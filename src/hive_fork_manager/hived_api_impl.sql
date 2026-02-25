@@ -262,37 +262,25 @@ BEGIN
     UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
   END LOOP;
 
-  -- Improve planner statistics for tables with block_id columns.
+  -- Override n_distinct for block_id columns to the actual number of blocks.
   --
-  -- Problem: PostgreSQL's ANALYZE samples too few rows to accurately estimate
-  -- the number of distinct block_id values in large tables (e.g. estimates ~4M
-  -- distinct block_ids in operations when actual is ~104M). This causes the
-  -- planner to vastly overestimate rows per block_id in nested loop joins
-  -- (e.g. 150K estimated vs 60 actual), inflating cost estimates to ~92M and
-  -- triggering unnecessary JIT compilation (131ms overhead per query).
+  -- Problem: PostgreSQL's ANALYZE underestimates distinct block_id values in large
+  -- tables (e.g. estimates ~4M when actual is ~104M), causing the planner to
+  -- overestimate rows per block_id, inflating cost estimates and triggering
+  -- unnecessary JIT compilation.
   --
-  -- Fix: SET STATISTICS increases histogram resolution for better selectivity
-  -- estimates. SET (n_distinct) overrides the sampled value with the correct
-  -- ratio. A negative n_distinct value means "fraction of total rows that are
-  -- distinct", so it scales automatically as the table grows.
-  --
-  -- How to recompute n_distinct if data characteristics change:
-  --   1. Run: SELECT COUNT(DISTINCT block_id)::float / COUNT(*) FROM hafd.<table>;
-  --      (or on a large sample: ... FROM hafd.<table> TABLESAMPLE SYSTEM(1))
-  --   2. The result is the fraction to use as the negative n_distinct value.
-  --   3. Verify with: EXPLAIN SELECT ... FROM <context>.operations_view WHERE block_num BETWEEN ...
-  --      The estimated cost for a 10k block range should be below 100000 (jit_above_cost).
-  IF _table_name = 'hafd.operations' THEN
-    ALTER TABLE hafd.operations ALTER COLUMN block_id SET STATISTICS 10000;
-    ALTER TABLE hafd.operations ALTER COLUMN block_id SET (n_distinct = -0.017); -- ~60 ops/block
-  ELSIF _table_name = 'hafd.account_operations' THEN
-    ALTER TABLE hafd.account_operations ALTER COLUMN block_id SET STATISTICS 10000;
-    ALTER TABLE hafd.account_operations ALTER COLUMN block_id SET (n_distinct = -0.012); -- ~84 rows/block
-  ELSIF _table_name = 'hafd.transactions' THEN
-    ALTER TABLE hafd.transactions ALTER COLUMN block_id SET STATISTICS 10000;
-    ALTER TABLE hafd.transactions ALTER COLUMN block_id SET (n_distinct = -0.025); -- ~40 txs/block
-  ELSIF _table_name = 'hafd.blocks' THEN
-    ALTER TABLE hafd.blocks ALTER COLUMN block_id SET STATISTICS 10000;
+  -- Fix: Set n_distinct to the actual block count. This is always correct
+  -- regardless of dataset size since each block_id value corresponds to one block.
+  IF _table_name IN ('hafd.operations', 'hafd.account_operations', 'hafd.transactions', 'hafd.blocks') THEN
+    EXECUTE format(
+      'ALTER TABLE %s ALTER COLUMN block_id SET STATISTICS 10000',
+      _table_name
+    );
+    EXECUTE format(
+      'ALTER TABLE %s ALTER COLUMN block_id SET (n_distinct = %s)',
+      _table_name,
+      (SELECT COUNT(*) FROM hafd.blocks)
+    );
   END IF;
 
   EXECUTE format( 'ANALYZE %s',  _table_name );
