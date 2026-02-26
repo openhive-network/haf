@@ -237,6 +237,10 @@ CREATE INDEX IF NOT EXISTS hive_transactions_block_id_to_num_idx ON hafd.transac
     hafd.block_id_to_fork(block_id) DESC
 );
 
+-- Index for transactions_view DISTINCT ON join: enables nested-loop index lookup
+-- on block_id when joining visible_blocks CTE result to transactions
+CREATE INDEX IF NOT EXISTS hive_transactions_block_id_idx ON hafd.transactions (block_id);
+
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, op_type_id);
 
 -- Index for operations_view canonical selection: finds highest block_id per (block_num, pos_in_block)
