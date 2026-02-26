@@ -12,30 +12,41 @@
 #include <boost/container/flat_set.hpp>
 #include <boost/container/flat_map.hpp>
 
+#include <cstring>
 #include <string>
 #include <vector>
 
 namespace {
 
+// Length-aware string copy into a palloc'd buffer.
+// Unlike pstrdup (which uses strlen and stops at \x00), this copies all
+// bytes from the std::string, preserving embedded null bytes faithfully.
+// HAF must never alter data delivered by hived.
+char* pstrdup_with_len(const char* data, int len)
+{
+  char* copied = (char*)palloc(len + 1);
+  memcpy(copied, data, len);
+  copied[len] = '\0';
+  return copied;
+}
+
 JsonbValue* push_key_to_jsonb(const std::string& key, JsonbParseState** parseState)
 {
-  const char* str = key.c_str();
-  const auto len = key.length();
+  const auto len = static_cast<int>(key.length());
   JsonbValue jb;
   jb.type = jbvString;
   jb.val.string.len = len;
-  jb.val.string.val = pstrdup(str);
+  jb.val.string.val = pstrdup_with_len(key.data(), len);
   return PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_KEY, &jb);
 }
 
 JsonbValue* push_string_to_jsonb(const std::string& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  const char* str = value.c_str();
-  const auto len = value.length();
+  const auto len = static_cast<int>(value.length());
   JsonbValue jb;
   jb.type = jbvString;
   jb.val.string.len = len;
-  jb.val.string.val = pstrdup(str);
+  jb.val.string.val = pstrdup_with_len(value.data(), len);
   return PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, token, &jb);
 }
 
@@ -247,12 +258,7 @@ void to_jsonb(const hive::protocol::fixed_string_impl<Storage>& value, JsonbIter
 }
 void to_jsonb(const hive::protocol::json_string& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  const std::string str = static_cast<std::string>(value);
-  JsonbValue jb;
-  jb.type = jbvString;
-  jb.val.string.len = str.length();
-  jb.val.string.val = pstrdup(str.c_str());
-  PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, token, &jb);
+  push_string_to_jsonb(static_cast<std::string>(value), token, parseState);
 }
 void to_jsonb(const hive::protocol::asset& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
