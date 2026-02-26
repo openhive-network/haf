@@ -369,6 +369,7 @@ SET_TESTS_PROPERTIES(
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/get_legacy_style_operation.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/extract_set_witness_properties.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/operation_to_jsonb_conversion.sql )
+ ADD_SQL_FUNCTIONAL_TEST( shared_lib/operation_to_jsonb_null_byte_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/operation_to_jsontext_conversion.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/operation_from_json_conversion.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/operation_to_text_conversion.sql )
