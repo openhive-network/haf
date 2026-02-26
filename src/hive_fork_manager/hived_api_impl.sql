@@ -262,27 +262,6 @@ BEGIN
     UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
   END LOOP;
 
-  -- Override n_distinct for block_id columns to the actual number of blocks.
-  --
-  -- Problem: PostgreSQL's ANALYZE underestimates distinct block_id values in large
-  -- tables (e.g. estimates ~4M when actual is ~104M), causing the planner to
-  -- overestimate rows per block_id, inflating cost estimates and triggering
-  -- unnecessary JIT compilation.
-  --
-  -- Fix: Set n_distinct to the actual block count. This is always correct
-  -- regardless of dataset size since each block_id value corresponds to one block.
-  IF _table_name IN ('hafd.operations', 'hafd.account_operations', 'hafd.transactions', 'hafd.blocks') THEN
-    EXECUTE format(
-      'ALTER TABLE %s ALTER COLUMN block_id SET STATISTICS 10000',
-      _table_name
-    );
-    EXECUTE format(
-      'ALTER TABLE %s ALTER COLUMN block_id SET (n_distinct = %s)',
-      _table_name,
-      (SELECT COUNT(*) FROM hafd.blocks)
-    );
-  END IF;
-
   EXECUTE format( 'ANALYZE %s',  _table_name );
 
   RAISE NOTICE 'Finished restoring any dropped indexes on %', _table_name;
