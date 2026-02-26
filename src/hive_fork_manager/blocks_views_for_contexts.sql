@@ -17,6 +17,11 @@
 -- 3. Skip dedup entirely when block_conflicts is empty (replay/sync)
 -- The conflicts CTE is MATERIALIZED (computed once), visible_blocks is NOT
 -- materialized (inlineable by the planner for filter pushdown).
+--
+-- hive_state optimization: The max allowed fork_id from hive_state is
+-- pre-computed once in a MATERIALIZED CTE (hs_data) instead of joining
+-- hafd.hive_state as a table in both the visible_blocks and anti-join
+-- subqueries. This halves cost estimates and simplifies the anti-join plan.
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION hive.create_context_data_view( _context_name TEXT )
@@ -123,22 +128,23 @@ BEGIN
                 hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
                 hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
                 hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-            FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+            FROM hafd.blocks hb, %s.context_data_view c,
+                 LATERAL (SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0) AS max_fork FROM hafd.hive_state LIMIT 1) hs
             WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
               AND (
                   (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-                   AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
+                   AND hafd.block_id_to_fork(hb.block_id) <= hs.max_fork)
                   OR
                   (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
                    AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
               )
               AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
+                  SELECT 1 FROM hafd.blocks hb2
                   WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                     AND hb2.block_id > hb.block_id
                     AND (
                         (hafd.block_id_to_num(hb2.block_id) <= c.irreversible_block
-                         AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0))
+                         AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork)
                         OR
                         (hafd.block_id_to_num(hb2.block_id) > c.irreversible_block
                          AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
@@ -169,14 +175,15 @@ BEGIN
                 hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
                 hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
                 hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-            FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+            FROM hafd.blocks hb, %s.context_data_view c,
+                 LATERAL (SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0) AS max_fork FROM hafd.hive_state LIMIT 1) hs
             WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
-              AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+              AND hafd.block_id_to_fork(hb.block_id) <= hs.max_fork
               AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
+                  SELECT 1 FROM hafd.blocks hb2
                   WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                     AND hb2.block_id > hb.block_id
-                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                    AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork
               )
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
@@ -222,14 +229,15 @@ BEGIN
             hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
             hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
             hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-        FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+        FROM hafd.blocks hb, %s.context_data_view c,
+             LATERAL (SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0) AS max_fork FROM hafd.hive_state LIMIT 1) hs
         WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-          AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+          AND hafd.block_id_to_fork(hb.block_id) <= hs.max_fork
           AND NOT EXISTS (
-              SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
+              SELECT 1 FROM hafd.blocks hb2
               WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                 AND hb2.block_id > hb.block_id
-                AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork
           )
         ;
         CREATE OR REPLACE VIEW %s.blocks_view AS
@@ -290,25 +298,29 @@ BEGIN
             WITH conflicts AS MATERIALIZED (
                 SELECT block_num FROM hafd.block_conflicts
             ),
+            hs_data AS MATERIALIZED (
+                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+                FROM hafd.hive_state
+            ),
             visible_blocks AS (
                 SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+                FROM hafd.blocks hb, %s.context_data_view c, hs_data
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
                   AND (
                       (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
+                       AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
                       OR
                       (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
                   )
                   AND NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                      SELECT 1 FROM hafd.blocks hb2, conflicts cf
                       WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                         AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                         AND hb2.block_id > hb.block_id
                         AND (
                             (hafd.block_id_to_num(hb2.block_id) <= c.irreversible_block
-                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0))
+                             AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork)
                             OR
                             (hafd.block_id_to_num(hb2.block_id) > c.irreversible_block
                              AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
@@ -327,17 +339,21 @@ BEGIN
             WITH conflicts AS MATERIALIZED (
                 SELECT block_num FROM hafd.block_conflicts
             ),
+            hs_data AS MATERIALIZED (
+                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+                FROM hafd.hive_state
+            ),
             visible_blocks AS (
                 SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+                FROM hafd.blocks hb, %s.context_data_view c, hs_data
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
-                  AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+                  AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
                   AND NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                      SELECT 1 FROM hafd.blocks hb2, conflicts cf
                       WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                         AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                         AND hb2.block_id > hb.block_id
-                        AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                        AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork
                   )
             )
             SELECT vb.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
@@ -370,17 +386,21 @@ BEGIN
         WITH conflicts AS MATERIALIZED (
             SELECT block_num FROM hafd.block_conflicts
         ),
+        hs_data AS MATERIALIZED (
+            SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+            FROM hafd.hive_state
+        ),
         visible_blocks AS (
             SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
-            FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+            FROM hafd.blocks hb, %s.context_data_view c, hs_data
             WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-              AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+              AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
               AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                  SELECT 1 FROM hafd.blocks hb2, conflicts cf
                   WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                     AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                     AND hb2.block_id > hb.block_id
-                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                    AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork
               )
         )
         SELECT vb.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
@@ -436,25 +456,29 @@ BEGIN
             WITH conflicts AS MATERIALIZED (
                 SELECT block_num FROM hafd.block_conflicts
             ),
+            hs_data AS MATERIALIZED (
+                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+                FROM hafd.hive_state
+            ),
             visible_blocks AS (
                 SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+                FROM hafd.blocks hb, %s.context_data_view c, hs_data
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
                   AND (
                       (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
+                       AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
                       OR
                       (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
                   )
                   AND NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                      SELECT 1 FROM hafd.blocks hb2, conflicts cf
                       WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                         AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                         AND hb2.block_id > hb.block_id
                         AND (
                             (hafd.block_id_to_num(hb2.block_id) <= c.irreversible_block
-                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0))
+                             AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork)
                             OR
                             (hafd.block_id_to_num(hb2.block_id) > c.irreversible_block
                              AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
@@ -479,17 +503,21 @@ BEGIN
             WITH conflicts AS MATERIALIZED (
                 SELECT block_num FROM hafd.block_conflicts
             ),
+            hs_data AS MATERIALIZED (
+                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+                FROM hafd.hive_state
+            ),
             visible_blocks AS (
                 SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+                FROM hafd.blocks hb, %s.context_data_view c, hs_data
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
-                  AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+                  AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
                   AND NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                      SELECT 1 FROM hafd.blocks hb2, conflicts cf
                       WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                         AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                         AND hb2.block_id > hb.block_id
-                        AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                        AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork
                   )
             )
             SELECT
@@ -530,25 +558,29 @@ BEGIN
             WITH conflicts AS MATERIALIZED (
                 SELECT block_num FROM hafd.block_conflicts
             ),
+            hs_data AS MATERIALIZED (
+                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+                FROM hafd.hive_state
+            ),
             visible_blocks AS (
                 SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num, hb.created_at
-                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+                FROM hafd.blocks hb, %s.context_data_view c, hs_data
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
                   AND (
                       (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
+                       AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
                       OR
                       (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
                   )
                   AND NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                      SELECT 1 FROM hafd.blocks hb2, conflicts cf
                       WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                         AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                         AND hb2.block_id > hb.block_id
                         AND (
                             (hafd.block_id_to_num(hb2.block_id) <= c.irreversible_block
-                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0))
+                             AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork)
                             OR
                             (hafd.block_id_to_num(hb2.block_id) > c.irreversible_block
                              AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
@@ -574,17 +606,21 @@ BEGIN
             WITH conflicts AS MATERIALIZED (
                 SELECT block_num FROM hafd.block_conflicts
             ),
+            hs_data AS MATERIALIZED (
+                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+                FROM hafd.hive_state
+            ),
             visible_blocks AS (
                 SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num, hb.created_at
-                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+                FROM hafd.blocks hb, %s.context_data_view c, hs_data
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
-                  AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+                  AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
                   AND NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                      SELECT 1 FROM hafd.blocks hb2, conflicts cf
                       WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                         AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                         AND hb2.block_id > hb.block_id
-                        AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                        AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork
                   )
             )
             SELECT
@@ -624,17 +660,21 @@ BEGIN
         WITH conflicts AS MATERIALIZED (
             SELECT block_num FROM hafd.block_conflicts
         ),
+        hs_data AS MATERIALIZED (
+            SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+            FROM hafd.hive_state
+        ),
         visible_blocks AS (
             SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
-            FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+            FROM hafd.blocks hb, %s.context_data_view c, hs_data
             WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-              AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+              AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
               AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                  SELECT 1 FROM hafd.blocks hb2, conflicts cf
                   WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                     AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                     AND hb2.block_id > hb.block_id
-                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                    AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork
               )
         )
         SELECT
@@ -672,17 +712,21 @@ BEGIN
         WITH conflicts AS MATERIALIZED (
             SELECT block_num FROM hafd.block_conflicts
         ),
+        hs_data AS MATERIALIZED (
+            SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+            FROM hafd.hive_state
+        ),
         visible_blocks AS (
             SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num, hb.created_at
-            FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+            FROM hafd.blocks hb, %s.context_data_view c, hs_data
             WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-              AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+              AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
               AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                  SELECT 1 FROM hafd.blocks hb2, conflicts cf
                   WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                     AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                     AND hb2.block_id > hb.block_id
-                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                    AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork
               )
         )
         SELECT
@@ -762,25 +806,29 @@ BEGIN
             WITH conflicts AS MATERIALIZED (
                 SELECT block_num FROM hafd.block_conflicts
             ),
+            hs_data AS MATERIALIZED (
+                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+                FROM hafd.hive_state
+            ),
             visible_blocks AS (
                 SELECT hb.block_id
-                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+                FROM hafd.blocks hb, %s.context_data_view c, hs_data
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
                   AND (
                       (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
+                       AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
                       OR
                       (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
                   )
                   AND NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                      SELECT 1 FROM hafd.blocks hb2, conflicts cf
                       WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                         AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                         AND hb2.block_id > hb.block_id
                         AND (
                             (hafd.block_id_to_num(hb2.block_id) <= c.irreversible_block
-                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0))
+                             AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork)
                             OR
                             (hafd.block_id_to_num(hb2.block_id) > c.irreversible_block
                              AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
@@ -798,17 +846,21 @@ BEGIN
             WITH conflicts AS MATERIALIZED (
                 SELECT block_num FROM hafd.block_conflicts
             ),
+            hs_data AS MATERIALIZED (
+                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+                FROM hafd.hive_state
+            ),
             visible_blocks AS (
                 SELECT hb.block_id
-                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+                FROM hafd.blocks hb, %s.context_data_view c, hs_data
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
-                  AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+                  AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
                   AND NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                      SELECT 1 FROM hafd.blocks hb2, conflicts cf
                       WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                         AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                         AND hb2.block_id > hb.block_id
-                        AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                        AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork
                   )
             )
             SELECT htm.trx_hash, htm.signature
@@ -840,17 +892,21 @@ BEGIN
         WITH conflicts AS MATERIALIZED (
             SELECT block_num FROM hafd.block_conflicts
         ),
+        hs_data AS MATERIALIZED (
+            SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+            FROM hafd.hive_state
+        ),
         visible_blocks AS (
             SELECT hb.block_id
-            FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+            FROM hafd.blocks hb, %s.context_data_view c, hs_data
             WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-              AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+              AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
               AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                  SELECT 1 FROM hafd.blocks hb2, conflicts cf
                   WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                     AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                     AND hb2.block_id > hb.block_id
-                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                    AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork
               )
         )
         SELECT htm.trx_hash, htm.signature
@@ -983,25 +1039,29 @@ BEGIN
             WITH conflicts AS MATERIALIZED (
                 SELECT block_num FROM hafd.block_conflicts
             ),
+            hs_data AS MATERIALIZED (
+                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+                FROM hafd.hive_state
+            ),
             visible_blocks AS (
                 SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+                FROM hafd.blocks hb, %s.context_data_view c, hs_data
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
                   AND (
                       (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
+                       AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
                       OR
                       (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
                   )
                   AND NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                      SELECT 1 FROM hafd.blocks hb2, conflicts cf
                       WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                         AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                         AND hb2.block_id > hb.block_id
                         AND (
                             (hafd.block_id_to_num(hb2.block_id) <= c.irreversible_block
-                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0))
+                             AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork)
                             OR
                             (hafd.block_id_to_num(hb2.block_id) > c.irreversible_block
                              AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
@@ -1023,17 +1083,21 @@ BEGIN
             WITH conflicts AS MATERIALIZED (
                 SELECT block_num FROM hafd.block_conflicts
             ),
+            hs_data AS MATERIALIZED (
+                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+                FROM hafd.hive_state
+            ),
             visible_blocks AS (
                 SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+                FROM hafd.blocks hb, %s.context_data_view c, hs_data
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
-                  AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+                  AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
                   AND NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                      SELECT 1 FROM hafd.blocks hb2, conflicts cf
                       WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                         AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                         AND hb2.block_id > hb.block_id
-                        AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                        AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork
                   )
             )
             SELECT
@@ -1069,17 +1133,21 @@ BEGIN
         WITH conflicts AS MATERIALIZED (
             SELECT block_num FROM hafd.block_conflicts
         ),
+        hs_data AS MATERIALIZED (
+            SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+            FROM hafd.hive_state
+        ),
         visible_blocks AS (
             SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
-            FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+            FROM hafd.blocks hb, %s.context_data_view c, hs_data
             WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-              AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+              AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
               AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                  SELECT 1 FROM hafd.blocks hb2, conflicts cf
                   WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                     AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                     AND hb2.block_id > hb.block_id
-                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                    AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork
               )
         )
         SELECT
@@ -1138,25 +1206,29 @@ BEGIN
             WITH conflicts AS MATERIALIZED (
                 SELECT block_num FROM hafd.block_conflicts
             ),
+            hs_data AS MATERIALIZED (
+                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+                FROM hafd.hive_state
+            ),
             visible_blocks AS (
                 SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+                FROM hafd.blocks hb, %s.context_data_view c, hs_data
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
                   AND (
                       (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
+                       AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
                       OR
                       (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
                   )
                   AND NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                      SELECT 1 FROM hafd.blocks hb2, conflicts cf
                       WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                         AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                         AND hb2.block_id > hb.block_id
                         AND (
                             (hafd.block_id_to_num(hb2.block_id) <= c.irreversible_block
-                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0))
+                             AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork)
                             OR
                             (hafd.block_id_to_num(hb2.block_id) > c.irreversible_block
                              AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
@@ -1174,17 +1246,21 @@ BEGIN
             WITH conflicts AS MATERIALIZED (
                 SELECT block_num FROM hafd.block_conflicts
             ),
+            hs_data AS MATERIALIZED (
+                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+                FROM hafd.hive_state
+            ),
             visible_blocks AS (
                 SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+                FROM hafd.blocks hb, %s.context_data_view c, hs_data
                 WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
-                  AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+                  AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
                   AND NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                      SELECT 1 FROM hafd.blocks hb2, conflicts cf
                       WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                         AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                         AND hb2.block_id > hb.block_id
-                        AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                        AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork
                   )
             )
             SELECT hah.hardfork_num, vb.num AS block_num, hah.hardfork_vop_id
@@ -1216,17 +1292,21 @@ BEGIN
         WITH conflicts AS MATERIALIZED (
             SELECT block_num FROM hafd.block_conflicts
         ),
+        hs_data AS MATERIALIZED (
+            SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
+            FROM hafd.hive_state
+        ),
         visible_blocks AS (
             SELECT hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
-            FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
+            FROM hafd.blocks hb, %s.context_data_view c, hs_data
             WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-              AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+              AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
               AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2, conflicts cf, hafd.hive_state hs2
+                  SELECT 1 FROM hafd.blocks hb2, conflicts cf
                   WHERE cf.block_num = hafd.block_id_to_num(hb.block_id)
                     AND hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
                     AND hb2.block_id > hb.block_id
-                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
+                    AND hafd.block_id_to_fork(hb2.block_id) <= hs_data.max_fork
               )
         )
         SELECT hah.hardfork_num, vb.num AS block_num, hah.hardfork_vop_id
