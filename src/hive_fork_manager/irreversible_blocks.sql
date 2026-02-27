@@ -61,7 +61,8 @@ CREATE INDEX IF NOT EXISTS hive_blocks_producer_account_id_idx ON hafd.blocks (p
 -- filter in blocks_view, avoiding heap access (~3.1 GB at 30M blocks)
 CREATE INDEX IF NOT EXISTS hive_blocks_created_at_idx ON hafd.blocks USING btree ( created_at ) INCLUDE ( block_id );
 
-CREATE STATISTICS IF NOT EXISTS blocks_block_num_stats ON block_num FROM hafd.blocks;
+-- No extended statistics needed for block_num: PostgreSQL collects per-column
+-- stats automatically for physical columns (unlike the old expression stat).
 
 -- =============================================================================
 -- hafd.hive_state - System state tracking
