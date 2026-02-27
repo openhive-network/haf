@@ -143,23 +143,23 @@ RETURNS void
 LANGUAGE 'plpgsql' AS
 $BODY$
 DECLARE
-    block_num INT;
+    __block_num INT;
     hash_suffix TEXT;
     prev_suffix TEXT;
     __block_id hafd.block_id;
 BEGIN
-    FOR block_num IN start_block..end_block LOOP
+    FOR __block_num IN start_block..end_block LOOP
         -- Add fork_id to hash to create unique hashes per fork
-        hash_suffix := lpad(to_hex(block_num * 16 + fork_id), 2, '0');
-        prev_suffix := lpad(to_hex(block_num * 16 + fork_id), 2, '0');
-        __block_id := hafd.make_block_id(block_num, fork_id);
+        hash_suffix := lpad(to_hex(__block_num * 16 + fork_id), 2, '0');
+        prev_suffix := lpad(to_hex(__block_num * 16 + fork_id), 2, '0');
+        __block_id := hafd.make_block_id(__block_num, fork_id);
 
         INSERT INTO hafd.blocks (block_id, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger)
         VALUES (
             __block_id,
             decode('BADD' || hash_suffix, 'hex'),
             decode('CAFE' || prev_suffix, 'hex'),
-            base_time + ((block_num - 1) || ' seconds')::interval,
+            base_time + ((__block_num - 1) || ' seconds')::interval,
             producer_id,
             '\x4007'::bytea,
             '[]'::jsonb,
@@ -170,10 +170,10 @@ BEGIN
 
         -- Track conflict if this block_num already has another version (matches push_block behavior)
         INSERT INTO hafd.block_conflicts (block_num)
-        SELECT create_blocks_reversible.block_num
+        SELECT __block_num
         WHERE EXISTS (
             SELECT 1 FROM hafd.blocks hb
-            WHERE hb.block_num = create_blocks_reversible.block_num
+            WHERE hb.block_num = __block_num
               AND hb.block_id != __block_id
         )
         ON CONFLICT DO NOTHING;
