@@ -114,17 +114,14 @@ BEGIN
     WHERE hc.name = _context_name;
 
     IF __is_forking THEN
-        -- Forking context: select canonical block per block_num using NOT EXISTS
+        -- Forking context: select canonical block per block_num using DISTINCT ON
         -- Visibility rules:
         --   - Irreversible (block_num <= irreversible_block): from any fork <= consistent_block's fork_id
         --   - Reversible (block_num > irreversible_block): from any fork <= context's fork_id
         -- For each block_num, pick highest block_id among visible blocks
-        -- NOTE: blocks_view_internal uses NOT EXISTS (not DISTINCT ON) because it is
-        -- consumed via LEFT JOIN from accounts_view without block range filters.
-        -- DISTINCT ON would sort ALL blocks; NOT EXISTS short-circuits per row.
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
-            SELECT
+            SELECT DISTINCT ON (hb.block_num)
                 hb.block_num AS num,
                 hb.block_id,
                 hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
@@ -142,18 +139,7 @@ BEGIN
                   (hb.block_num > c.irreversible_block
                    AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
               )
-              AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2
-                  WHERE hb2.block_num = hb.block_num
-                    AND hb2.block_id > hb.block_id
-                    AND (
-                        (hb2.block_num <= c.irreversible_block
-                         AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork)
-                        OR
-                        (hb2.block_num > c.irreversible_block
-                         AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
-                    )
-              )
+            ORDER BY hb.block_num, hb.block_id DESC
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
             SELECT num, hash, prev, created_at, producer_account_id,
@@ -165,12 +151,12 @@ BEGIN
             ', __schema, __schema, __schema, __schema
         );
     ELSE
-        -- Non-forking context: show blocks up to min_block using NOT EXISTS
+        -- Non-forking context: show blocks up to min_block using DISTINCT ON
         -- Uses same fork visibility rule as forking contexts for irreversible:
         --   fork_id <= consistent_block's fork_id
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
-            SELECT
+            SELECT DISTINCT ON (hb.block_num)
                 hb.block_num AS num,
                 hb.block_id,
                 hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
@@ -182,12 +168,7 @@ BEGIN
                  LATERAL (SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0) AS max_fork FROM hafd.hive_state LIMIT 1) hs
             WHERE hb.block_num <= c.min_block
               AND hafd.block_id_to_fork(hb.block_id) <= hs.max_fork
-              AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2
-                  WHERE hb2.block_num = hb.block_num
-                    AND hb2.block_id > hb.block_id
-                    AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork
-              )
+            ORDER BY hb.block_num, hb.block_id DESC
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
             SELECT num, hash, prev, created_at, producer_account_id,
@@ -219,11 +200,11 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    -- All irreversible: canonical block selection using NOT EXISTS
+    -- All irreversible: canonical block selection using DISTINCT ON
     -- Uses fork visibility rule: fork_id <= consistent_block's fork_id
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
-        SELECT
+        SELECT DISTINCT ON (hb.block_num)
             hb.block_num AS num,
             hb.block_id,
             hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
@@ -235,12 +216,7 @@ BEGIN
              LATERAL (SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0) AS max_fork FROM hafd.hive_state LIMIT 1) hs
         WHERE hb.block_num <= c.irreversible_block
           AND hafd.block_id_to_fork(hb.block_id) <= hs.max_fork
-          AND NOT EXISTS (
-              SELECT 1 FROM hafd.blocks hb2
-              WHERE hb2.block_num = hb.block_num
-                AND hb2.block_id > hb.block_id
-                AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork
-          )
+        ORDER BY hb.block_num, hb.block_id DESC
         ;
         CREATE OR REPLACE VIEW %s.blocks_view AS
         SELECT num, hash, prev, created_at, producer_account_id,
