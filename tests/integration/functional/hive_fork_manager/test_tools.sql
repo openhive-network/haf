@@ -170,10 +170,10 @@ BEGIN
 
         -- Track conflict if this block_num already has another version (matches push_block behavior)
         INSERT INTO hafd.block_conflicts (block_num)
-        SELECT block_num
+        SELECT create_blocks_reversible.block_num
         WHERE EXISTS (
             SELECT 1 FROM hafd.blocks hb
-            WHERE hafd.block_id_to_num(hb.block_id) = block_num
+            WHERE hb.block_num = create_blocks_reversible.block_num
               AND hb.block_id != __block_id
         )
         ON CONFLICT DO NOTHING;
