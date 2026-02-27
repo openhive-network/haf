@@ -10,20 +10,10 @@
 --   - accounts: uses block_num
 --   - applied_hardforks: uses block_num
 --
--- Data views (transactions, operations, etc.) embed a CTE-gated blocks lookup
--- directly instead of joining blocks_view_internal. This allows PostgreSQL to:
--- 1. Push block_num range filters into the blocks index scan
--- 2. Use pk_hive_operations (and similar PKs) for nested loop joins
--- 3. Use DISTINCT ON for canonical block selection (single-pass sort vs per-row anti-join)
---
--- hive_state optimization: The max allowed fork_id from hive_state is
--- pre-computed once in a MATERIALIZED CTE (hs_data) instead of joining
--- hafd.hive_state as a table in both the visible_blocks and anti-join
--- subqueries. This halves cost estimates and simplifies the plan.
---
--- Canonical block selection: Uses DISTINCT ON (block_num) ORDER BY block_id DESC
--- to pick the highest block_id per block_num in a single sort pass, replacing
--- the previous NOT EXISTS anti-join which required per-row index probes.
+-- blocks_view_internal handles canonical block selection using a 3-level
+-- block_conflicts fast-path (empty table → no conflicts → full anti-join).
+-- Data views (transactions, operations, etc.) simply JOIN blocks_view_internal
+-- on block_id to inherit this filtering efficiently.
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION hive.create_context_data_view( _context_name TEXT )
@@ -298,7 +288,7 @@ $BODY$
 
 -- =============================================================================
 -- transactions_view - Uses block_id from transactions table
--- CTE-gated: embeds blocks lookup with DISTINCT ON dedup directly
+-- JOINs blocks_view_internal which already handles canonical block selection
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION hive.create_transactions_view( _context_name TEXT )
@@ -318,49 +308,19 @@ BEGIN
     IF __is_forking THEN
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.transactions_view AS
-            WITH hs_data AS MATERIALIZED (
-                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-                FROM hafd.hive_state
-            ),
-            visible_blocks AS (
-                SELECT DISTINCT ON (hb.block_num)
-                    hb.block_id, hb.block_num AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hb.block_num <= c.current_block_num
-                  AND (
-                      (hb.block_num <= c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
-                      OR
-                      (hb.block_num > c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
-                  )
-                ORDER BY hb.block_num, hb.block_id DESC
-            )
-            SELECT vb.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
+            SELECT b.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
                    ht.ref_block_prefix, ht.expiration, ht.signature
-            FROM visible_blocks vb
-            JOIN hafd.transactions ht ON ht.block_id = vb.block_id
+            FROM hafd.transactions ht
+            JOIN %s.blocks_view_internal b ON b.block_id = ht.block_id
             ;', __schema, __schema
         );
     ELSE
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.transactions_view AS
-            WITH hs_data AS MATERIALIZED (
-                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-                FROM hafd.hive_state
-            ),
-            visible_blocks AS (
-                SELECT DISTINCT ON (hb.block_num)
-                    hb.block_id, hb.block_num AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hb.block_num <= c.min_block
-                  AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-                ORDER BY hb.block_num, hb.block_id DESC
-            )
-            SELECT vb.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
+            SELECT b.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
                    ht.ref_block_prefix, ht.expiration, ht.signature
-            FROM visible_blocks vb
-            JOIN hafd.transactions ht ON ht.block_id = vb.block_id
+            FROM hafd.transactions ht
+            JOIN %s.blocks_view_internal b ON b.block_id = ht.block_id
             ;', __schema, __schema
         );
     END IF;
@@ -384,22 +344,10 @@ BEGIN
 
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.transactions_view AS
-        WITH hs_data AS MATERIALIZED (
-            SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-            FROM hafd.hive_state
-        ),
-        visible_blocks AS (
-            SELECT DISTINCT ON (hb.block_num)
-                hb.block_id, hb.block_num AS num
-            FROM hafd.blocks hb, %s.context_data_view c, hs_data
-            WHERE hb.block_num <= c.irreversible_block
-              AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-            ORDER BY hb.block_num, hb.block_id DESC
-        )
-        SELECT vb.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
+        SELECT b.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
                ht.ref_block_prefix, ht.expiration, ht.signature
-        FROM visible_blocks vb
-        JOIN hafd.transactions ht ON ht.block_id = vb.block_id
+        FROM hafd.transactions ht
+        JOIN %s.blocks_view_internal b ON b.block_id = ht.block_id
         ;', __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'transactions_view');
@@ -426,7 +374,7 @@ $BODY$
 
 -- =============================================================================
 -- operations_view - Uses id encoding (block_num|seq|type)
--- CTE-gated: embeds blocks lookup with DISTINCT ON dedup directly
+-- JOINs blocks_view_internal which already handles canonical block selection
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION hive.create_operations_view( _context_name TEXT )
@@ -446,61 +394,31 @@ BEGIN
     IF __is_forking THEN
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.operations_view AS
-            WITH hs_data AS MATERIALIZED (
-                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-                FROM hafd.hive_state
-            ),
-            visible_blocks AS (
-                SELECT DISTINCT ON (hb.block_num)
-                    hb.block_id, hb.block_num AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hb.block_num <= c.current_block_num
-                  AND (
-                      (hb.block_num <= c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
-                      OR
-                      (hb.block_num > c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
-                  )
-                ORDER BY hb.block_num, hb.block_id DESC
-            )
             SELECT
                 ho.id,
-                vb.num AS block_num,
+                b.num AS block_num,
                 ho.trx_in_block, ho.op_pos,
                 ho.op_type_id,
                 ho.body_binary,
                 ho.body_binary::jsonb AS body,
                 ho.custom_json_type_id
-            FROM visible_blocks vb
-            JOIN hafd.operations ho ON ho.block_id = vb.block_id
+            FROM hafd.operations ho
+            JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
             ;', __schema, __schema
         );
     ELSE
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.operations_view AS
-            WITH hs_data AS MATERIALIZED (
-                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-                FROM hafd.hive_state
-            ),
-            visible_blocks AS (
-                SELECT DISTINCT ON (hb.block_num)
-                    hb.block_id, hb.block_num AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hb.block_num <= c.min_block
-                  AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-                ORDER BY hb.block_num, hb.block_id DESC
-            )
             SELECT
                 ho.id,
-                vb.num AS block_num,
+                b.num AS block_num,
                 ho.trx_in_block, ho.op_pos,
                 ho.op_type_id,
                 ho.body_binary,
                 ho.body_binary::jsonb AS body,
                 ho.custom_json_type_id
-            FROM visible_blocks vb
-            JOIN hafd.operations ho ON ho.block_id = vb.block_id
+            FROM hafd.operations ho
+            JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
             ;', __schema, __schema
         );
     END IF;
@@ -526,63 +444,33 @@ BEGIN
     IF __is_forking THEN
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.operations_view_extended AS
-            WITH hs_data AS MATERIALIZED (
-                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-                FROM hafd.hive_state
-            ),
-            visible_blocks AS (
-                SELECT DISTINCT ON (hb.block_num)
-                    hb.block_id, hb.block_num AS num, hb.created_at
-                FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hb.block_num <= c.current_block_num
-                  AND (
-                      (hb.block_num <= c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
-                      OR
-                      (hb.block_num > c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
-                  )
-                ORDER BY hb.block_num, hb.block_id DESC
-            )
             SELECT
                 ho.id,
-                vb.num AS block_num,
+                b.num AS block_num,
                 ho.trx_in_block, ho.op_pos,
                 ho.op_type_id,
-                vb.created_at AS timestamp,
+                b.created_at AS timestamp,
                 ho.body_binary,
                 ho.body_binary::jsonb AS body,
                 ho.custom_json_type_id
-            FROM visible_blocks vb
-            JOIN hafd.operations ho ON ho.block_id = vb.block_id
+            FROM hafd.operations ho
+            JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
             ;', __schema, __schema
         );
     ELSE
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.operations_view_extended AS
-            WITH hs_data AS MATERIALIZED (
-                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-                FROM hafd.hive_state
-            ),
-            visible_blocks AS (
-                SELECT DISTINCT ON (hb.block_num)
-                    hb.block_id, hb.block_num AS num, hb.created_at
-                FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hb.block_num <= c.min_block
-                  AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-                ORDER BY hb.block_num, hb.block_id DESC
-            )
             SELECT
                 ho.id,
-                vb.num AS block_num,
+                b.num AS block_num,
                 ho.trx_in_block, ho.op_pos,
                 ho.op_type_id,
-                vb.created_at AS timestamp,
+                b.created_at AS timestamp,
                 ho.body_binary,
                 ho.body_binary::jsonb AS body,
                 ho.custom_json_type_id
-            FROM visible_blocks vb
-            JOIN hafd.operations ho ON ho.block_id = vb.block_id
+            FROM hafd.operations ho
+            JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
             ;', __schema, __schema
         );
     END IF;
@@ -606,28 +494,16 @@ BEGIN
 
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view AS
-        WITH hs_data AS MATERIALIZED (
-            SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-            FROM hafd.hive_state
-        ),
-        visible_blocks AS (
-            SELECT DISTINCT ON (hb.block_num)
-                hb.block_id, hb.block_num AS num
-            FROM hafd.blocks hb, %s.context_data_view c, hs_data
-            WHERE hb.block_num <= c.irreversible_block
-              AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-            ORDER BY hb.block_num, hb.block_id DESC
-        )
         SELECT
             ho.id,
-            vb.num AS block_num,
+            b.num AS block_num,
             ho.trx_in_block, ho.op_pos,
             ho.op_type_id,
             ho.body_binary,
             ho.body_binary::jsonb AS body,
             ho.custom_json_type_id
-        FROM visible_blocks vb
-        JOIN hafd.operations ho ON ho.block_id = vb.block_id
+        FROM hafd.operations ho
+        JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
         ;', __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view');
@@ -650,29 +526,17 @@ BEGIN
 
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view_extended AS
-        WITH hs_data AS MATERIALIZED (
-            SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-            FROM hafd.hive_state
-        ),
-        visible_blocks AS (
-            SELECT DISTINCT ON (hb.block_num)
-                hb.block_id, hb.block_num AS num, hb.created_at
-            FROM hafd.blocks hb, %s.context_data_view c, hs_data
-            WHERE hb.block_num <= c.irreversible_block
-              AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-            ORDER BY hb.block_num, hb.block_id DESC
-        )
         SELECT
             ho.id,
-            vb.num AS block_num,
+            b.num AS block_num,
             ho.trx_in_block, ho.op_pos,
             ho.op_type_id,
-            vb.created_at AS timestamp,
+            b.created_at AS timestamp,
             ho.body_binary,
             ho.body_binary::jsonb AS body,
             ho.custom_json_type_id
-        FROM visible_blocks vb
-        JOIN hafd.operations ho ON ho.block_id = vb.block_id
+        FROM hafd.operations ho
+        JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
         ;', __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
@@ -716,7 +580,7 @@ $BODY$
 
 -- =============================================================================
 -- signatures_view (transactions_multisig) - Uses trx_hash reference
--- CTE-gated: embeds blocks lookup with DISTINCT ON dedup directly
+-- JOINs blocks_view_internal which already handles canonical block selection
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION hive.create_signatures_view( _context_name TEXT )
@@ -736,47 +600,17 @@ BEGIN
     IF __is_forking THEN
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.TRANSACTIONS_MULTISIG_VIEW AS
-            WITH hs_data AS MATERIALIZED (
-                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-                FROM hafd.hive_state
-            ),
-            visible_blocks AS (
-                SELECT DISTINCT ON (hb.block_num)
-                    hb.block_id
-                FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hb.block_num <= c.current_block_num
-                  AND (
-                      (hb.block_num <= c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
-                      OR
-                      (hb.block_num > c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
-                  )
-                ORDER BY hb.block_num, hb.block_id DESC
-            )
             SELECT htm.trx_hash, htm.signature
-            FROM visible_blocks vb
-            JOIN hafd.transactions_multisig htm ON htm.block_id = vb.block_id
+            FROM hafd.transactions_multisig htm
+            JOIN %s.blocks_view_internal b ON b.block_id = htm.block_id
             ;', __schema, __schema
         );
     ELSE
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.TRANSACTIONS_MULTISIG_VIEW AS
-            WITH hs_data AS MATERIALIZED (
-                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-                FROM hafd.hive_state
-            ),
-            visible_blocks AS (
-                SELECT DISTINCT ON (hb.block_num)
-                    hb.block_id
-                FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hb.block_num <= c.min_block
-                  AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-                ORDER BY hb.block_num, hb.block_id DESC
-            )
             SELECT htm.trx_hash, htm.signature
-            FROM visible_blocks vb
-            JOIN hafd.transactions_multisig htm ON htm.block_id = vb.block_id
+            FROM hafd.transactions_multisig htm
+            JOIN %s.blocks_view_internal b ON b.block_id = htm.block_id
             ;', __schema, __schema
         );
     END IF;
@@ -800,21 +634,9 @@ BEGIN
 
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.TRANSACTIONS_MULTISIG_VIEW AS
-        WITH hs_data AS MATERIALIZED (
-            SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-            FROM hafd.hive_state
-        ),
-        visible_blocks AS (
-            SELECT DISTINCT ON (hb.block_num)
-                hb.block_id
-            FROM hafd.blocks hb, %s.context_data_view c, hs_data
-            WHERE hb.block_num <= c.irreversible_block
-              AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-            ORDER BY hb.block_num, hb.block_id DESC
-        )
         SELECT htm.trx_hash, htm.signature
-        FROM visible_blocks vb
-        JOIN hafd.transactions_multisig htm ON htm.block_id = vb.block_id
+        FROM hafd.transactions_multisig htm
+        JOIN %s.blocks_view_internal b ON b.block_id = htm.block_id
         ;', __schema, __schema
     );
 
@@ -919,7 +741,7 @@ $BODY$
 
 -- =============================================================================
 -- account_operations_view - Uses operation_id encoding
--- CTE-gated: embeds blocks lookup with DISTINCT ON dedup directly
+-- JOINs blocks_view_internal which already handles canonical block selection
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION hive.create_account_operations_view( _context_name TEXT )
@@ -939,55 +761,25 @@ BEGIN
     IF __is_forking THEN
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.account_operations_view AS
-            WITH hs_data AS MATERIALIZED (
-                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-                FROM hafd.hive_state
-            ),
-            visible_blocks AS (
-                SELECT DISTINCT ON (hb.block_num)
-                    hb.block_id, hb.block_num AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hb.block_num <= c.current_block_num
-                  AND (
-                      (hb.block_num <= c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
-                      OR
-                      (hb.block_num > c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
-                  )
-                ORDER BY hb.block_num, hb.block_id DESC
-            )
             SELECT
-                vb.num AS block_num,
+                b.num AS block_num,
                 hao.account_id, hao.transacting_account_id, hao.account_op_seq_no,
                 hao.operation_id,
                 hao.op_type_id
-            FROM visible_blocks vb
-            JOIN hafd.account_operations hao ON hao.block_id = vb.block_id
+            FROM hafd.account_operations hao
+            JOIN %s.blocks_view_internal b ON b.block_id = hao.block_id
             ;', __schema, __schema
         );
     ELSE
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.account_operations_view AS
-            WITH hs_data AS MATERIALIZED (
-                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-                FROM hafd.hive_state
-            ),
-            visible_blocks AS (
-                SELECT DISTINCT ON (hb.block_num)
-                    hb.block_id, hb.block_num AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hb.block_num <= c.min_block
-                  AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-                ORDER BY hb.block_num, hb.block_id DESC
-            )
             SELECT
-                vb.num AS block_num,
+                b.num AS block_num,
                 hao.account_id, hao.transacting_account_id, hao.account_op_seq_no,
                 hao.operation_id,
                 hao.op_type_id
-            FROM visible_blocks vb
-            JOIN hafd.account_operations hao ON hao.block_id = vb.block_id
+            FROM hafd.account_operations hao
+            JOIN %s.blocks_view_internal b ON b.block_id = hao.block_id
             ;', __schema, __schema
         );
     END IF;
@@ -1011,25 +803,13 @@ BEGIN
 
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.account_operations_view AS
-        WITH hs_data AS MATERIALIZED (
-            SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-            FROM hafd.hive_state
-        ),
-        visible_blocks AS (
-            SELECT DISTINCT ON (hb.block_num)
-                hb.block_id, hb.block_num AS num
-            FROM hafd.blocks hb, %s.context_data_view c, hs_data
-            WHERE hb.block_num <= c.irreversible_block
-              AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-            ORDER BY hb.block_num, hb.block_id DESC
-        )
         SELECT
-            vb.num AS block_num,
+            b.num AS block_num,
             hao.account_id, hao.transacting_account_id, hao.account_op_seq_no,
             hao.operation_id,
             hao.op_type_id
-        FROM visible_blocks vb
-        JOIN hafd.account_operations hao ON hao.block_id = vb.block_id
+        FROM hafd.account_operations hao
+        JOIN %s.blocks_view_internal b ON b.block_id = hao.block_id
         ;', __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'account_operations_view');
@@ -1056,7 +836,7 @@ $BODY$
 
 -- =============================================================================
 -- applied_hardforks_view - Uses block_id from applied_hardforks table
--- CTE-gated: embeds blocks lookup with DISTINCT ON dedup directly
+-- JOINs blocks_view_internal which already handles canonical block selection
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION hive.create_applied_hardforks_view( _context_name TEXT )
@@ -1076,47 +856,17 @@ BEGIN
     IF __is_forking THEN
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.applied_hardforks_view AS
-            WITH hs_data AS MATERIALIZED (
-                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-                FROM hafd.hive_state
-            ),
-            visible_blocks AS (
-                SELECT DISTINCT ON (hb.block_num)
-                    hb.block_id, hb.block_num AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hb.block_num <= c.current_block_num
-                  AND (
-                      (hb.block_num <= c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
-                      OR
-                      (hb.block_num > c.irreversible_block
-                       AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
-                  )
-                ORDER BY hb.block_num, hb.block_id DESC
-            )
-            SELECT hah.hardfork_num, vb.num AS block_num, hah.hardfork_vop_id
-            FROM visible_blocks vb
-            JOIN hafd.applied_hardforks hah ON hah.block_id = vb.block_id
+            SELECT hah.hardfork_num, b.num AS block_num, hah.hardfork_vop_id
+            FROM hafd.applied_hardforks hah
+            JOIN %s.blocks_view_internal b ON b.block_id = hah.block_id
             ;', __schema, __schema
         );
     ELSE
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.applied_hardforks_view AS
-            WITH hs_data AS MATERIALIZED (
-                SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-                FROM hafd.hive_state
-            ),
-            visible_blocks AS (
-                SELECT DISTINCT ON (hb.block_num)
-                    hb.block_id, hb.block_num AS num
-                FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hb.block_num <= c.min_block
-                  AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-                ORDER BY hb.block_num, hb.block_id DESC
-            )
-            SELECT hah.hardfork_num, vb.num AS block_num, hah.hardfork_vop_id
-            FROM visible_blocks vb
-            JOIN hafd.applied_hardforks hah ON hah.block_id = vb.block_id
+            SELECT hah.hardfork_num, b.num AS block_num, hah.hardfork_vop_id
+            FROM hafd.applied_hardforks hah
+            JOIN %s.blocks_view_internal b ON b.block_id = hah.block_id
             ;', __schema, __schema
         );
     END IF;
@@ -1140,21 +890,9 @@ BEGIN
 
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.applied_hardforks_view AS
-        WITH hs_data AS MATERIALIZED (
-            SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0::bigint) AS max_fork
-            FROM hafd.hive_state
-        ),
-        visible_blocks AS (
-            SELECT DISTINCT ON (hb.block_num)
-                hb.block_id, hb.block_num AS num
-            FROM hafd.blocks hb, %s.context_data_view c, hs_data
-            WHERE hb.block_num <= c.irreversible_block
-              AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-            ORDER BY hb.block_num, hb.block_id DESC
-        )
-        SELECT hah.hardfork_num, vb.num AS block_num, hah.hardfork_vop_id
-        FROM visible_blocks vb
-        JOIN hafd.applied_hardforks hah ON hah.block_id = vb.block_id
+        SELECT hah.hardfork_num, b.num AS block_num, hah.hardfork_vop_id
+        FROM hafd.applied_hardforks hah
+        JOIN %s.blocks_view_internal b ON b.block_id = hah.block_id
         ;', __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'applied_hardforks_view');
