@@ -14,39 +14,64 @@
 
 #include <cstring>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
 
-// Length-aware string copy into a palloc'd buffer.
-// Unlike pstrdup (which uses strlen and stops at \x00), this copies all
-// bytes from the std::string, preserving embedded null bytes faithfully.
-// HAF must never alter data delivered by hived.
-char* pstrdup_with_len(const char* data, int len)
+// Copy a string into a palloc'd buffer, truncating at the first NUL byte.
+//
+// pstrdup uses strlen internally, which naturally stops at the first \x00.
+// This produces valid JSONB because PostgreSQL rejects \u0000:
+//
+//   "The jsonb type also rejects \u0000 (because that cannot be
+//    represented in PostgreSQL's text type)"
+//       — PostgreSQL docs §8.14 "JSON Types"
+//
+// TRADEOFF / DATA FIDELITY WARNING:
+// Strings containing \x00 are truncated — the operation::jsonb cast is LOSSY.
+// The canonical, lossless representation is hafd.operation (bytea).
+// In practice only spam/attack transactions contain \x00 in string fields
+// (e.g. block 104 130 768, account "guest4test"), so legitimate data is
+// unaffected.  Every truncation is logged at DEBUG1.
+//
+// Precondition: data must be non-null (always holds for std::string::data()).
+//
+std::pair<char*, int> pstrdup_truncate_nul(const char* data, int len)
 {
-  char* copied = (char*)palloc(len + 1);
-  memcpy(copied, data, len);
-  copied[len] = '\0';
-  return copied;
+  // pstrdup uses strlen internally — stops at the first NUL byte.
+  // For std::string::data() the terminating NUL sits at data[len],
+  // so if no embedded NUL exists pstrdup copies all len bytes.
+  char* buf = pstrdup(data);
+  int copied = static_cast<int>(strlen(buf));
+
+  if (copied != len)
+  {
+    ereport(DEBUG1,
+      (errmsg("operation_to_jsonb: truncated string at NUL byte (copied %d of %d bytes)",
+              copied, len)));
+  }
+
+  return {buf, copied};
 }
 
 JsonbValue* push_key_to_jsonb(const std::string& key, JsonbParseState** parseState)
 {
-  const auto len = static_cast<int>(key.length());
+  auto [str, len] = pstrdup_truncate_nul(key.data(), static_cast<int>(key.length()));
   JsonbValue jb;
   jb.type = jbvString;
+  jb.val.string.val = str;
   jb.val.string.len = len;
-  jb.val.string.val = pstrdup_with_len(key.data(), len);
   return PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, WJB_KEY, &jb);
 }
 
 JsonbValue* push_string_to_jsonb(const std::string& value, JsonbIteratorToken token, JsonbParseState** parseState)
 {
-  const auto len = static_cast<int>(value.length());
+  auto [str, len] = pstrdup_truncate_nul(value.data(), static_cast<int>(value.length()));
   JsonbValue jb;
   jb.type = jbvString;
+  jb.val.string.val = str;
   jb.val.string.len = len;
-  jb.val.string.val = pstrdup_with_len(value.data(), len);
   return PsqlTools::PsqlUtils::cxx_call_pg(pushJsonbValue, parseState, token, &jb);
 }
 
