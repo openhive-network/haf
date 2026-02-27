@@ -114,14 +114,18 @@ BEGIN
     WHERE hc.name = _context_name;
 
     IF __is_forking THEN
-        -- Forking context: select canonical block per block_num using DISTINCT ON
+        -- Forking context: select canonical block per block_num
         -- Visibility rules:
         --   - Irreversible (block_num <= irreversible_block): from any fork <= consistent_block's fork_id
         --   - Reversible (block_num > irreversible_block): from any fork <= context's fork_id
         -- For each block_num, pick highest block_id among visible blocks
+        -- OPTIMIZATION: 3-level conflict check (same pattern as hive.blocks_view):
+        -- 1. block_conflicts empty → skip all dedup (replay/REINDEX fast path)
+        -- 2. This block_num not in block_conflicts → skip dedup for this block
+        -- 3. Block has conflicts → run expensive anti-join for canonical selection
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
-            SELECT DISTINCT ON (hb.block_num)
+            SELECT
                 hb.block_num AS num,
                 hb.block_id,
                 hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
@@ -139,7 +143,24 @@ BEGIN
                   (hb.block_num > c.irreversible_block
                    AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
               )
-            ORDER BY hb.block_num, hb.block_id DESC
+              AND (
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+                  OR
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hb.block_num)
+                  OR
+                  NOT EXISTS (
+                      SELECT 1 FROM hafd.blocks hb2
+                      WHERE hb2.block_num = hb.block_num
+                        AND hb2.block_id > hb.block_id
+                        AND (
+                            (hb2.block_num <= c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork)
+                            OR
+                            (hb2.block_num > c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
+                        )
+                  )
+              )
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
             SELECT num, hash, prev, created_at, producer_account_id,
@@ -151,12 +172,13 @@ BEGIN
             ', __schema, __schema, __schema, __schema
         );
     ELSE
-        -- Non-forking context: show blocks up to min_block using DISTINCT ON
+        -- Non-forking context: show blocks up to min_block
         -- Uses same fork visibility rule as forking contexts for irreversible:
         --   fork_id <= consistent_block's fork_id
+        -- OPTIMIZATION: 3-level conflict check for fast path when no conflicts
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
-            SELECT DISTINCT ON (hb.block_num)
+            SELECT
                 hb.block_num AS num,
                 hb.block_id,
                 hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
@@ -168,7 +190,18 @@ BEGIN
                  LATERAL (SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0) AS max_fork FROM hafd.hive_state LIMIT 1) hs
             WHERE hb.block_num <= c.min_block
               AND hafd.block_id_to_fork(hb.block_id) <= hs.max_fork
-            ORDER BY hb.block_num, hb.block_id DESC
+              AND (
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+                  OR
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hb.block_num)
+                  OR
+                  NOT EXISTS (
+                      SELECT 1 FROM hafd.blocks hb2
+                      WHERE hb2.block_num = hb.block_num
+                        AND hb2.block_id > hb.block_id
+                        AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork
+                  )
+              )
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
             SELECT num, hash, prev, created_at, producer_account_id,
@@ -200,11 +233,12 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    -- All irreversible: canonical block selection using DISTINCT ON
+    -- All irreversible: canonical block selection
     -- Uses fork visibility rule: fork_id <= consistent_block's fork_id
+    -- OPTIMIZATION: 3-level conflict check for fast path when no conflicts
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
-        SELECT DISTINCT ON (hb.block_num)
+        SELECT
             hb.block_num AS num,
             hb.block_id,
             hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
@@ -216,7 +250,18 @@ BEGIN
              LATERAL (SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0) AS max_fork FROM hafd.hive_state LIMIT 1) hs
         WHERE hb.block_num <= c.irreversible_block
           AND hafd.block_id_to_fork(hb.block_id) <= hs.max_fork
-        ORDER BY hb.block_num, hb.block_id DESC
+          AND (
+              NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+              OR
+              NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hb.block_num)
+              OR
+              NOT EXISTS (
+                  SELECT 1 FROM hafd.blocks hb2
+                  WHERE hb2.block_num = hb.block_num
+                    AND hb2.block_id > hb.block_id
+                    AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork
+              )
+          )
         ;
         CREATE OR REPLACE VIEW %s.blocks_view AS
         SELECT num, hash, prev, created_at, producer_account_id,
