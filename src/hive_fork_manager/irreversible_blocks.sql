@@ -39,16 +39,18 @@ CREATE TABLE IF NOT EXISTS hafd.blocks (
     current_hbd_supply hafd.hbd_amount,
     dhf_interval_ledger hafd.hbd_amount,
 
+    block_num INTEGER GENERATED ALWAYS AS (hafd.block_id_to_num(block_id)) STORED,
+
     CONSTRAINT pk_hive_blocks PRIMARY KEY( block_id )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.blocks', '');
 
--- Optimized expression index for blocks_view canonical block selection
--- Uses fork_id only (not full block_id) since block_num is already in first column
--- This reduces index size by ~33% compared to using full block_id (~8 bytes/row vs ~12 bytes/row)
+-- Physical block_num + block_id index for blocks_view canonical block selection
+-- Matches the DISTINCT ON (block_num) ORDER BY block_num, block_id DESC pattern
+-- exactly, enabling backward index scans without a separate sort step.
 CREATE INDEX IF NOT EXISTS hive_blocks_block_num_idx ON hafd.blocks (
-    hafd.block_id_to_num(block_id),
-    hafd.block_id_to_fork(block_id) DESC
+    block_num,
+    block_id DESC
 );
 
 CREATE INDEX IF NOT EXISTS hive_blocks_producer_account_id_idx ON hafd.blocks (producer_account_id);
@@ -59,7 +61,7 @@ CREATE INDEX IF NOT EXISTS hive_blocks_producer_account_id_idx ON hafd.blocks (p
 -- filter in blocks_view, avoiding heap access (~3.1 GB at 30M blocks)
 CREATE INDEX IF NOT EXISTS hive_blocks_created_at_idx ON hafd.blocks USING btree ( created_at ) INCLUDE ( block_id );
 
-CREATE STATISTICS IF NOT EXISTS blocks_block_num_stats ON (hafd.block_id_to_num(block_id)) FROM hafd.blocks;
+CREATE STATISTICS IF NOT EXISTS blocks_block_num_stats ON block_num FROM hafd.blocks;
 
 -- =============================================================================
 -- hafd.hive_state - System state tracking

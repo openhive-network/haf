@@ -38,7 +38,7 @@ Look for these patterns in `haf_admin_test_given()`:
 ```sql
 INSERT INTO hafd.operation_types VALUES ...
 INSERT INTO hafd.fork VALUES ...
-INSERT INTO hafd.blocks VALUES ...
+INSERT INTO hafd.blocks (block_id, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger) VALUES ...
 INSERT INTO hafd.accounts VALUES ...
 INSERT INTO hafd.transactions VALUES ...
 INSERT INTO hafd.operations VALUES ...
@@ -113,7 +113,7 @@ Replace each INSERT group with corresponding function:
 
 ```sql
 -- BEFORE
-INSERT INTO hafd.blocks VALUES (1, ...), (2, ...), (3, ...);
+INSERT INTO hafd.blocks (block_id, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger) VALUES (1, ...), (2, ...), (3, ...);
 
 -- AFTER
 PERFORM test.create_blocks(1, 3);
@@ -198,7 +198,7 @@ PERFORM test.create_accounts();
 ### Pattern 2: Complete Irreversible Blockchain
 ```sql
 -- BEFORE (40 lines)
-INSERT INTO hafd.blocks VALUES (1, ...), (2, ...), ...;
+INSERT INTO hafd.blocks (block_id, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger) VALUES (1, ...), (2, ...), ...;
 INSERT INTO hafd.transactions VALUES (1, ...), (2, ...), ...;
 INSERT INTO hafd.operations VALUES ...;
 -- etc.
@@ -251,8 +251,8 @@ PERFORM test.set_head_block_num(100);
 ```sql
 -- If test creates blocks 1, 2, 5, 10 (not sequential)
 PERFORM test.create_blocks(1, 2);
-INSERT INTO hafd.blocks VALUES (5, ...); -- Custom
-INSERT INTO hafd.blocks VALUES (10, ...); -- Custom
+INSERT INTO hafd.blocks (block_id, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger) VALUES (5, ...); -- Custom
+INSERT INTO hafd.blocks (block_id, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger) VALUES (10, ...); -- Custom
 ```
 
 ### Case 2: Different Producers per Block
@@ -339,7 +339,7 @@ BEGIN
     VALUES (2, 6, '2020-06-22 19:10:25-07'::timestamp),
            (3, 7, '2020-06-22 19:10:25-07'::timestamp);
 
-    INSERT INTO hafd.blocks VALUES
+    INSERT INTO hafd.blocks (block_id, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger) VALUES
         (1, '\xBADD10', ...),
         (2, '\xBADD20', ...),
         (3, '\xBADD30', ...),
@@ -389,7 +389,7 @@ $BODY$;
 CREATE OR REPLACE PROCEDURE haf_admin_test_given() AS $BODY$
 BEGIN
     INSERT INTO hafd.operation_types VALUES ...;
-    INSERT INTO hafd.blocks VALUES (1, ...);
+    INSERT INTO hafd.blocks (block_id, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger) VALUES (1, ...);
     INSERT INTO hafd.accounts VALUES (5, 'initminer', 1);
 
     PERFORM hive.end_massive_sync(1);

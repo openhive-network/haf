@@ -110,7 +110,7 @@ BEGIN
         prev_suffix := lpad(to_hex(block_num * 16), 2, '0');
         __block_id := hafd.make_block_id(block_num, 0);  -- fork_id=0 for irreversible
 
-        INSERT INTO hafd.blocks
+        INSERT INTO hafd.blocks (block_id, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger)
         VALUES (
             __block_id,
             decode('BADD' || hash_suffix, 'hex'),
@@ -154,7 +154,7 @@ BEGIN
         prev_suffix := lpad(to_hex(block_num * 16 + fork_id), 2, '0');
         __block_id := hafd.make_block_id(block_num, fork_id);
 
-        INSERT INTO hafd.blocks
+        INSERT INTO hafd.blocks (block_id, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger)
         VALUES (
             __block_id,
             decode('BADD' || hash_suffix, 'hex'),

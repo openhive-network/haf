@@ -27,7 +27,7 @@
 -- rows directly without canonical selection overhead.
 CREATE OR REPLACE VIEW hive.blocks_view AS
 SELECT
-    hafd.block_id_to_num(hb.block_id) AS num,
+    hb.block_num AS num,
     hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
     hb.transaction_merkle_root, hb.extensions, hb.witness_signature,
     hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
@@ -40,13 +40,13 @@ WHERE
     (
         NOT EXISTS (
             SELECT 1 FROM hafd.block_conflicts bc
-            WHERE bc.block_num = hafd.block_id_to_num(hb.block_id)
+            WHERE bc.block_num = hb.block_num
         )
         OR
         hb.block_id = (
             SELECT hb2.block_id
             FROM hafd.blocks hb2
-            WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+            WHERE hb2.block_num = hb.block_num
             ORDER BY hb2.block_id DESC
             LIMIT 1
         )
@@ -235,7 +235,7 @@ WHERE
         AND ha.block_id = (
             SELECT hb.block_id
             FROM hafd.blocks hb
-            WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(ha.block_id)
+            WHERE hb.block_num = hafd.block_id_to_num(ha.block_id)
             ORDER BY hb.block_id DESC
             LIMIT 1
         )
@@ -247,7 +247,7 @@ WHERE
               AND ha2.block_id = (
                   SELECT hb.block_id
                   FROM hafd.blocks hb
-                  WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(ha2.block_id)
+                  WHERE hb.block_num = hafd.block_id_to_num(ha2.block_id)
                   ORDER BY hb.block_id DESC
                   LIMIT 1
               )
@@ -277,7 +277,7 @@ OR (
     htm.block_id = (
         SELECT hb.block_id
         FROM hafd.blocks hb
-        WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(htm.block_id)
+        WHERE hb.block_num = hafd.block_id_to_num(htm.block_id)
         ORDER BY hb.block_id DESC
         LIMIT 1
     )
@@ -318,7 +318,7 @@ OR (
 
 CREATE OR REPLACE VIEW hive.irreversible_blocks_view AS
 SELECT
-    hafd.block_id_to_num(hb.block_id) AS num,
+    hb.block_num AS num,
     hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
     hb.transaction_merkle_root, hb.extensions, hb.witness_signature,
     hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
@@ -330,7 +330,7 @@ WHERE hb.block_id <= hs.consistent_block
   AND hb.block_id = (
       SELECT hb2.block_id
       FROM hafd.blocks hb2
-      WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+      WHERE hb2.block_num = hb.block_num
         AND hb2.block_id <= hs.consistent_block
       ORDER BY hb2.block_id DESC
       LIMIT 1
@@ -426,7 +426,7 @@ WHERE (
           AND ha2.block_id = (
               SELECT hb.block_id
               FROM hafd.blocks hb
-              WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(ha2.block_id)
+              WHERE hb.block_num = hafd.block_id_to_num(ha2.block_id)
                 AND hb.block_id <= hs.consistent_block
               ORDER BY hb.block_id DESC
               LIMIT 1
@@ -440,7 +440,7 @@ OR (
     AND ha.block_id = (
         SELECT hb.block_id
         FROM hafd.blocks hb
-        WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(ha.block_id)
+        WHERE hb.block_num = hafd.block_id_to_num(ha.block_id)
           AND hb.block_id <= hs.consistent_block
         ORDER BY hb.block_id DESC
         LIMIT 1
@@ -454,7 +454,7 @@ OR (
           AND ha2.block_id = (
               SELECT hb.block_id
               FROM hafd.blocks hb
-              WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(ha2.block_id)
+              WHERE hb.block_num = hafd.block_id_to_num(ha2.block_id)
                 AND hb.block_id <= hs.consistent_block
               ORDER BY hb.block_id DESC
               LIMIT 1
@@ -472,7 +472,7 @@ WHERE htm.block_id <= hs.consistent_block
   AND htm.block_id = (
       SELECT hb.block_id
       FROM hafd.blocks hb
-      WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(htm.block_id)
+      WHERE hb.block_num = hafd.block_id_to_num(htm.block_id)
         AND hb.block_id <= hs.consistent_block
       ORDER BY hb.block_id DESC
       LIMIT 1

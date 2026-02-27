@@ -125,7 +125,7 @@ BEGIN
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
             SELECT
-                hafd.block_id_to_num(hb.block_id) AS num,
+                hb.block_num AS num,
                 hb.block_id,
                 hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
                 hb.transaction_merkle_root, hb.extensions, hb.witness_signature,
@@ -134,23 +134,23 @@ BEGIN
                 hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
             FROM hafd.blocks hb, %s.context_data_view c,
                  LATERAL (SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0) AS max_fork FROM hafd.hive_state LIMIT 1) hs
-            WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
+            WHERE hb.block_num <= c.current_block_num
               AND (
-                  (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+                  (hb.block_num <= c.irreversible_block
                    AND hafd.block_id_to_fork(hb.block_id) <= hs.max_fork)
                   OR
-                  (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
+                  (hb.block_num > c.irreversible_block
                    AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
               )
               AND NOT EXISTS (
                   SELECT 1 FROM hafd.blocks hb2
-                  WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+                  WHERE hb2.block_num = hb.block_num
                     AND hb2.block_id > hb.block_id
                     AND (
-                        (hafd.block_id_to_num(hb2.block_id) <= c.irreversible_block
+                        (hb2.block_num <= c.irreversible_block
                          AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork)
                         OR
-                        (hafd.block_id_to_num(hb2.block_id) > c.irreversible_block
+                        (hb2.block_num > c.irreversible_block
                          AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
                     )
               )
@@ -171,7 +171,7 @@ BEGIN
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
             SELECT
-                hafd.block_id_to_num(hb.block_id) AS num,
+                hb.block_num AS num,
                 hb.block_id,
                 hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
                 hb.transaction_merkle_root, hb.extensions, hb.witness_signature,
@@ -180,11 +180,11 @@ BEGIN
                 hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
             FROM hafd.blocks hb, %s.context_data_view c,
                  LATERAL (SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0) AS max_fork FROM hafd.hive_state LIMIT 1) hs
-            WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
+            WHERE hb.block_num <= c.min_block
               AND hafd.block_id_to_fork(hb.block_id) <= hs.max_fork
               AND NOT EXISTS (
                   SELECT 1 FROM hafd.blocks hb2
-                  WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+                  WHERE hb2.block_num = hb.block_num
                     AND hb2.block_id > hb.block_id
                     AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork
               )
@@ -224,7 +224,7 @@ BEGIN
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
         SELECT
-            hafd.block_id_to_num(hb.block_id) AS num,
+            hb.block_num AS num,
             hb.block_id,
             hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
             hb.transaction_merkle_root, hb.extensions, hb.witness_signature,
@@ -233,11 +233,11 @@ BEGIN
             hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
         FROM hafd.blocks hb, %s.context_data_view c,
              LATERAL (SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0) AS max_fork FROM hafd.hive_state LIMIT 1) hs
-        WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+        WHERE hb.block_num <= c.irreversible_block
           AND hafd.block_id_to_fork(hb.block_id) <= hs.max_fork
           AND NOT EXISTS (
               SELECT 1 FROM hafd.blocks hb2
-              WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+              WHERE hb2.block_num = hb.block_num
                 AND hb2.block_id > hb.block_id
                 AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork
           )
@@ -302,18 +302,18 @@ BEGIN
                 FROM hafd.hive_state
             ),
             visible_blocks AS (
-                SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                    hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
+                SELECT DISTINCT ON (hb.block_num)
+                    hb.block_id, hb.block_num AS num
                 FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
+                WHERE hb.block_num <= c.current_block_num
                   AND (
-                      (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+                      (hb.block_num <= c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
                       OR
-                      (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
+                      (hb.block_num > c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
                   )
-                ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+                ORDER BY hb.block_num, hb.block_id DESC
             )
             SELECT vb.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
                    ht.ref_block_prefix, ht.expiration, ht.signature
@@ -329,12 +329,12 @@ BEGIN
                 FROM hafd.hive_state
             ),
             visible_blocks AS (
-                SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                    hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
+                SELECT DISTINCT ON (hb.block_num)
+                    hb.block_id, hb.block_num AS num
                 FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
+                WHERE hb.block_num <= c.min_block
                   AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-                ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+                ORDER BY hb.block_num, hb.block_id DESC
             )
             SELECT vb.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
                    ht.ref_block_prefix, ht.expiration, ht.signature
@@ -368,12 +368,12 @@ BEGIN
             FROM hafd.hive_state
         ),
         visible_blocks AS (
-            SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
+            SELECT DISTINCT ON (hb.block_num)
+                hb.block_id, hb.block_num AS num
             FROM hafd.blocks hb, %s.context_data_view c, hs_data
-            WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+            WHERE hb.block_num <= c.irreversible_block
               AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-            ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+            ORDER BY hb.block_num, hb.block_id DESC
         )
         SELECT vb.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
                ht.ref_block_prefix, ht.expiration, ht.signature
@@ -430,18 +430,18 @@ BEGIN
                 FROM hafd.hive_state
             ),
             visible_blocks AS (
-                SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                    hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
+                SELECT DISTINCT ON (hb.block_num)
+                    hb.block_id, hb.block_num AS num
                 FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
+                WHERE hb.block_num <= c.current_block_num
                   AND (
-                      (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+                      (hb.block_num <= c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
                       OR
-                      (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
+                      (hb.block_num > c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
                   )
-                ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+                ORDER BY hb.block_num, hb.block_id DESC
             )
             SELECT
                 ho.id,
@@ -463,12 +463,12 @@ BEGIN
                 FROM hafd.hive_state
             ),
             visible_blocks AS (
-                SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                    hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
+                SELECT DISTINCT ON (hb.block_num)
+                    hb.block_id, hb.block_num AS num
                 FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
+                WHERE hb.block_num <= c.min_block
                   AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-                ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+                ORDER BY hb.block_num, hb.block_id DESC
             )
             SELECT
                 ho.id,
@@ -510,18 +510,18 @@ BEGIN
                 FROM hafd.hive_state
             ),
             visible_blocks AS (
-                SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                    hb.block_id, hafd.block_id_to_num(hb.block_id) AS num, hb.created_at
+                SELECT DISTINCT ON (hb.block_num)
+                    hb.block_id, hb.block_num AS num, hb.created_at
                 FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
+                WHERE hb.block_num <= c.current_block_num
                   AND (
-                      (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+                      (hb.block_num <= c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
                       OR
-                      (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
+                      (hb.block_num > c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
                   )
-                ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+                ORDER BY hb.block_num, hb.block_id DESC
             )
             SELECT
                 ho.id,
@@ -544,12 +544,12 @@ BEGIN
                 FROM hafd.hive_state
             ),
             visible_blocks AS (
-                SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                    hb.block_id, hafd.block_id_to_num(hb.block_id) AS num, hb.created_at
+                SELECT DISTINCT ON (hb.block_num)
+                    hb.block_id, hb.block_num AS num, hb.created_at
                 FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
+                WHERE hb.block_num <= c.min_block
                   AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-                ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+                ORDER BY hb.block_num, hb.block_id DESC
             )
             SELECT
                 ho.id,
@@ -590,12 +590,12 @@ BEGIN
             FROM hafd.hive_state
         ),
         visible_blocks AS (
-            SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
+            SELECT DISTINCT ON (hb.block_num)
+                hb.block_id, hb.block_num AS num
             FROM hafd.blocks hb, %s.context_data_view c, hs_data
-            WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+            WHERE hb.block_num <= c.irreversible_block
               AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-            ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+            ORDER BY hb.block_num, hb.block_id DESC
         )
         SELECT
             ho.id,
@@ -634,12 +634,12 @@ BEGIN
             FROM hafd.hive_state
         ),
         visible_blocks AS (
-            SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                hb.block_id, hafd.block_id_to_num(hb.block_id) AS num, hb.created_at
+            SELECT DISTINCT ON (hb.block_num)
+                hb.block_id, hb.block_num AS num, hb.created_at
             FROM hafd.blocks hb, %s.context_data_view c, hs_data
-            WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+            WHERE hb.block_num <= c.irreversible_block
               AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-            ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+            ORDER BY hb.block_num, hb.block_id DESC
         )
         SELECT
             ho.id,
@@ -720,18 +720,18 @@ BEGIN
                 FROM hafd.hive_state
             ),
             visible_blocks AS (
-                SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
+                SELECT DISTINCT ON (hb.block_num)
                     hb.block_id
                 FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
+                WHERE hb.block_num <= c.current_block_num
                   AND (
-                      (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+                      (hb.block_num <= c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
                       OR
-                      (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
+                      (hb.block_num > c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
                   )
-                ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+                ORDER BY hb.block_num, hb.block_id DESC
             )
             SELECT htm.trx_hash, htm.signature
             FROM visible_blocks vb
@@ -746,12 +746,12 @@ BEGIN
                 FROM hafd.hive_state
             ),
             visible_blocks AS (
-                SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
+                SELECT DISTINCT ON (hb.block_num)
                     hb.block_id
                 FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
+                WHERE hb.block_num <= c.min_block
                   AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-                ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+                ORDER BY hb.block_num, hb.block_id DESC
             )
             SELECT htm.trx_hash, htm.signature
             FROM visible_blocks vb
@@ -784,12 +784,12 @@ BEGIN
             FROM hafd.hive_state
         ),
         visible_blocks AS (
-            SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
+            SELECT DISTINCT ON (hb.block_num)
                 hb.block_id
             FROM hafd.blocks hb, %s.context_data_view c, hs_data
-            WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+            WHERE hb.block_num <= c.irreversible_block
               AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-            ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+            ORDER BY hb.block_num, hb.block_id DESC
         )
         SELECT htm.trx_hash, htm.signature
         FROM visible_blocks vb
@@ -923,18 +923,18 @@ BEGIN
                 FROM hafd.hive_state
             ),
             visible_blocks AS (
-                SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                    hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
+                SELECT DISTINCT ON (hb.block_num)
+                    hb.block_id, hb.block_num AS num
                 FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
+                WHERE hb.block_num <= c.current_block_num
                   AND (
-                      (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+                      (hb.block_num <= c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
                       OR
-                      (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
+                      (hb.block_num > c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
                   )
-                ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+                ORDER BY hb.block_num, hb.block_id DESC
             )
             SELECT
                 vb.num AS block_num,
@@ -953,12 +953,12 @@ BEGIN
                 FROM hafd.hive_state
             ),
             visible_blocks AS (
-                SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                    hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
+                SELECT DISTINCT ON (hb.block_num)
+                    hb.block_id, hb.block_num AS num
                 FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
+                WHERE hb.block_num <= c.min_block
                   AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-                ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+                ORDER BY hb.block_num, hb.block_id DESC
             )
             SELECT
                 vb.num AS block_num,
@@ -995,12 +995,12 @@ BEGIN
             FROM hafd.hive_state
         ),
         visible_blocks AS (
-            SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
+            SELECT DISTINCT ON (hb.block_num)
+                hb.block_id, hb.block_num AS num
             FROM hafd.blocks hb, %s.context_data_view c, hs_data
-            WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+            WHERE hb.block_num <= c.irreversible_block
               AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-            ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+            ORDER BY hb.block_num, hb.block_id DESC
         )
         SELECT
             vb.num AS block_num,
@@ -1060,18 +1060,18 @@ BEGIN
                 FROM hafd.hive_state
             ),
             visible_blocks AS (
-                SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                    hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
+                SELECT DISTINCT ON (hb.block_num)
+                    hb.block_id, hb.block_num AS num
                 FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
+                WHERE hb.block_num <= c.current_block_num
                   AND (
-                      (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+                      (hb.block_num <= c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork)
                       OR
-                      (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
+                      (hb.block_num > c.irreversible_block
                        AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
                   )
-                ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+                ORDER BY hb.block_num, hb.block_id DESC
             )
             SELECT hah.hardfork_num, vb.num AS block_num, hah.hardfork_vop_id
             FROM visible_blocks vb
@@ -1086,12 +1086,12 @@ BEGIN
                 FROM hafd.hive_state
             ),
             visible_blocks AS (
-                SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                    hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
+                SELECT DISTINCT ON (hb.block_num)
+                    hb.block_id, hb.block_num AS num
                 FROM hafd.blocks hb, %s.context_data_view c, hs_data
-                WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
+                WHERE hb.block_num <= c.min_block
                   AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-                ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+                ORDER BY hb.block_num, hb.block_id DESC
             )
             SELECT hah.hardfork_num, vb.num AS block_num, hah.hardfork_vop_id
             FROM visible_blocks vb
@@ -1124,12 +1124,12 @@ BEGIN
             FROM hafd.hive_state
         ),
         visible_blocks AS (
-            SELECT DISTINCT ON (hafd.block_id_to_num(hb.block_id))
-                hb.block_id, hafd.block_id_to_num(hb.block_id) AS num
+            SELECT DISTINCT ON (hb.block_num)
+                hb.block_id, hb.block_num AS num
             FROM hafd.blocks hb, %s.context_data_view c, hs_data
-            WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+            WHERE hb.block_num <= c.irreversible_block
               AND hafd.block_id_to_fork(hb.block_id) <= hs_data.max_fork
-            ORDER BY hafd.block_id_to_num(hb.block_id), hb.block_id DESC
+            ORDER BY hb.block_num, hb.block_id DESC
         )
         SELECT hah.hardfork_num, vb.num AS block_num, hah.hardfork_vop_id
         FROM visible_blocks vb
