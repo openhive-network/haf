@@ -111,7 +111,7 @@ BEGIN
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
             SELECT
-                hafd.block_id_to_num(hb.block_id) AS num,
+                hb.block_num AS num,
                 hb.block_id,
                 hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
                 hb.transaction_merkle_root, hb.extensions, hb.witness_signature,
@@ -119,28 +119,28 @@ BEGIN
                 hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
                 hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
             FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
-            WHERE hafd.block_id_to_num(hb.block_id) <= c.current_block_num
+            WHERE hb.block_num <= c.current_block_num
               AND (
-                  (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+                  (hb.block_num <= c.irreversible_block
                    AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
                   OR
-                  (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
+                  (hb.block_num > c.irreversible_block
                    AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
               )
               AND (
                   NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
                   OR
-                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hafd.block_id_to_num(hb.block_id))
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hb.block_num)
                   OR
                   NOT EXISTS (
                       SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
-                      WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+                      WHERE hb2.block_num = hb.block_num
                         AND hb2.block_id > hb.block_id
                         AND (
-                            (hafd.block_id_to_num(hb2.block_id) <= c.irreversible_block
+                            (hb2.block_num <= c.irreversible_block
                              AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0))
                             OR
-                            (hafd.block_id_to_num(hb2.block_id) > c.irreversible_block
+                            (hb2.block_num > c.irreversible_block
                              AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
                         )
                   )
@@ -163,7 +163,7 @@ BEGIN
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
             SELECT
-                hafd.block_id_to_num(hb.block_id) AS num,
+                hb.block_num AS num,
                 hb.block_id,
                 hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
                 hb.transaction_merkle_root, hb.extensions, hb.witness_signature,
@@ -171,16 +171,16 @@ BEGIN
                 hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
                 hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
             FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
-            WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
+            WHERE hb.block_num <= c.min_block
               AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
               AND (
                   NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
                   OR
-                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hafd.block_id_to_num(hb.block_id))
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hb.block_num)
                   OR
                   NOT EXISTS (
                       SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
-                      WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+                      WHERE hb2.block_num = hb.block_num
                         AND hb2.block_id > hb.block_id
                         AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
                   )
@@ -222,7 +222,7 @@ BEGIN
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
         SELECT
-            hafd.block_id_to_num(hb.block_id) AS num,
+            hb.block_num AS num,
             hb.block_id,
             hb.hash, hb.prev, hb.created_at, hb.producer_account_id,
             hb.transaction_merkle_root, hb.extensions, hb.witness_signature,
@@ -230,16 +230,16 @@ BEGIN
             hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
             hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
         FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
-        WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+        WHERE hb.block_num <= c.irreversible_block
           AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
           AND (
               NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
               OR
-              NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hafd.block_id_to_num(hb.block_id))
+              NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hb.block_num)
               OR
               NOT EXISTS (
                   SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
-                  WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+                  WHERE hb2.block_num = hb.block_num
                     AND hb2.block_id > hb.block_id
                     AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
               )
