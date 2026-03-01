@@ -244,8 +244,14 @@ detect_changes:
       # Initialize defaults
       CAN_SKIP_BUILD=false
       CAN_SKIP_REPLAY=false
+      SQL_ONLY_CHANGE=false
       CACHE_COMMIT=""
       HAF_IMG=""
+
+      # Patterns for classifying changed files
+      # Note: Avoid \.txt$ as it matches CMakeLists.txt
+      SKIP_ALL_PATTERNS="^tests/|^docs/|\.md$|^README|^CHANGELOG|^LICENSE"
+      SQL_PATTERNS="\.sql$"
 
       # Handle manual QUICK_TEST mode
       if [[ "$QUICK_TEST" == "true" ]]; then
@@ -267,84 +273,18 @@ detect_changes:
         echo "Using HAF image: $HAF_IMG"
       else
         # Automatic detection mode
-        echo "=== Detecting Changed Files ==="
+        echo "=== Finding cached image ==="
 
-        # Get changed files based on pipeline type
-        if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
-          BASE_SHA="$CI_MERGE_REQUEST_DIFF_BASE_SHA"
-          echo "MR pipeline: comparing against target branch"
-        elif [[ "${CI_PIPELINE_SOURCE:-}" == "push" ]]; then
-          BASE_SHA="HEAD~1"
-          echo "Push pipeline: comparing against previous commit"
-        else
-          BASE_SHA=$(git merge-base HEAD origin/develop 2>/dev/null || echo "HEAD~1")
-          echo "Other pipeline: comparing against develop"
-        fi
-
-        echo "Comparing $BASE_SHA to HEAD"
-        CHANGED_FILES=$(git diff --name-only "$BASE_SHA" HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
-
-        echo "Changed files:"
-        echo "$CHANGED_FILES" | head -50
-
-        # Three levels of change detection:
-        # 1. Skip BUILD completely: only tests/docs changed (no SQL, no source)
-        # 2. SQL-only change: SQL changed but no C++ source - use thin overlay build
-        # 3. Full build: C++ source changed - requires full compilation
-
-        # Note: Avoid \.txt$ as it matches CMakeLists.txt
-        # Patterns for files that don't require any build
-        SKIP_ALL_PATTERNS="^tests/|^docs/|\.md$|^README|^CHANGELOG|^LICENSE"
-        # SQL files need thin overlay build but not full C++ compilation
-        SQL_PATTERNS="\.sql$"
-
-        # Check what files changed
-        NON_SKIP_FILES=$(echo "$CHANGED_FILES" | grep -vE "$SKIP_ALL_PATTERNS" || true)
-        SQL_CHANGED=$(echo "$NON_SKIP_FILES" | grep -E "$SQL_PATTERNS" || true)
-        NON_SQL_SOURCE=$(echo "$NON_SKIP_FILES" | grep -vE "$SQL_PATTERNS" || true)
-
-        # Detect hfm functional test changes - these are under tests/ (skipped by
-        # SKIP_ALL_PATTERNS) but must still trigger the hfm_functional_tests job
-        HFM_TEST_FILES=$(echo "$CHANGED_FILES" | grep -E "^tests/integration/functional/hive_fork_manager/" || true)
-        if [[ -n "$HFM_TEST_FILES" ]]; then
-          HFM_TESTS_CHANGED=true
-          echo ""
-          echo "=== HFM functional test files changed ==="
-          echo "$HFM_TEST_FILES" | head -10
-        else
-          HFM_TESTS_CHANGED=false
-        fi
-
-        # Determine build mode
-        SQL_ONLY_CHANGE=false
-        if [[ -z "$NON_SKIP_FILES" ]]; then
-          # Only tests/docs changed - can skip build entirely
-          CAN_SKIP_BUILD=true
-          CAN_SKIP_REPLAY=true
-          echo ""
-          echo "=== Can skip build entirely (only tests/docs changed) ==="
-        elif [[ -z "$NON_SQL_SOURCE" && -n "$SQL_CHANGED" ]]; then
-          # Only SQL files changed (plus maybe tests/docs) - use thin overlay
-          SQL_ONLY_CHANGE=true
-          echo ""
-          echo "=== SQL-only change detected - will use thin overlay build ==="
-          echo "SQL files changed:"
-          echo "$SQL_CHANGED" | head -10
-        else
-          echo ""
-          echo "=== Full build required (C++ source changed) ==="
-          echo "Source files requiring build:"
-          echo "$NON_SQL_SOURCE" | head -20
-        fi
-
-        # Find cached data/images when we can skip something
         # Docker login for image verification
         echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY" 2>/dev/null || true
 
+        # Step 1: Find the best cache — closest ancestor with valid Docker images.
         NFS_CACHE_PATH="/nfs/ci-cache/haf"
         if [[ -d "$NFS_CACHE_PATH" ]]; then
-          # Look through recent cache files to find one with valid Docker images
-          for TAR in $(ls -t "$NFS_CACHE_PATH"/*.tar 2>/dev/null | head -5); do
+          BEST_COMMIT=""
+          BEST_DISTANCE=999999
+
+          for TAR in $(ls -t "$NFS_CACHE_PATH"/*.tar 2>/dev/null | head -10); do
             TEST_COMMIT=$(basename "$TAR" .tar)
             CACHE_SHORT="${TEST_COMMIT:0:8}"
 
@@ -359,37 +299,108 @@ detect_changes:
               fi
             done
 
-            if [[ "$IMAGES_EXIST" == "true" ]]; then
-              # Verify cache commit is reachable from current branch to avoid schema mismatches
-              # This prevents using caches from feature branches with incompatible schema changes
-              if ! git merge-base --is-ancestor "$TEST_COMMIT" HEAD 2>/dev/null; then
-                echo "Cache $TEST_COMMIT not ancestor of HEAD - skipping (incompatible branch)"
-                continue
-              fi
-              CACHE_COMMIT="$TEST_COMMIT"
-              echo "Found cached data with valid images: $CACHE_COMMIT"
-              break
-            else
+            if [[ "$IMAGES_EXIST" != "true" ]]; then
               echo "Cache $TEST_COMMIT missing Docker images, trying next..."
+              continue
+            fi
+
+            # Verify cache commit is an ancestor of HEAD
+            if ! git merge-base --is-ancestor "$TEST_COMMIT" HEAD 2>/dev/null; then
+              echo "Cache $TEST_COMMIT not ancestor of HEAD - skipping (incompatible branch)"
+              continue
+            fi
+
+            # Pick the closest ancestor (fewest commits between cache and HEAD)
+            DISTANCE=$(git rev-list --count "$TEST_COMMIT"..HEAD 2>/dev/null || echo 999999)
+            echo "Cache candidate: $TEST_COMMIT (distance: $DISTANCE commits)"
+            if [[ "$DISTANCE" -lt "$BEST_DISTANCE" ]]; then
+              BEST_DISTANCE="$DISTANCE"
+              BEST_COMMIT="$TEST_COMMIT"
             fi
           done
+
+          if [[ -n "$BEST_COMMIT" ]]; then
+            CACHE_COMMIT="$BEST_COMMIT"
+            echo ""
+            echo "Selected cache: $CACHE_COMMIT ($BEST_DISTANCE commits behind HEAD)"
+          fi
         fi
 
-        # For complete skip, we need cached data with images
-        if [[ "$CAN_SKIP_BUILD" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
-          echo "WARNING: No cached data with valid images found - cannot skip build"
-          CAN_SKIP_BUILD=false
+        if [[ -z "$CACHE_COMMIT" ]]; then
+          echo "No valid cache found — full build required"
         fi
 
-        # For SQL-only change, we need a base image to overlay on
-        if [[ "$SQL_ONLY_CHANGE" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
-          echo "WARNING: No cached image found for thin overlay - falling back to full build"
-          SQL_ONLY_CHANGE=false
+        # Step 2: Detect hfm functional test changes (HEAD~1 is sufficient here —
+        # we just need to know if this commit touched test files).
+        CHANGED_FILES_HEAD=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || true)
+        HFM_TEST_FILES=$(echo "$CHANGED_FILES_HEAD" | grep -E "^tests/integration/functional/hive_fork_manager/" || true)
+        if [[ -n "$HFM_TEST_FILES" ]]; then
+          HFM_TESTS_CHANGED=true
+          echo ""
+          echo "=== HFM functional test files changed ==="
+          echo "$HFM_TEST_FILES" | head -10
+        else
+          HFM_TESTS_CHANGED=false
         fi
 
-        if [[ "$CAN_SKIP_REPLAY" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
-          echo "WARNING: No cached data found - cannot skip replay"
-          CAN_SKIP_REPLAY=false
+        # Step 3: Decide build type based on what changed between CACHE_COMMIT and HEAD.
+        # This is the key correctness fix: the build decision must consider ALL changes
+        # since the cached image was built, not just the latest commit.  A cache from
+        # 5 commits ago means 5 commits of changes to evaluate — if any of them added
+        # C++ code, we need a full build even if the current commit is SQL-only.
+        if [[ -n "$CACHE_COMMIT" ]]; then
+          # Ensure we have enough history to diff against the cache commit.
+          # Shallow clones may not include it — try to deepen if needed.
+          if ! git cat-file -e "$CACHE_COMMIT" 2>/dev/null; then
+            echo "Cache commit $CACHE_COMMIT not in shallow checkout, deepening..."
+            git fetch origin "$CACHE_COMMIT" --depth=1 2>/dev/null \
+              || git fetch --deepen=50 2>/dev/null \
+              || true
+          fi
+
+          if git cat-file -e "$CACHE_COMMIT" 2>/dev/null; then
+            CHANGED_SINCE_CACHE=$(git diff --name-only "$CACHE_COMMIT" HEAD 2>/dev/null || true)
+
+            if [[ -z "$CHANGED_SINCE_CACHE" ]]; then
+              # HEAD is the cache commit (or no diff) — skip everything
+              CAN_SKIP_BUILD=true
+              CAN_SKIP_REPLAY=true
+              echo ""
+              echo "=== No changes since cache — skipping build ==="
+            else
+              echo ""
+              echo "=== Changes since cache ($CACHE_COMMIT) ==="
+              echo "$CHANGED_SINCE_CACHE" | head -50
+
+              NON_SKIP_FILES=$(echo "$CHANGED_SINCE_CACHE" | grep -vE "$SKIP_ALL_PATTERNS" || true)
+              SQL_CHANGED=$(echo "$NON_SKIP_FILES" | grep -E "$SQL_PATTERNS" || true)
+              NON_SQL_SOURCE=$(echo "$NON_SKIP_FILES" | grep -vE "$SQL_PATTERNS" || true)
+
+              if [[ -z "$NON_SKIP_FILES" ]]; then
+                # Only tests/docs changed since the cache — image is still valid
+                CAN_SKIP_BUILD=true
+                CAN_SKIP_REPLAY=true
+                echo ""
+                echo "=== Only tests/docs changed since cache — skipping build ==="
+              elif [[ -z "$NON_SQL_SOURCE" && -n "$SQL_CHANGED" ]]; then
+                # Only SQL changed since the cache — thin overlay is safe
+                SQL_ONLY_CHANGE=true
+                echo ""
+                echo "=== SQL-only changes since cache — will use thin overlay build ==="
+                echo "SQL files changed:"
+                echo "$SQL_CHANGED" | head -10
+              else
+                # C++ or other source changed since cache — must do full build
+                echo ""
+                echo "=== Full build required (source changed since cache) ==="
+                echo "Source files requiring build:"
+                echo "$NON_SQL_SOURCE" | head -20
+              fi
+            fi
+          else
+            echo "WARNING: Cannot reach cache commit $CACHE_COMMIT even after deepening"
+            echo "Falling back to full build (cannot verify what changed)"
+          fi
         fi
       fi
 
@@ -399,20 +410,30 @@ detect_changes:
       echo "SQL_ONLY_CHANGE=$SQL_ONLY_CHANGE" >> detect_changes.env
       echo "HFM_TESTS_CHANGED=${HFM_TESTS_CHANGED:-false}" >> detect_changes.env
 
-      # Export HAF_COMMIT and cached image info when we can use cached data
-      if [[ "$CAN_SKIP_BUILD" == "true" || "$SQL_ONLY_CHANGE" == "true" ]]; then
+      # Export cache info and HAF_COMMIT
+      if [[ -n "$CACHE_COMMIT" ]]; then
         echo "AUTO_CACHE_COMMIT=$CACHE_COMMIT" >> detect_changes.env
-        # Use image tag based on cache commit (first 8 chars)
         CACHE_SHORT="${CACHE_COMMIT:0:8}"
         HAF_IMG="${QUICK_TEST_HAF_IMAGE:-registry.gitlab.syncad.com/hive/haf:$CACHE_SHORT}"
         echo "CACHED_BASE_IMAGE=$HAF_IMG" >> detect_changes.env
-        # HAF_COMMIT must point to cache commit for data cache paths (HAF_DATA_CACHE_LOCAL)
-        echo "HAF_COMMIT=$CACHE_COMMIT" >> detect_changes.env
+
+        if [[ "$CAN_SKIP_BUILD" == "true" ]]; then
+          echo "HAF_IMAGE_NAME=$HAF_IMG" >> detect_changes.env
+        fi
       fi
 
-      # For complete build skip, also export HAF_IMAGE_NAME (uses cached image directly)
-      if [[ "$CAN_SKIP_BUILD" == "true" ]]; then
-        echo "HAF_IMAGE_NAME=$HAF_IMG" >> detect_changes.env
+      # HAF_DATA_COMMIT controls the replay data cache key.  We use a
+      # separate variable because haf_image_build also exports HAF_COMMIT
+      # (pointing to the base image commit), which would clobber our value
+      # when prepare_haf_data loads both dotenvs.
+      #
+      # When replay can be skipped (only tests/docs changed), point it at
+      # the cache commit so prepare_haf_data finds existing data.  Otherwise,
+      # use HEAD so the cache lookup misses and a real replay runs.
+      if [[ "$CAN_SKIP_REPLAY" == "true" && -n "$CACHE_COMMIT" ]]; then
+        echo "HAF_DATA_COMMIT=$CACHE_COMMIT" >> detect_changes.env
+      else
+        echo "HAF_DATA_COMMIT=$CI_COMMIT_SHA" >> detect_changes.env
       fi
 
       echo ""
@@ -1493,6 +1514,17 @@ prepare_haf_data:
     HIVE_NETWORK_TYPE: mainnet
     BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
+  script:
+    # Override HAF_COMMIT at runtime with HAF_DATA_COMMIT from detect_changes.
+    # We can't do this in variables: because dotenvs aren't available at variable
+    # expansion time, and haf_image_build's dotenv clobbers HAF_COMMIT afterwards.
+    - |
+      if [[ -n "${HAF_DATA_COMMIT:-}" ]]; then
+        echo "Overriding HAF_COMMIT for replay cache: ${HAF_DATA_COMMIT}"
+        export HAF_COMMIT="$HAF_DATA_COMMIT"
+        export DATA_CACHE_DIR="${DATA_CACHE_HAF_PREFIX}_${HAF_COMMIT}"
+      fi
+    - !reference [.prepare_haf_data_5m, script]
   after_script:
     - echo "Cleanup complete"
   tags:
