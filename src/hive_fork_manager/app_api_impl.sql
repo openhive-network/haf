@@ -607,3 +607,388 @@ BEGIN
 END;
 $BODY$
 ;
+
+
+-- =============================================================================
+-- App-scoped index management API
+-- =============================================================================
+-- These functions allow HAF applications to manage their own registered indexes
+-- during massive sync (drop for fast bulk inserts, restore afterward).
+--
+-- Unlike the hived-only functions (hive.save_and_drop_indexes_constraints,
+-- hive.restore_indexes), these are:
+--   1. Scoped by context — apps can only touch indexes they registered
+--   2. SECURITY DEFINER — so app roles can write to hafd.indexes_constraints
+--   3. Selective — only drop/restore registered indexes, never PKs or
+--      unique constraints
+--
+-- Authorization: automatically granted to hive_applications_group via the
+-- existing blanket GRANT on hive schema functions (authorization.sql).
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- hive.app_register_index_dependency(context, command)
+--
+-- Register an application index with HAF's index lifecycle management.
+-- The index will be tracked in hafd.indexes_constraints, enabling the app
+-- to drop it during massive sync and restore it afterward.
+--
+-- Wrapper around hive.register_index_dependency that uses SECURITY DEFINER
+-- to allow app roles to write to hafd.indexes_constraints.
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION hive.app_register_index_dependency(
+    _context_name TEXT,
+    _create_index_command TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = hive, hafd, pg_catalog
+AS $$
+BEGIN
+    PERFORM hive.register_index_dependency(_context_name, _create_index_command);
+END;
+$$;
+
+-- -----------------------------------------------------------------------------
+-- hive.app_save_and_drop_indexes(context)
+--
+-- Drop all indexes registered by the given context.
+-- Only touches indexes where this context_id is in the contexts array
+-- and status is not already 'missing'. Never drops PKs or unique constraints.
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION hive.app_save_and_drop_indexes(
+    _context_name TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = hive, hafd, pg_catalog
+AS $$
+DECLARE
+    __context_id INT;
+    __r RECORD;
+    __start_time TIMESTAMP;
+    __duration INTERVAL;
+BEGIN
+    SELECT id INTO __context_id
+    FROM hafd.contexts
+    WHERE name = _context_name;
+
+    IF __context_id IS NULL THEN
+        RAISE EXCEPTION 'Context "%" not found in hafd.contexts', _context_name;
+    END IF;
+
+    FOR __r IN
+        SELECT index_constraint_name, table_name
+        FROM hafd.indexes_constraints
+        WHERE __context_id = ANY(contexts)
+          AND is_index = TRUE
+          AND is_foreign_key = FALSE
+          AND status != 'missing'
+    LOOP
+        __start_time := clock_timestamp();
+        EXECUTE format('DROP INDEX IF EXISTS %s', __r.index_constraint_name);
+        __duration := clock_timestamp() - __start_time;
+        UPDATE hafd.indexes_constraints
+        SET status = 'missing'
+        WHERE table_name = __r.table_name
+          AND index_constraint_name = __r.index_constraint_name;
+        RAISE NOTICE 'Dropped index % (%.3fs)', __r.index_constraint_name, EXTRACT(EPOCH FROM __duration);
+    END LOOP;
+END;
+$$;
+
+-- -----------------------------------------------------------------------------
+-- hive.app_restore_indexes(context)
+--
+-- Restore all indexes registered by the given context that have
+-- status = 'missing'. Runs the stored CREATE INDEX commands and updates
+-- status through 'creating' -> 'created'. Runs ANALYZE on affected tables.
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION hive.app_restore_indexes(
+    _context_name TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = hive, hafd, pg_catalog
+AS $$
+DECLARE
+    __context_id INT;
+    __r RECORD;
+    __start_time TIMESTAMP;
+    __duration INTERVAL;
+    __tables_to_analyze TEXT[];
+BEGIN
+    SELECT id INTO __context_id
+    FROM hafd.contexts
+    WHERE name = _context_name;
+
+    IF __context_id IS NULL THEN
+        RAISE EXCEPTION 'Context "%" not found in hafd.contexts', _context_name;
+    END IF;
+
+    __tables_to_analyze := ARRAY[]::TEXT[];
+
+    FOR __r IN
+        SELECT index_constraint_name, command, table_name
+        FROM hafd.indexes_constraints
+        WHERE __context_id = ANY(contexts)
+          AND is_index = TRUE
+          AND is_foreign_key = FALSE
+          AND status = 'missing'
+    LOOP
+        RAISE NOTICE 'Restoring index: %', __r.command;
+        UPDATE hafd.indexes_constraints
+        SET status = 'creating'
+        WHERE table_name = __r.table_name
+          AND index_constraint_name = __r.index_constraint_name;
+
+        __start_time := clock_timestamp();
+        EXECUTE __r.command;
+        __duration := clock_timestamp() - __start_time;
+
+        UPDATE hafd.indexes_constraints
+        SET status = 'created'
+        WHERE table_name = __r.table_name
+          AND index_constraint_name = __r.index_constraint_name;
+
+        RAISE NOTICE 'Index % created in %.3f seconds', __r.index_constraint_name, EXTRACT(EPOCH FROM __duration);
+
+        IF NOT __r.table_name = ANY(__tables_to_analyze) THEN
+            __tables_to_analyze := array_append(__tables_to_analyze, __r.table_name);
+        END IF;
+    END LOOP;
+
+    -- ANALYZE all affected tables
+    FOR __r IN SELECT unnest(__tables_to_analyze) AS tbl
+    LOOP
+        RAISE NOTICE 'Analyzing %', __r.tbl;
+        EXECUTE format('ANALYZE %s', __r.tbl);
+    END LOOP;
+END;
+$$;
+
+-- -----------------------------------------------------------------------------
+-- hive.app_restore_indexes(context, table_name)
+--
+-- Per-table variant for parallel restore. Restores only indexes for the
+-- given context that belong to the specified table. Table name must be
+-- schema-qualified (e.g., 'myapp.my_table').
+--
+-- Usage pattern for parallel restore:
+--   Thread 1: SELECT hive.app_restore_indexes('myapp', 'myapp.table_a');
+--   Thread 2: SELECT hive.app_restore_indexes('myapp', 'myapp.table_b');
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION hive.app_restore_indexes(
+    _context_name TEXT,
+    _table_name TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = hive, hafd, pg_catalog
+AS $$
+DECLARE
+    __context_id INT;
+    __r RECORD;
+    __start_time TIMESTAMP;
+    __duration INTERVAL;
+BEGIN
+    SELECT id INTO __context_id
+    FROM hafd.contexts
+    WHERE name = _context_name;
+
+    IF __context_id IS NULL THEN
+        RAISE EXCEPTION 'Context "%" not found in hafd.contexts', _context_name;
+    END IF;
+
+    FOR __r IN
+        SELECT index_constraint_name, command
+        FROM hafd.indexes_constraints
+        WHERE __context_id = ANY(contexts)
+          AND table_name = _table_name
+          AND is_index = TRUE
+          AND is_foreign_key = FALSE
+          AND status = 'missing'
+    LOOP
+        RAISE NOTICE 'Restoring index: %', __r.command;
+        UPDATE hafd.indexes_constraints
+        SET status = 'creating'
+        WHERE table_name = _table_name
+          AND index_constraint_name = __r.index_constraint_name;
+
+        __start_time := clock_timestamp();
+        EXECUTE __r.command;
+        __duration := clock_timestamp() - __start_time;
+
+        UPDATE hafd.indexes_constraints
+        SET status = 'created'
+        WHERE table_name = _table_name
+          AND index_constraint_name = __r.index_constraint_name;
+
+        RAISE NOTICE 'Index % created in %.3f seconds', __r.index_constraint_name, EXTRACT(EPOCH FROM __duration);
+    END LOOP;
+
+    EXECUTE format('ANALYZE %s', _table_name);
+END;
+$$;
+
+-- -----------------------------------------------------------------------------
+-- hive.app_save_and_drop_foreign_keys(context, schema, table)
+--
+-- Discover foreign keys on the given table, save them to
+-- hafd.indexes_constraints (scoped to the context), then drop them.
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION hive.app_save_and_drop_foreign_keys(
+    _context_name TEXT,
+    _table_schema TEXT,
+    _table_name TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = hive, hafd, pg_catalog
+AS $$
+DECLARE
+    __context_id INT;
+    __command TEXT;
+BEGIN
+    SELECT id INTO __context_id
+    FROM hafd.contexts
+    WHERE name = _context_name;
+
+    IF __context_id IS NULL THEN
+        RAISE EXCEPTION 'Context "%" not found in hafd.contexts', _context_name;
+    END IF;
+
+    -- Discover and save foreign keys
+    INSERT INTO hafd.indexes_constraints(
+        index_constraint_name, table_name, command,
+        is_constraint, is_index, is_foreign_key,
+        contexts, status
+    )
+    SELECT
+        DISTINCT ON (pgc.conname)
+        pgc.conname,
+        _table_schema || '.' || _table_name,
+        'ALTER TABLE ' || tc.table_schema || '.' || tc.table_name
+            || ' ADD CONSTRAINT ' || pgc.conname || ' '
+            || pg_get_constraintdef(pgc.oid),
+        FALSE,
+        FALSE,
+        TRUE,
+        ARRAY[__context_id],
+        'missing'
+    FROM pg_constraint pgc
+    JOIN pg_namespace nsp ON nsp.oid = pgc.connamespace
+    JOIN information_schema.table_constraints tc
+        ON pgc.conname = tc.constraint_name
+        AND nsp.nspname = tc.constraint_schema
+    WHERE tc.constraint_type = 'FOREIGN KEY'
+      AND tc.table_schema = _table_schema
+      AND tc.table_name = _table_name
+    ON CONFLICT (index_constraint_name, table_name) DO UPDATE
+    SET status = 'missing',
+        contexts = CASE
+            WHEN __context_id = ANY(hafd.indexes_constraints.contexts)
+            THEN hafd.indexes_constraints.contexts
+            ELSE array_append(hafd.indexes_constraints.contexts, __context_id)
+        END;
+
+    -- Drop the foreign keys
+    FOR __command IN
+        SELECT 'ALTER TABLE ' || _table_schema || '.' || _table_name
+               || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name
+        FROM hafd.indexes_constraints
+        WHERE table_name = _table_schema || '.' || _table_name
+          AND is_foreign_key = TRUE
+          AND __context_id = ANY(contexts)
+          AND status = 'missing'
+    LOOP
+        RAISE NOTICE 'Dropping FK: %', __command;
+        EXECUTE __command;
+    END LOOP;
+END;
+$$;
+
+-- -----------------------------------------------------------------------------
+-- hive.app_restore_foreign_keys(context, table_name)
+--
+-- Restore foreign keys for the given context and table.
+-- Table name must be schema-qualified (e.g., 'myapp.my_table').
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION hive.app_restore_foreign_keys(
+    _context_name TEXT,
+    _table_name TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = hive, hafd, pg_catalog
+AS $$
+DECLARE
+    __context_id INT;
+    __r RECORD;
+BEGIN
+    SELECT id INTO __context_id
+    FROM hafd.contexts
+    WHERE name = _context_name;
+
+    IF __context_id IS NULL THEN
+        RAISE EXCEPTION 'Context "%" not found in hafd.contexts', _context_name;
+    END IF;
+
+    FOR __r IN
+        SELECT index_constraint_name, command
+        FROM hafd.indexes_constraints
+        WHERE table_name = _table_name
+          AND is_foreign_key = TRUE
+          AND __context_id = ANY(contexts)
+          AND status = 'missing'
+    LOOP
+        RAISE NOTICE 'Restoring FK: %', __r.command;
+        EXECUTE __r.command;
+        UPDATE hafd.indexes_constraints
+        SET status = 'created'
+        WHERE table_name = _table_name
+          AND index_constraint_name = __r.index_constraint_name;
+    END LOOP;
+END;
+$$;
+
+-- -----------------------------------------------------------------------------
+-- hive.app_check_indexes_created(context)
+--
+-- Returns TRUE if all indexes registered by the given context have
+-- status = 'created'. Useful for health checks and sync validation.
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION hive.app_check_indexes_created(
+    _context_name TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = hive, hafd, pg_catalog
+AS $$
+DECLARE
+    __context_id INT;
+BEGIN
+    SELECT id INTO __context_id
+    FROM hafd.contexts
+    WHERE name = _context_name;
+
+    IF __context_id IS NULL THEN
+        RAISE EXCEPTION 'Context "%" not found in hafd.contexts', _context_name;
+    END IF;
+
+    RETURN NOT EXISTS (
+        SELECT 1
+        FROM hafd.indexes_constraints
+        WHERE __context_id = ANY(contexts)
+          AND is_foreign_key = FALSE
+          AND status != 'created'
+    );
+END;
+$$;
