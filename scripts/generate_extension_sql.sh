@@ -96,6 +96,7 @@ DEPLOY_SOURCES=(
     convert_blocks.sql
     get_legacy_style_operation.sql
     extract_set_witness_properties.sql
+    strip_json_null_escapes.sql
     trigger_switch/trigger_on.sql
     types/types.sql
     types/cast_functions.sql
