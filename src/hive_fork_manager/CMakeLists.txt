@@ -17,6 +17,7 @@ ADD_PSQL_EXTENSION(
              types/operation/operation_id.sql
              types/asset_unique_id.sql
              irreversible_blocks.sql
+             brin_optimization_indexes.sql
              reversible_blocks.sql
              state_provider.sql
              hived_connections.sql
