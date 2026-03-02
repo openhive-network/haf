@@ -215,8 +215,10 @@ BEGIN
     WHERE hc.name = _context_name;
 
     -- All irreversible: canonical block selection
-    -- Uses fork visibility rule: fork_id <= consistent_block's fork_id
-    -- OPTIMIZATION: 3-level conflict check (same pattern as hive.blocks_view)
+    -- Uses c.min_block (not c.irreversible_block) as upper bound because during
+    -- massive sync, irreversible_block is the chain head while min_block is the
+    -- current batch position. Scanning up to irreversible_block would scan the
+    -- entire blocks table instead of just the current batch slice.
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
         SELECT
@@ -228,7 +230,7 @@ BEGIN
             hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
             hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
         FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
-        WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+        WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
           AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
           AND NOT EXISTS (
               SELECT 1 FROM hafd.blocks hb2
@@ -358,13 +360,17 @@ BEGIN
     WHERE hc.name = _context_name;
 
     -- All irreversible: direct scan with inline fork visibility + PK-range dedup.
+    -- Uses c.min_block (not c.irreversible_block) as upper bound because during
+    -- massive sync, irreversible_block is the chain head while min_block is the
+    -- current batch position. Scanning up to irreversible_block would scan the
+    -- entire transactions table instead of just the current batch slice.
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.transactions_view AS
         SELECT hafd.block_id_to_num(ht.block_id) AS block_num,
                ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
                ht.ref_block_prefix, ht.expiration, ht.signature
         FROM hafd.transactions ht, %s.context_data_view c, hafd.hive_state hs
-        WHERE hafd.block_id_to_num(ht.block_id) <= c.irreversible_block
+        WHERE hafd.block_id_to_num(ht.block_id) <= c.min_block
           AND hafd.block_id_to_fork(ht.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
           AND NOT EXISTS (
               SELECT 1 FROM hafd.blocks hb2
@@ -549,6 +555,10 @@ BEGIN
     WHERE hc.name = _context_name;
 
     -- All irreversible: direct scan with inline fork visibility + PK-range dedup.
+    -- Uses c.min_block (not c.irreversible_block) as upper bound because during
+    -- massive sync, irreversible_block is the chain head while min_block is the
+    -- current batch position. Scanning up to irreversible_block would scan the
+    -- entire operations table instead of just the current batch slice.
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view AS
         SELECT
@@ -560,7 +570,7 @@ BEGIN
             ho.body_binary::jsonb AS body,
             ho.custom_json_type_id
         FROM hafd.operations ho, %s.context_data_view c, hafd.hive_state hs
-        WHERE hafd.operation_id_to_block_num(ho.id) <= c.irreversible_block
+        WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
           AND hafd.block_id_to_fork(ho.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
           AND NOT EXISTS (
               SELECT 1 FROM hafd.blocks hb2
