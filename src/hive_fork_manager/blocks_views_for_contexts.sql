@@ -157,9 +157,10 @@ BEGIN
         );
     ELSE
         -- Non-forking context: show blocks up to min_block
-        -- Uses same fork visibility rule as forking contexts for irreversible:
-        --   fork_id <= consistent_block's fork_id
-        -- OPTIMIZATION: 3-level conflict check (same pattern as hive.blocks_view)
+        -- OPTIMIZATION: For non-forking contexts, all visible blocks are irreversible
+        -- and have exactly one row per block_num (fork conflicts are resolved when
+        -- blocks become irreversible). No deduplication needed - direct filter suffices.
+        -- Scalar subquery on context_data_view helps planner treat min_block as constant.
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
             SELECT
@@ -170,21 +171,8 @@ BEGIN
                 hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
                 hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
                 hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-            FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
-            WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
-              AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
-              AND (
-                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
-                  OR
-                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hafd.block_id_to_num(hb.block_id))
-                  OR
-                  NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
-                      WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
-                        AND hb2.block_id > hb.block_id
-                        AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
-                  )
-              )
+            FROM hafd.blocks hb
+            WHERE hafd.block_id_to_num(hb.block_id) <= (SELECT c.min_block FROM %s.context_data_view c)
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
             SELECT num, hash, prev, created_at, producer_account_id,
@@ -216,9 +204,11 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    -- All irreversible: canonical block selection
-    -- Uses fork visibility rule: fork_id <= consistent_block's fork_id
-    -- OPTIMIZATION: 3-level conflict check (same pattern as hive.blocks_view)
+    -- All irreversible: show all irreversible blocks
+    -- OPTIMIZATION: All visible blocks are irreversible and have exactly one row
+    -- per block_num (fork conflicts are resolved when blocks become irreversible).
+    -- No deduplication needed - direct filter suffices.
+    -- Scalar subquery on context_data_view helps planner treat irreversible_block as constant.
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
         SELECT
@@ -229,21 +219,8 @@ BEGIN
             hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
             hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
             hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-        FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
-        WHERE hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-          AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
-          AND (
-              NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
-              OR
-              NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hafd.block_id_to_num(hb.block_id))
-              OR
-              NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
-                  WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
-                    AND hb2.block_id > hb.block_id
-                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
-              )
-          )
+        FROM hafd.blocks hb
+        WHERE hafd.block_id_to_num(hb.block_id) <= (SELECT c.irreversible_block FROM %s.context_data_view c)
         ;
         CREATE OR REPLACE VIEW %s.blocks_view AS
         SELECT num, hash, prev, created_at, producer_account_id,

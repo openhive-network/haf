@@ -237,6 +237,11 @@ CREATE INDEX IF NOT EXISTS hive_transactions_block_id_to_num_idx ON hafd.transac
     hafd.block_id_to_fork(block_id) DESC
 );
 
+-- BRIN index for efficient block_id range scans during batch joins
+-- Transactions are physically ordered by insertion (block_id correlates with heap position)
+-- pages_per_range=16 provides good selectivity for 10K-block batches while remaining compact
+CREATE INDEX IF NOT EXISTS hive_transactions_block_id_brin ON hafd.transactions USING BRIN (block_id) WITH (pages_per_range = 16);
+
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, op_type_id);
 
 -- Index for operations_view canonical selection: finds highest block_id per (block_num, pos_in_block)
@@ -245,6 +250,11 @@ CREATE INDEX IF NOT EXISTS hive_operations_id_block_id_idx ON hafd.operations (i
 
 -- Index for id-only lookups when PK is (block_id, id)
 CREATE INDEX IF NOT EXISTS hive_operations_id_idx ON hafd.operations (id);
+
+-- BRIN index for efficient block_id range scans during batch joins
+-- Operations are physically ordered by insertion (block_id correlates with heap position)
+-- pages_per_range=16 provides good selectivity for 10K-block batches while remaining compact
+CREATE INDEX IF NOT EXISTS hive_operations_block_id_brin ON hafd.operations USING BRIN (block_id) WITH (pages_per_range = 16);
 
 -- Clustering for get_account_history performance
 CLUSTER hafd.account_operations USING hive_account_operations_uq1;
