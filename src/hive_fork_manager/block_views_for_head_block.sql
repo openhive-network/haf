@@ -2,19 +2,31 @@
 -- Head Block Views for hive schema
 -- =============================================================================
 -- These views show all data including reversible blocks.
--- Canonical block selection: For each block_num, the row from the newest fork
--- (highest block_id) is canonical. Uses PK-range NOT EXISTS on pk_hive_blocks
--- for efficient deduplication:
---   NOT EXISTS (SELECT 1 FROM hafd.blocks hb2
---               WHERE hb2.block_id > row.block_id
---                 AND hb2.block_id < (((row.block_id >> 32) + 1) << 32))
--- This gives Nested Loop Anti Join with Index Only Scan instead of Hash Anti Join.
+-- Canonical block selection: For each grouping key, select the row with the
+-- highest block_id (newest fork version).
+--
+-- Pattern used: block_conflicts 3-level short-circuit optimization
+-- - Level 1: NOT EXISTS (block_conflicts) → pass all rows (no forks active)
+-- - Level 2: No conflict for this block_num → pass this row
+-- - Level 3: Full canonical selection (highest block_id for block_num)
+--
+-- This is critical for performance: when no forks exist (the common case,
+-- especially during massive sync), the empty block_conflicts table triggers
+-- an instant short-circuit without any per-row overhead.
+--
+-- NOTE: Context-level views in blocks_views_for_contexts.sql use PK-range
+-- NOT EXISTS instead, because they already have bounded ranges (via context
+-- bounds) and need efficient dedup when forks DO occur. The system-level
+-- views here are UNBOUNDED (scan all 104M+ blocks) so the block_conflicts
+-- short-circuit is essential to avoid full-table hash builds.
 -- =============================================================================
 
 -- =============================================================================
--- blocks_view - Canonical blocks via PK-range dedup
+-- blocks_view - Canonical blocks with conflict-based optimization
 -- =============================================================================
 -- For each block_num, returns the version with highest block_id.
+-- OPTIMIZATION: When block_conflicts is empty (normal operation), returns all
+-- rows directly without canonical selection overhead.
 CREATE OR REPLACE VIEW hive.blocks_view AS
 SELECT
     hafd.block_id_to_num(hb.block_id) AS num,
@@ -24,30 +36,61 @@ SELECT
     hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
     hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
 FROM hafd.blocks hb
-WHERE NOT EXISTS (
-    SELECT 1 FROM hafd.blocks hb2
-    WHERE hb2.block_id > hb.block_id
-      AND hb2.block_id < (((hb.block_id >> 32) + 1) << 32)
-);
+WHERE
+    NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+    OR
+    (
+        NOT EXISTS (
+            SELECT 1 FROM hafd.block_conflicts bc
+            WHERE bc.block_num = hafd.block_id_to_num(hb.block_id)
+        )
+        OR
+        hb.block_id = (
+            SELECT hb2.block_id
+            FROM hafd.blocks hb2
+            WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
+            ORDER BY hb2.block_id DESC
+            LIMIT 1
+        )
+    );
 
 -- =============================================================================
--- transactions_view - Canonical transactions via PK-range dedup
+-- transactions_view - Canonical transactions with conflict-based optimization
 -- =============================================================================
+-- For each (block_num, trx_in_block), returns the version with highest block_id.
+-- OPTIMIZATION: When block_conflicts is empty (normal operation), returns all
+-- rows directly without canonical selection overhead.
 CREATE OR REPLACE VIEW hive.transactions_view AS
 SELECT
     hafd.block_id_to_num(ht.block_id) AS block_num,
     ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
     ht.ref_block_prefix, ht.expiration, ht.signature
 FROM hafd.transactions ht
-WHERE NOT EXISTS (
-    SELECT 1 FROM hafd.blocks hb2
-    WHERE hb2.block_id > ht.block_id
-      AND hb2.block_id < (((ht.block_id >> 32) + 1) << 32)
-);
+WHERE
+    NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+    OR
+    (
+        NOT EXISTS (
+            SELECT 1 FROM hafd.block_conflicts bc
+            WHERE bc.block_num = hafd.block_id_to_num(ht.block_id)
+        )
+        OR
+        ht.block_id = (
+            SELECT ht2.block_id
+            FROM hafd.transactions ht2
+            WHERE hafd.block_id_to_num(ht2.block_id) = hafd.block_id_to_num(ht.block_id)
+              AND ht2.trx_in_block = ht.trx_in_block
+            ORDER BY ht2.block_id DESC
+            LIMIT 1
+        )
+    );
 
 -- =============================================================================
--- operations_view - Canonical operations via PK-range dedup
+-- operations_view - Canonical operations with conflict-based optimization
 -- =============================================================================
+-- For each (block_num, seq_in_block), returns the version with highest block_id.
+-- OPTIMIZATION: When block_conflicts is empty (normal operation), returns all
+-- rows directly without canonical selection overhead.
 CREATE OR REPLACE VIEW hive.operations_view AS
 SELECT
     ho.id,
@@ -59,11 +102,23 @@ SELECT
     ho.body_binary::jsonb AS body,
     ho.custom_json_type_id
 FROM hafd.operations ho
-WHERE NOT EXISTS (
-    SELECT 1 FROM hafd.blocks hb2
-    WHERE hb2.block_id > ho.block_id
-      AND hb2.block_id < (((ho.block_id >> 32) + 1) << 32)
-);
+WHERE
+    NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+    OR
+    (
+        NOT EXISTS (
+            SELECT 1 FROM hafd.block_conflicts bc
+            WHERE bc.block_num = hafd.operation_id_to_block_num(ho.id)
+        )
+        OR
+        ho.block_id = (
+            SELECT ho2.block_id
+            FROM hafd.operations ho2
+            WHERE ho2.id = ho.id
+            ORDER BY ho2.block_id DESC
+            LIMIT 1
+        )
+    );
 
 -- =============================================================================
 -- operations_view_extended - Canonical operations with timestamp
@@ -83,12 +138,14 @@ FROM hive.operations_view ov
 JOIN hive.blocks_view b ON b.num = ov.block_num;
 
 -- =============================================================================
--- account_operations_view - Canonical account operations via PK-range dedup
+-- account_operations_view - Account operations with stored operation_id
 -- =============================================================================
--- Two-level filtering:
--- 1. Block-level: row's block must be canonical (no newer fork for same block_num)
--- 2. Account-op level: among canonical rows, keep only highest block_id
---    per (account_id, account_op_seq_no)
+-- Uses stored operation_id to avoid JOIN with operations table.
+-- This is critical for get_account_history performance (enables LIMIT pushdown).
+-- OPTIMIZATION: When block_conflicts is empty, skips canonical selection entirely.
+-- NOTE: Two-level filtering:
+-- 1. Block-level: row's block must be canonical (highest block_id for block_num)
+-- 2. Account-op level: among canonical rows, keep only highest block_id per (account_id, account_op_seq_no)
 CREATE OR REPLACE VIEW hive.account_operations_view AS
 SELECT
     hafd.block_id_to_num(hao.block_id) AS block_num,
@@ -99,83 +156,137 @@ SELECT
     hao.op_type_id
 FROM hafd.account_operations hao
 WHERE
-    -- Block is canonical (no newer fork for same block_num)
-    NOT EXISTS (
-        SELECT 1 FROM hafd.blocks hb2
-        WHERE hb2.block_id > hao.block_id
-          AND hb2.block_id < (((hao.block_id >> 32) + 1) << 32)
-    )
-    -- No other canonical row for same (account_id, account_op_seq_no) with higher block_id
-    AND NOT EXISTS (
-        SELECT 1 FROM hafd.account_operations hao2
-        WHERE hao2.account_id = hao.account_id
-          AND hao2.account_op_seq_no = hao.account_op_seq_no
-          AND hao2.block_id > hao.block_id
-          AND NOT EXISTS (
-              SELECT 1 FROM hafd.blocks hb3
-              WHERE hb3.block_id > hao2.block_id
-                AND hb3.block_id < (((hao2.block_id >> 32) + 1) << 32)
-          )
+    -- Fast path: no conflicts exist, return all rows directly
+    NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+    OR (
+        -- Row passes if BOTH conditions are true:
+        -- 1. This row's block is canonical (highest block_id for its block_num)
+        -- 2. No other canonical row has higher block_id for same (account_id, account_op_seq_no)
+        (
+            -- Block has no conflict, or block is canonical
+            NOT EXISTS (
+                SELECT 1 FROM hafd.block_conflicts bc
+                WHERE bc.block_num = hafd.block_id_to_num(hao.block_id)
+            )
+            OR
+            hao.block_id = (
+                SELECT MAX(b.block_id)
+                FROM hafd.blocks b
+                WHERE hafd.block_id_to_num(b.block_id) = hafd.block_id_to_num(hao.block_id)
+            )
+        )
+        AND
+        -- No other row for same (account_id, account_op_seq_no) with higher block_id
+        -- where that row's block is also canonical
+        NOT EXISTS (
+            SELECT 1
+            FROM hafd.account_operations hao2
+            WHERE hao2.account_id = hao.account_id
+              AND hao2.account_op_seq_no = hao.account_op_seq_no
+              AND hao2.block_id > hao.block_id
+              -- And hao2's block is also canonical
+              AND (
+                  NOT EXISTS (
+                      SELECT 1 FROM hafd.block_conflicts bc
+                      WHERE bc.block_num = hafd.block_id_to_num(hao2.block_id)
+                  )
+                  OR
+                  hao2.block_id = (
+                      SELECT MAX(b.block_id)
+                      FROM hafd.blocks b
+                      WHERE hafd.block_id_to_num(b.block_id) = hafd.block_id_to_num(hao2.block_id)
+                  )
+              )
+        )
     );
 
 -- =============================================================================
--- accounts_view - Canonical accounts via PK-range dedup
+-- accounts_view - Accounts with conflict-based optimization
 -- =============================================================================
--- Shows accounts from canonical blocks or initial dump (NULL block_id).
+-- Shows accounts from canonical blocks or initial dump.
+-- OPTIMIZATION: When block_conflicts is empty (normal operation), returns all
+-- rows directly without canonical selection overhead.
 CREATE OR REPLACE VIEW hive.accounts_view AS
 SELECT ha.id, ha.name
 FROM hafd.accounts ha
 WHERE
+    -- Global fast path: if no conflicts exist at all
+    NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+    OR
     (
-        -- Block-based account from a canonical block, latest version
-        ha.block_id IS NOT NULL
-        AND NOT EXISTS (
-            SELECT 1 FROM hafd.blocks hb2
-            WHERE hb2.block_id > ha.block_id
-              AND hb2.block_id < (((ha.block_id >> 32) + 1) << 32)
-        )
+        -- Account from initial dump (NULL block_id)
+        ha.block_id IS NULL
         AND NOT EXISTS (
             SELECT 1 FROM hafd.accounts ha2
-            WHERE ha2.id = ha.id
-              AND ha2.block_id IS NOT NULL
-              AND ha2.block_id > ha.block_id
-              AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb3
-                  WHERE hb3.block_id > ha2.block_id
-                    AND hb3.block_id < (((ha2.block_id >> 32) + 1) << 32)
-              )
+            WHERE ha2.id = ha.id AND ha2.block_id IS NOT NULL
         )
     )
     OR
     (
-        -- Initial dump account (NULL block_id), only if no canonical block-based version exists
-        ha.block_id IS NULL
+        -- Account from non-conflicted block
+        ha.block_id IS NOT NULL
         AND NOT EXISTS (
-            SELECT 1 FROM hafd.accounts ha2
+            SELECT 1 FROM hafd.block_conflicts bc
+            WHERE bc.block_num = hafd.block_id_to_num(ha.block_id)
+        )
+    )
+    OR
+    (
+        -- Slow path: conflict exists, use full canonical selection
+        ha.block_id IS NOT NULL
+        AND ha.block_id = (
+            SELECT hb.block_id
+            FROM hafd.blocks hb
+            WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(ha.block_id)
+            ORDER BY hb.block_id DESC
+            LIMIT 1
+        )
+        AND ha.block_id = (
+            SELECT ha2.block_id
+            FROM hafd.accounts ha2
             WHERE ha2.id = ha.id
               AND ha2.block_id IS NOT NULL
-              AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2
-                  WHERE hb2.block_id > ha2.block_id
-                    AND hb2.block_id < (((ha2.block_id >> 32) + 1) << 32)
+              AND ha2.block_id = (
+                  SELECT hb.block_id
+                  FROM hafd.blocks hb
+                  WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(ha2.block_id)
+                  ORDER BY hb.block_id DESC
+                  LIMIT 1
               )
+            ORDER BY ha2.block_id DESC
+            LIMIT 1
         )
     );
 
 -- =============================================================================
--- transactions_multisig_view - Canonical multisig signatures via PK-range dedup
+-- transactions_multisig_view - Multisig signatures with conflict-based optimization
 -- =============================================================================
+-- Shows multisig signatures only from canonical blocks.
+-- OPTIMIZATION: Uses block_conflicts table to skip canonical selection for
+-- non-conflicted blocks.
 CREATE OR REPLACE VIEW hive.transactions_multisig_view AS
 SELECT htm.trx_hash, htm.signature
 FROM hafd.transactions_multisig htm
-WHERE NOT EXISTS (
-    SELECT 1 FROM hafd.blocks hb2
-    WHERE hb2.block_id > htm.block_id
-      AND hb2.block_id < (((htm.block_id >> 32) + 1) << 32)
+WHERE (
+    -- Fast path: no conflict for this block_num
+    NOT EXISTS (
+        SELECT 1 FROM hafd.block_conflicts bc
+        WHERE bc.block_num = hafd.block_id_to_num(htm.block_id)
+    )
+)
+OR (
+    -- Slow path: conflict exists, use canonical selection
+    htm.block_id = (
+        SELECT hb.block_id
+        FROM hafd.blocks hb
+        WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(htm.block_id)
+        ORDER BY hb.block_id DESC
+        LIMIT 1
+    )
 );
 
 -- =============================================================================
--- applied_hardforks_view - Canonical hardforks via PK-range dedup
+-- applied_hardforks_view - Canonical hardforks with conflict-based optimization
 -- =============================================================================
 CREATE OR REPLACE VIEW hive.applied_hardforks_view AS
 SELECT
@@ -183,17 +294,30 @@ SELECT
     hafd.block_id_to_num(hah.block_id) AS block_num,
     hah.hardfork_vop_id
 FROM hafd.applied_hardforks hah
-WHERE NOT EXISTS (
-    SELECT 1 FROM hafd.blocks hb2
-    WHERE hb2.block_id > hah.block_id
-      AND hb2.block_id < (((hah.block_id >> 32) + 1) << 32)
+WHERE (
+    -- Fast path: no conflict for this block_num
+    NOT EXISTS (
+        SELECT 1 FROM hafd.block_conflicts bc
+        WHERE bc.block_num = hafd.block_id_to_num(hah.block_id)
+    )
+)
+OR (
+    -- Slow path: conflict exists, use canonical selection
+    hah.block_id = (
+        SELECT hah2.block_id
+        FROM hafd.applied_hardforks hah2
+        WHERE hah2.hardfork_num = hah.hardfork_num
+        ORDER BY hah2.block_id DESC
+        LIMIT 1
+    )
 );
 
 -- =============================================================================
 -- Irreversible views - Only show data from irreversible blocks
 -- =============================================================================
 -- These views filter to blocks at or below consistent_block (irreversible).
--- Uses PK-range NOT EXISTS restricted to the irreversible range.
+-- Uses ORDER BY block_id DESC LIMIT 1 to find canonical version within
+-- the irreversible range.
 
 CREATE OR REPLACE VIEW hive.irreversible_blocks_view AS
 SELECT
@@ -206,11 +330,13 @@ SELECT
 FROM hafd.blocks hb
 CROSS JOIN hafd.hive_state hs
 WHERE hb.block_id <= hs.consistent_block
-  AND NOT EXISTS (
-      SELECT 1 FROM hafd.blocks hb2
-      WHERE hb2.block_id > hb.block_id
-        AND hb2.block_id < (((hb.block_id >> 32) + 1) << 32)
+  AND hb.block_id = (
+      SELECT hb2.block_id
+      FROM hafd.blocks hb2
+      WHERE hafd.block_id_to_num(hb2.block_id) = hafd.block_id_to_num(hb.block_id)
         AND hb2.block_id <= hs.consistent_block
+      ORDER BY hb2.block_id DESC
+      LIMIT 1
   );
 
 CREATE OR REPLACE VIEW hive.irreversible_transactions_view AS
@@ -221,11 +347,14 @@ SELECT
 FROM hafd.transactions ht
 CROSS JOIN hafd.hive_state hs
 WHERE ht.block_id <= hs.consistent_block
-  AND NOT EXISTS (
-      SELECT 1 FROM hafd.blocks hb2
-      WHERE hb2.block_id > ht.block_id
-        AND hb2.block_id < (((ht.block_id >> 32) + 1) << 32)
-        AND hb2.block_id <= hs.consistent_block
+  AND ht.block_id = (
+      SELECT ht2.block_id
+      FROM hafd.transactions ht2
+      WHERE hafd.block_id_to_num(ht2.block_id) = hafd.block_id_to_num(ht.block_id)
+        AND ht2.trx_in_block = ht.trx_in_block
+        AND ht2.block_id <= hs.consistent_block
+      ORDER BY ht2.block_id DESC
+      LIMIT 1
   );
 
 CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
@@ -241,11 +370,13 @@ SELECT
 FROM hafd.operations ho
 CROSS JOIN hafd.hive_state hs
 WHERE ho.block_id <= hs.consistent_block
-  AND NOT EXISTS (
-      SELECT 1 FROM hafd.blocks hb2
-      WHERE hb2.block_id > ho.block_id
-        AND hb2.block_id < (((ho.block_id >> 32) + 1) << 32)
-        AND hb2.block_id <= hs.consistent_block
+  AND ho.block_id = (
+      SELECT ho2.block_id
+      FROM hafd.operations ho2
+      WHERE ho2.id = ho.id
+        AND ho2.block_id <= hs.consistent_block
+      ORDER BY ho2.block_id DESC
+      LIMIT 1
   );
 
 CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
@@ -273,85 +404,81 @@ SELECT
 FROM hafd.account_operations hao
 CROSS JOIN hafd.hive_state hs
 WHERE hao.block_id <= hs.consistent_block
-  -- Block is canonical within irreversible range
-  AND NOT EXISTS (
-      SELECT 1 FROM hafd.blocks hb2
-      WHERE hb2.block_id > hao.block_id
-        AND hb2.block_id < (((hao.block_id >> 32) + 1) << 32)
-        AND hb2.block_id <= hs.consistent_block
-  )
-  -- No other canonical row for same (account_id, account_op_seq_no) with higher block_id
-  AND NOT EXISTS (
-      SELECT 1 FROM hafd.account_operations hao2
-      WHERE hao2.account_id = hao.account_id
-        AND hao2.account_op_seq_no = hao.account_op_seq_no
-        AND hao2.block_id > hao.block_id
-        AND hao2.block_id <= hs.consistent_block
-        AND NOT EXISTS (
-            SELECT 1 FROM hafd.blocks hb3
-            WHERE hb3.block_id > hao2.block_id
-              AND hb3.block_id < (((hao2.block_id >> 32) + 1) << 32)
-              AND hb3.block_id <= hs.consistent_block
-        )
-  );
+  AND hao.block_id = (
+    SELECT hao2.block_id
+    FROM hafd.account_operations hao2
+    WHERE hao2.account_id = hao.account_id
+      AND hao2.account_op_seq_no = hao.account_op_seq_no
+      AND hao2.block_id <= hs.consistent_block
+    ORDER BY hao2.block_id DESC
+    LIMIT 1
+);
 
 CREATE OR REPLACE VIEW hive.irreversible_accounts_view AS
 SELECT ha.id, ha.name
 FROM hafd.accounts ha
 CROSS JOIN hafd.hive_state hs
-WHERE
-    (
-        -- Block-based account from a canonical irreversible block, latest version
-        ha.block_id IS NOT NULL
-        AND ha.block_id <= hs.consistent_block
-        AND NOT EXISTS (
-            SELECT 1 FROM hafd.blocks hb2
-            WHERE hb2.block_id > ha.block_id
-              AND hb2.block_id < (((ha.block_id >> 32) + 1) << 32)
-              AND hb2.block_id <= hs.consistent_block
-        )
-        AND NOT EXISTS (
-            SELECT 1 FROM hafd.accounts ha2
-            WHERE ha2.id = ha.id
-              AND ha2.block_id IS NOT NULL
-              AND ha2.block_id > ha.block_id
-              AND ha2.block_id <= hs.consistent_block
-              AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb3
-                  WHERE hb3.block_id > ha2.block_id
-                    AND hb3.block_id < (((ha2.block_id >> 32) + 1) << 32)
-                    AND hb3.block_id <= hs.consistent_block
-              )
-        )
+WHERE (
+    -- Account is from initial dump AND no version from irreversible canonical blocks exists
+    ha.block_id IS NULL
+    AND NOT EXISTS (
+        SELECT 1 FROM hafd.accounts ha2
+        WHERE ha2.id = ha.id
+          AND ha2.block_id IS NOT NULL
+          AND ha2.block_id <= hs.consistent_block
+          AND ha2.block_id = (
+              SELECT hb.block_id
+              FROM hafd.blocks hb
+              WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(ha2.block_id)
+                AND hb.block_id <= hs.consistent_block
+              ORDER BY hb.block_id DESC
+              LIMIT 1
+          )
     )
-    OR
-    (
-        -- Initial dump account (NULL block_id), only if no canonical irreversible version exists
-        ha.block_id IS NULL
-        AND NOT EXISTS (
-            SELECT 1 FROM hafd.accounts ha2
-            WHERE ha2.id = ha.id
-              AND ha2.block_id IS NOT NULL
-              AND ha2.block_id <= hs.consistent_block
-              AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2
-                  WHERE hb2.block_id > ha2.block_id
-                    AND hb2.block_id < (((ha2.block_id >> 32) + 1) << 32)
-                    AND hb2.block_id <= hs.consistent_block
-              )
-        )
-    );
+)
+OR (
+    -- Account is from an irreversible canonical block AND is the latest version
+    ha.block_id IS NOT NULL
+    AND ha.block_id <= hs.consistent_block
+    AND ha.block_id = (
+        SELECT hb.block_id
+        FROM hafd.blocks hb
+        WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(ha.block_id)
+          AND hb.block_id <= hs.consistent_block
+        ORDER BY hb.block_id DESC
+        LIMIT 1
+    )
+    AND ha.block_id = (
+        SELECT ha2.block_id
+        FROM hafd.accounts ha2
+        WHERE ha2.id = ha.id
+          AND ha2.block_id IS NOT NULL
+          AND ha2.block_id <= hs.consistent_block
+          AND ha2.block_id = (
+              SELECT hb.block_id
+              FROM hafd.blocks hb
+              WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(ha2.block_id)
+                AND hb.block_id <= hs.consistent_block
+              ORDER BY hb.block_id DESC
+              LIMIT 1
+          )
+        ORDER BY ha2.block_id DESC
+        LIMIT 1
+    )
+);
 
 CREATE OR REPLACE VIEW hive.irreversible_transactions_multisig_view AS
 SELECT htm.trx_hash, htm.signature
 FROM hafd.transactions_multisig htm
 CROSS JOIN hafd.hive_state hs
 WHERE htm.block_id <= hs.consistent_block
-  AND NOT EXISTS (
-      SELECT 1 FROM hafd.blocks hb2
-      WHERE hb2.block_id > htm.block_id
-        AND hb2.block_id < (((htm.block_id >> 32) + 1) << 32)
-        AND hb2.block_id <= hs.consistent_block
+  AND htm.block_id = (
+      SELECT hb.block_id
+      FROM hafd.blocks hb
+      WHERE hafd.block_id_to_num(hb.block_id) = hafd.block_id_to_num(htm.block_id)
+        AND hb.block_id <= hs.consistent_block
+      ORDER BY hb.block_id DESC
+      LIMIT 1
   );
 
 CREATE OR REPLACE VIEW hive.irreversible_applied_hardforks_view AS
@@ -362,9 +489,11 @@ SELECT
 FROM hafd.applied_hardforks hah
 CROSS JOIN hafd.hive_state hs
 WHERE hah.block_id <= hs.consistent_block
-  AND NOT EXISTS (
-      SELECT 1 FROM hafd.blocks hb2
-      WHERE hb2.block_id > hah.block_id
-        AND hb2.block_id < (((hah.block_id >> 32) + 1) << 32)
-        AND hb2.block_id <= hs.consistent_block
+  AND hah.block_id = (
+      SELECT hah2.block_id
+      FROM hafd.applied_hardforks hah2
+      WHERE hah2.hardfork_num = hah.hardfork_num
+        AND hah2.block_id <= hs.consistent_block
+      ORDER BY hah2.block_id DESC
+      LIMIT 1
   );
