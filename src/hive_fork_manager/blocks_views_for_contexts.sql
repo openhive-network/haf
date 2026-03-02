@@ -501,41 +501,26 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    IF __is_forking THEN
-        -- Forking context: filter by context block range
-        EXECUTE format(
-            'CREATE OR REPLACE VIEW %s.operations_view_extended AS
-            SELECT
-                ho.id,
-                b.num AS block_num,
-                ho.trx_in_block, ho.op_pos,
-                ho.op_type_id,
-                b.created_at AS timestamp,
-                ho.body_binary,
-                ho.body_binary::jsonb AS body,
-                ho.custom_json_type_id
-            FROM hafd.operations ho
-            JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
-            ;', __schema, __schema
-        );
-    ELSE
-        -- Non-forking context: filter by min_block
-        EXECUTE format(
-            'CREATE OR REPLACE VIEW %s.operations_view_extended AS
-            SELECT
-                ho.id,
-                b.num AS block_num,
-                ho.trx_in_block, ho.op_pos,
-                ho.op_type_id,
-                b.created_at AS timestamp,
-                ho.body_binary,
-                ho.body_binary::jsonb AS body,
-                ho.custom_json_type_id
-            FROM hafd.operations ho
-            JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
-            ;', __schema, __schema
-        );
-    END IF;
+    -- De-JOIN: use operations_view (which has its own functional-index-driven
+    -- scan) and join to blocks_view_internal on block_num for the timestamp.
+    -- The old approach (JOIN hafd.operations ON block_id) prevented PostgreSQL
+    -- from using the operations block_num functional index for range scans,
+    -- causing full table scans at the Steem bubble (445s -> 0.9s per batch).
+    EXECUTE format(
+        'CREATE OR REPLACE VIEW %s.operations_view_extended AS
+        SELECT
+            ov.id,
+            ov.block_num,
+            ov.trx_in_block, ov.op_pos,
+            ov.op_type_id,
+            b.created_at AS timestamp,
+            ov.body_binary,
+            ov.body,
+            ov.custom_json_type_id
+        FROM %s.operations_view ov
+        JOIN %s.blocks_view_internal b ON b.num = ov.block_num
+        ;', __schema, __schema, __schema
+    );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
 END;
 $BODY$
@@ -598,21 +583,21 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    -- All irreversible: show all operations with timestamps
+    -- All irreversible: de-JOIN same as forking/non-forking variant.
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view_extended AS
         SELECT
-            ho.id,
-            b.num AS block_num,
-            ho.trx_in_block, ho.op_pos,
-            ho.op_type_id,
+            ov.id,
+            ov.block_num,
+            ov.trx_in_block, ov.op_pos,
+            ov.op_type_id,
             b.created_at AS timestamp,
-            ho.body_binary,
-            ho.body_binary::jsonb AS body,
-            ho.custom_json_type_id
-        FROM hafd.operations ho
-        JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
-        ;', __schema, __schema
+            ov.body_binary,
+            ov.body,
+            ov.custom_json_type_id
+        FROM %s.operations_view ov
+        JOIN %s.blocks_view_internal b ON b.num = ov.block_num
+        ;', __schema, __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
 END;
