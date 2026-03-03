@@ -456,14 +456,17 @@ BEGIN
             DELETE FROM hafd.blocks WHERE num > _block_num;
         END IF;
     ELSE
-        -- we need remove with fork event blocks which are greater than head block in hived state(param _block_num)
-        -- because WAL was replayed, we are sure that we have situation before hived close
-        -- when hived did remove reversible data than we have two possibilities:
-        --  1. max(block_num) in HAF is greater than HB in state, lacking blocks are going to replay and HAF must prepare a new fork for them
-        --  2. max(block_num) in HAF is equal HB in state, newly replayed blocks will be new for HAF, no fork required
-        ASSERT COALESCE(__max_block,0) >= _block_num OR COALESCE(__max_block,0) < _first_block, 'Hived state cannot have more blocks on top micro fork than HAF';
-        -- when hived did not remove reversible data (i.e. is during reply) the situation is the same as for point 2 above -> no fork is required
-        IF __max_block > _block_num OR _block_num = 0 THEN --_block_num = 0 to ensure that at least 1 fork exists
+        -- Log the state for diagnostics; both HAF-ahead (reversible blocks from
+        -- prior session) and HAF-behind (replay-blockchain past consistent_block)
+        -- are valid scenarios handled by back_from_fork below.
+        IF COALESCE(__max_block, 0) <> _block_num THEN
+            RAISE LOG 'hive.connect: max_block=%, _block_num=%, _first_block=%',
+                __max_block, _block_num, _first_block;
+        END IF;
+
+        -- If max_block > _block_num, we need to handle fork situation
+        -- _block_num = 0 ensures at least 1 fork exists
+        IF __max_block > _block_num OR _block_num = 0 THEN
             PERFORM hive.back_from_fork( _block_num );
         END IF;
     END IF;

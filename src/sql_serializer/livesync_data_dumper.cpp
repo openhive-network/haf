@@ -198,10 +198,13 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     ilog("on_block_fail(${b}): processing=${p}, last_dumped=${l}",
          ("b", block_num)("p", processing_block)("l", _last_dumped_block));
     if ( processing_block != block_num && _last_dumped_block != block_num ) {
-      // the block failed before we started processing it, so we don't need to do anything
+      ilog("on_block_fail(${b}): block was not yet dumped to DB, no cleanup needed",
+           ("b", block_num));
       return;
     }
 
+    ilog("on_block_fail(${b}): triggering back_from_fork(${target}) to rewind dumped block",
+         ("b", block_num)("target", block_num - 1));
     _processing_thread.enqueue("SELECT hive.back_from_fork(" + std::to_string(block_num-1) + ")");
   }
 
