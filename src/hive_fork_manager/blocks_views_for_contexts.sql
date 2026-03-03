@@ -137,17 +137,20 @@ BEGIN
                   (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
                    AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
               )
-              AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2
-                  WHERE hb2.block_id > hb.block_id
-                    AND hb2.block_id < (((hb.block_id >> 32) + 1) << 32)
-                    AND (
-                        (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
-                         AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
-                        OR
-                        (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
-                         AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
-                    )
+              AND (
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+                  OR NOT EXISTS (
+                      SELECT 1 FROM hafd.blocks hb2
+                      WHERE hb2.block_id > hb.block_id
+                        AND hb2.block_id < (((hb.block_id >> 32) + 1) << 32)
+                        AND (
+                            (hafd.block_id_to_num(hb.block_id) <= c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
+                            OR
+                            (hafd.block_id_to_num(hb.block_id) > c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
+                        )
+                  )
               )
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
@@ -177,11 +180,14 @@ BEGIN
             FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
             WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
               AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
-              AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2
-                  WHERE hb2.block_id > hb.block_id
-                    AND hb2.block_id < (((hb.block_id >> 32) + 1) << 32)
-                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+              AND (
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+                  OR NOT EXISTS (
+                      SELECT 1 FROM hafd.blocks hb2
+                      WHERE hb2.block_id > hb.block_id
+                        AND hb2.block_id < (((hb.block_id >> 32) + 1) << 32)
+                        AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+                  )
               )
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
@@ -232,11 +238,14 @@ BEGIN
         FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
         WHERE hafd.block_id_to_num(hb.block_id) <= c.min_block
           AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
-          AND NOT EXISTS (
-              SELECT 1 FROM hafd.blocks hb2
-              WHERE hb2.block_id > hb.block_id
-                AND hb2.block_id < (((hb.block_id >> 32) + 1) << 32)
-                AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+          AND (
+              NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+              OR NOT EXISTS (
+                  SELECT 1 FROM hafd.blocks hb2
+                  WHERE hb2.block_id > hb.block_id
+                    AND hb2.block_id < (((hb.block_id >> 32) + 1) << 32)
+                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+              )
           )
         ;
         CREATE OR REPLACE VIEW %s.blocks_view AS
@@ -308,17 +317,20 @@ BEGIN
                   (hafd.block_id_to_num(ht.block_id) > c.irreversible_block
                    AND hafd.block_id_to_fork(ht.block_id) <= c.fork_id)
               )
-              AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2
-                  WHERE hb2.block_id > ht.block_id
-                    AND hb2.block_id < (((ht.block_id >> 32) + 1) << 32)
-                    AND (
-                        (hafd.block_id_to_num(ht.block_id) <= c.irreversible_block
-                         AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
-                        OR
-                        (hafd.block_id_to_num(ht.block_id) > c.irreversible_block
-                         AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
-                    )
+              AND (
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+                  OR NOT EXISTS (
+                      SELECT 1 FROM hafd.blocks hb2
+                      WHERE hb2.block_id > ht.block_id
+                        AND hb2.block_id < (((ht.block_id >> 32) + 1) << 32)
+                        AND (
+                            (hafd.block_id_to_num(ht.block_id) <= c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
+                            OR
+                            (hafd.block_id_to_num(ht.block_id) > c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
+                        )
+                  )
               )
             ;', __schema, __schema
         );
@@ -332,11 +344,14 @@ BEGIN
             FROM hafd.transactions ht, %s.context_data_view c, hafd.hive_state hs
             WHERE hafd.block_id_to_num(ht.block_id) <= c.min_block
               AND hafd.block_id_to_fork(ht.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
-              AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2
-                  WHERE hb2.block_id > ht.block_id
-                    AND hb2.block_id < (((ht.block_id >> 32) + 1) << 32)
-                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+              AND (
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+                  OR NOT EXISTS (
+                      SELECT 1 FROM hafd.blocks hb2
+                      WHERE hb2.block_id > ht.block_id
+                        AND hb2.block_id < (((ht.block_id >> 32) + 1) << 32)
+                        AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+                  )
               )
             ;', __schema, __schema
         );
@@ -372,11 +387,14 @@ BEGIN
         FROM hafd.transactions ht, %s.context_data_view c, hafd.hive_state hs
         WHERE hafd.block_id_to_num(ht.block_id) <= c.min_block
           AND hafd.block_id_to_fork(ht.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
-          AND NOT EXISTS (
-              SELECT 1 FROM hafd.blocks hb2
-              WHERE hb2.block_id > ht.block_id
-                AND hb2.block_id < (((ht.block_id >> 32) + 1) << 32)
-                AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+          AND (
+              NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+              OR NOT EXISTS (
+                  SELECT 1 FROM hafd.blocks hb2
+                  WHERE hb2.block_id > ht.block_id
+                    AND hb2.block_id < (((ht.block_id >> 32) + 1) << 32)
+                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+              )
           )
         ;', __schema, __schema
     );
@@ -444,17 +462,20 @@ BEGIN
                   (hafd.block_id_to_num(ho.block_id) > c.irreversible_block
                    AND hafd.block_id_to_fork(ho.block_id) <= c.fork_id)
               )
-              AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2
-                  WHERE hb2.block_id > ho.block_id
-                    AND hb2.block_id < (((ho.block_id >> 32) + 1) << 32)
-                    AND (
-                        (hafd.block_id_to_num(ho.block_id) <= c.irreversible_block
-                         AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
-                        OR
-                        (hafd.block_id_to_num(ho.block_id) > c.irreversible_block
-                         AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
-                    )
+              AND (
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+                  OR NOT EXISTS (
+                      SELECT 1 FROM hafd.blocks hb2
+                      WHERE hb2.block_id > ho.block_id
+                        AND hb2.block_id < (((ho.block_id >> 32) + 1) << 32)
+                        AND (
+                            (hafd.block_id_to_num(ho.block_id) <= c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
+                            OR
+                            (hafd.block_id_to_num(ho.block_id) > c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
+                        )
+                  )
               )
             ;', __schema, __schema
         );
@@ -473,11 +494,14 @@ BEGIN
             FROM hafd.operations ho, %s.context_data_view c, hafd.hive_state hs
             WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
               AND hafd.block_id_to_fork(ho.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
-              AND NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2
-                  WHERE hb2.block_id > ho.block_id
-                    AND hb2.block_id < (((ho.block_id >> 32) + 1) << 32)
-                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+              AND (
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+                  OR NOT EXISTS (
+                      SELECT 1 FROM hafd.blocks hb2
+                      WHERE hb2.block_id > ho.block_id
+                        AND hb2.block_id < (((ho.block_id >> 32) + 1) << 32)
+                        AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+                  )
               )
             ;', __schema, __schema
         );
@@ -557,11 +581,14 @@ BEGIN
         FROM hafd.operations ho, %s.context_data_view c, hafd.hive_state hs
         WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
           AND hafd.block_id_to_fork(ho.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
-          AND NOT EXISTS (
-              SELECT 1 FROM hafd.blocks hb2
-              WHERE hb2.block_id > ho.block_id
-                AND hb2.block_id < (((ho.block_id >> 32) + 1) << 32)
-                AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+          AND (
+              NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+              OR NOT EXISTS (
+                  SELECT 1 FROM hafd.blocks hb2
+                  WHERE hb2.block_id > ho.block_id
+                    AND hb2.block_id < (((ho.block_id >> 32) + 1) << 32)
+                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
+              )
           )
         ;', __schema, __schema
     );
