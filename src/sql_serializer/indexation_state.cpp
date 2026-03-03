@@ -531,6 +531,10 @@ void indexation_state::move_irreversible_blocks( cached_data_t& cached_data ) {
   force_trigger_flush_with_all_data( irreversible_cached_data, _irreversible_block_num );
 }
 
+void indexation_state::flush_all_cached_data( cached_data_t& cached_data, int last_block_num ) {
+  force_trigger_flush_with_all_data( cached_data, last_block_num );
+}
+
 void
 indexation_state::on_irreversible_block( uint32_t block_num ) {
   _irreversible_block_num = block_num;

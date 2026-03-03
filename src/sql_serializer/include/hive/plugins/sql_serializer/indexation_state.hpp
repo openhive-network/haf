@@ -86,6 +86,7 @@ namespace hive::plugins::sql_serializer {
     public:
 
       void move_irreversible_blocks( cached_data_t& cached_data );
+      void flush_all_cached_data( cached_data_t& cached_data, int last_block_num );
       bool is_pruning_enabled() const { return _psql_pruning_tail_size > 0; }
 
     private:

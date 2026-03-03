@@ -55,23 +55,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _account_writer->trigger( std::move( cached_data.accounts ), last_block_num );
     _account_operations_writer->trigger( std::move( cached_data.account_operations ), last_block_num );
     _applied_hardforks_writer->trigger( std::move( cached_data.applied_hardforks ), last_block_num );
-
-    if (app.is_interrupt_request())
-    {
-      cancel();
-    }
-  }
-
-  void reindex_data_dumper::cancel() {
-    cancel_processors(
-      *_block_writer,
-      *_transaction_writer,
-      *_operation_writer,
-      *_transaction_multisig_writer,
-      *_account_writer,
-      *_account_operations_writer,
-      *_applied_hardforks_writer
-    );
   }
 
   void reindex_data_dumper::join() {

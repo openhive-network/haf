@@ -347,7 +347,7 @@ public:
     ("ah", currently_caching_data->applied_hardforks.size())
     ("ts", currently_caching_data->total_size )
     );
-    _indexation_state.move_irreversible_blocks( *currently_caching_data );
+    _indexation_state.flush_all_cached_data( *currently_caching_data, _last_block_num );
 
     ilog("Serializer plugin is closing");
   }

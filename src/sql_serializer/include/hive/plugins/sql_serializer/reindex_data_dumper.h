@@ -33,7 +33,6 @@ namespace hive::plugins::sql_serializer {
 
     void trigger_data_flush( cached_data_t& cached_data, int last_block_num ) override;
   private:
-    void cancel();
     void join();
     void mark_irreversible_data_as_dirty( bool is_dirty );
 
