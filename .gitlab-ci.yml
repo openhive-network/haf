@@ -509,7 +509,7 @@ detect_changes:
       # Check for automatic skip mode (from detect_changes)
       elif [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
         SKIP_BUILD_ALLOWED=true
-        CACHED_COMMIT="${HAF_COMMIT}"
+        CACHED_COMMIT="${AUTO_CACHE_COMMIT}"
       # Check for SQL-only change mode (from detect_changes)
       elif [[ "${SQL_ONLY_CHANGE:-false}" == "true" ]]; then
         SQL_OVERLAY_BUILD=true
