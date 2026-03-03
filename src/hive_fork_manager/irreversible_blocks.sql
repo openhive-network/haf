@@ -246,6 +246,15 @@ CREATE INDEX IF NOT EXISTS hive_operations_id_block_id_idx ON hafd.operations (i
 -- Composite index to optimize sync for applications like HAFBE that filter by op_type_id
 CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_id_idx ON hafd.operations (op_type_id, id);
 
+-- Composite index for op_type + block range scans.
+-- Targets queries filtering by op_type_id and block_num range while preserving
+-- efficient ordered access by operation id.
+CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num_id_idx ON hafd.operations (
+    op_type_id,
+    hafd.operation_id_to_block_num(id),
+    id
+);
+
 -- Index for id-only lookups when PK is (block_id, id)
 CREATE INDEX IF NOT EXISTS hive_operations_id_idx ON hafd.operations (id);
 
@@ -260,6 +269,7 @@ CREATE INDEX IF NOT EXISTS hive_operations_block_id_brin ON hafd.operations USIN
 CLUSTER hafd.account_operations USING hive_account_operations_uq1;
 
 CREATE INDEX IF NOT EXISTS hive_accounts_name_idx ON hafd.accounts USING btree (name);
+CREATE INDEX IF NOT EXISTS hive_accounts_block_id_idx ON hafd.accounts (block_id) WHERE block_id IS NOT NULL;
 
 -- =============================================================================
 -- hafd.write_ahead_log_state - WAL tracking (unchanged)
