@@ -211,9 +211,10 @@ BEGIN
     WHERE hc.name = _context_name;
 
     -- All irreversible: fork visibility filter only, no NOT EXISTS dedup needed.
-    -- Uses c.irreversible_block as upper bound (not min_block) because after detach
-    -- current_block_num may be less than irreversible_block, and all irreversible
-    -- blocks should still be visible.
+    -- Uses min_block (= LEAST(irreversible_block, current_block_num)) when current_block_num > 0
+    -- to limit scans to the app's processing position (performant during massive sync).
+    -- Falls back to irreversible_block when current_block_num = 0 (uninitialized: state providers
+    -- or freshly created contexts that haven't processed via app_next_block yet).
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
         SELECT
@@ -225,7 +226,7 @@ BEGIN
             hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
             hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
         FROM hafd.blocks hb, hafd.hive_state hs
-        WHERE hafd.block_id_to_num(hb.block_id) <= (SELECT c.irreversible_block FROM %s.context_data_view c)
+        WHERE hafd.block_id_to_num(hb.block_id) <= (SELECT CASE WHEN c.current_block_num > 0 THEN c.min_block ELSE c.irreversible_block END FROM %s.context_data_view c)
           AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
         ;
         CREATE OR REPLACE VIEW %s.blocks_view AS
@@ -346,15 +347,14 @@ BEGIN
     WHERE hc.name = _context_name;
 
     -- All irreversible: fork visibility filter only, no NOT EXISTS dedup needed.
-    -- Uses c.irreversible_block (not min_block) because after detach
-    -- current_block_num may be less than irreversible_block.
+    -- Uses min_block when current_block_num > 0, else irreversible_block (see blocks view comment).
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.transactions_view AS
         SELECT hafd.block_id_to_num(ht.block_id) AS block_num,
                ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
                ht.ref_block_prefix, ht.expiration, ht.signature
         FROM hafd.transactions ht, hafd.hive_state hs
-        WHERE hafd.block_id_to_num(ht.block_id) <= (SELECT c.irreversible_block FROM %s.context_data_view c)
+        WHERE hafd.block_id_to_num(ht.block_id) <= (SELECT CASE WHEN c.current_block_num > 0 THEN c.min_block ELSE c.irreversible_block END FROM %s.context_data_view c)
           AND hafd.block_id_to_fork(ht.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
         ;', __schema, __schema
     );
@@ -515,8 +515,7 @@ BEGIN
     WHERE hc.name = _context_name;
 
     -- All irreversible: fork visibility filter only, no NOT EXISTS dedup needed.
-    -- Uses c.irreversible_block (not min_block) because after detach
-    -- current_block_num may be less than irreversible_block.
+    -- Uses min_block when current_block_num > 0, else irreversible_block (see blocks view comment).
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view AS
         SELECT
@@ -528,7 +527,7 @@ BEGIN
             ho.body_binary::jsonb AS body,
             ho.custom_json_type_id
         FROM hafd.operations ho, hafd.hive_state hs
-        WHERE hafd.operation_id_to_block_num(ho.id) <= (SELECT c.irreversible_block FROM %s.context_data_view c)
+        WHERE hafd.operation_id_to_block_num(ho.id) <= (SELECT CASE WHEN c.current_block_num > 0 THEN c.min_block ELSE c.irreversible_block END FROM %s.context_data_view c)
           AND hafd.block_id_to_fork(ho.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
         ;', __schema, __schema
     );
