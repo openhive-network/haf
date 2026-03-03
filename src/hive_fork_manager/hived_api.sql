@@ -610,11 +610,13 @@ BEGIN
             DELETE FROM hafd.blocks WHERE hafd.block_id_to_num(block_id) > _block_num;
         END IF;
     ELSE
-        -- After WAL replay, HAF should have at least as many blocks as hived's state reports.
-        -- If HAF has fewer blocks than hived, something is wrong (data loss).
-        -- Exception: when max_block < _first_block (pruned scenario) this is expected.
-        ASSERT COALESCE(__max_block, 0) >= _block_num OR COALESCE(__max_block, 0) < _first_block,
-            format('Hived state cannot have more blocks on top micro fork than HAF. max_block=%s, _block_num=%s', __max_block, _block_num);
+        -- Log the state for diagnostics; both HAF-ahead (reversible blocks from
+        -- prior session) and HAF-behind (replay-blockchain past consistent_block)
+        -- are valid scenarios handled by back_from_fork below.
+        IF COALESCE(__max_block, 0) <> _block_num THEN
+            RAISE LOG 'hive.connect: max_block=%, _block_num=%, _first_block=%',
+                __max_block, _block_num, _first_block;
+        END IF;
 
         -- If max_block > _block_num, we need to handle fork situation
         -- _block_num = 0 ensures at least 1 fork exists

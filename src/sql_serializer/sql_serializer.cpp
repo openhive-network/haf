@@ -38,6 +38,7 @@
 
 #include <boost/filesystem.hpp>
 
+#include <atomic>
 #include <condition_variable>
 #include <map>
 #include <sstream>
@@ -391,6 +392,7 @@ public:
   appbase::application& theApp;
 
   uint32_t _last_block_num = 0;
+  std::atomic<uint32_t> _consecutive_block_failures{0};
 
   uint32_t psql_block_number = 0;
   uint32_t psql_index_threshold = 0;
@@ -592,7 +594,22 @@ void sql_serializer_plugin_impl::connect_signals()
           [&](const block_notification& note) { on_post_apply_block(note);block_operation_handlers(note); }
           , main_plugin);
 
-  _on_block_failed = chain_db.add_fail_apply_block_handler( [&](const block_notification& note) { block_operation_handlers(note); currently_caching_data->revert_to_snapshot(); }, main_plugin );;
+  _on_block_failed = chain_db.add_fail_apply_block_handler(
+    [&](const block_notification& note) {
+      uint32_t failures = ++_consecutive_block_failures;
+      if( failures == 1 || failures == 10 || failures % 1000 == 0 )
+      {
+        elog( "sql_serializer: block ${b} failed during apply (${n} consecutive failure(s)). "
+              "Reverting cached data: blocks=${blk}, ops=${ops}, txs=${txs}.",
+              ("b", note.block_num)
+              ("n", failures)
+              ("blk", currently_caching_data->blocks.size() - currently_caching_data->stash.blocks)
+              ("ops", currently_caching_data->operations.size() - currently_caching_data->stash.operations)
+              ("txs", currently_caching_data->transactions.size() - currently_caching_data->stash.transactions) );
+      }
+      block_operation_handlers(note);
+      currently_caching_data->revert_to_snapshot();
+    }, main_plugin );
 }
 
 void sql_serializer_plugin_impl::disconnect_signals()
@@ -747,6 +764,7 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
   try
   {
     _last_block_num = note.block_num;
+    _consecutive_block_failures = 0;
     if(!can_collect_blocks())
       return;
     op_in_block_number = 0;
