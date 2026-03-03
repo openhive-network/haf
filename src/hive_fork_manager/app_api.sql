@@ -769,6 +769,12 @@ BEGIN
         RAISE EXCEPTION 'First block % is greater than %', _first_block, _last_block;
     END IF;
 
+    -- Advance current_block_num BEFORE state providers run, because they query
+    -- context views (accounts_view, operations_view) which are bounded by min_block.
+    UPDATE hafd.contexts
+    SET current_block_num = GREATEST(current_block_num, _last_block)
+    WHERE name = _context;
+
     PERFORM hive.update_one_state_providers( _first_block, _last_block, hsp.state_provider, _context )
     FROM hafd.state_providers_registered hsp
     WHERE hsp.context_id = __context_id;

@@ -93,7 +93,7 @@ BEGIN
          , ( hafd.make_block_id(10, 3), 0, 0, 0, '{"type":"system_warning_operation","value":{"message":"TEN OPERATION"}}' :: jsonb :: hafd.operation, hafd.operation_id(10, 0) )
     ;
 
-    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 1;
+    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 4;
 END;
 $BODY$
 ;
