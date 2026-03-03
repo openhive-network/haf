@@ -123,12 +123,11 @@ BEGIN
                 hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
                 hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
                 hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-            FROM hafd.blocks hb, %s.context_data_view c,
-                 LATERAL (SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0) AS max_fork FROM hafd.hive_state LIMIT 1) hs
+            FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
             WHERE hb.block_num <= c.current_block_num
               AND (
                   (hb.block_num <= c.irreversible_block
-                   AND hafd.block_id_to_fork(hb.block_id) <= hs.max_fork)
+                   AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
                   OR
                   (hb.block_num > c.irreversible_block
                    AND hafd.block_id_to_fork(hb.block_id) <= c.fork_id)
@@ -139,12 +138,12 @@ BEGIN
                   NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hb.block_num)
                   OR
                   NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2
+                      SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
                       WHERE hb2.block_num = hb.block_num
                         AND hb2.block_id > hb.block_id
                         AND (
                             (hb2.block_num <= c.irreversible_block
-                             AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork)
+                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0))
                             OR
                             (hb2.block_num > c.irreversible_block
                              AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
@@ -176,20 +175,19 @@ BEGIN
                 hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
                 hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
                 hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-            FROM hafd.blocks hb, %s.context_data_view c,
-                 LATERAL (SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0) AS max_fork FROM hafd.hive_state LIMIT 1) hs
+            FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
             WHERE hb.block_num <= c.min_block
-              AND hafd.block_id_to_fork(hb.block_id) <= hs.max_fork
+              AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
               AND (
                   NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
                   OR
                   NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hb.block_num)
                   OR
                   NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2
+                      SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
                       WHERE hb2.block_num = hb.block_num
                         AND hb2.block_id > hb.block_id
-                        AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork
+                        AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
                   )
               )
             ;
@@ -236,20 +234,19 @@ BEGIN
             hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
             hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
             hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-        FROM hafd.blocks hb, %s.context_data_view c,
-             LATERAL (SELECT COALESCE(hafd.block_id_to_fork(consistent_block), 0) AS max_fork FROM hafd.hive_state LIMIT 1) hs
+        FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
         WHERE hb.block_num <= c.irreversible_block
-          AND hafd.block_id_to_fork(hb.block_id) <= hs.max_fork
+          AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
           AND (
               NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
               OR
               NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hb.block_num)
               OR
               NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2
+                  SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
                   WHERE hb2.block_num = hb.block_num
                     AND hb2.block_id > hb.block_id
-                    AND hafd.block_id_to_fork(hb2.block_id) <= hs.max_fork
+                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
               )
           )
         ;
