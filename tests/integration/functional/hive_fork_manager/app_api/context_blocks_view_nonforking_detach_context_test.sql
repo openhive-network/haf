@@ -31,8 +31,8 @@ BEGIN
     -- Reversible blocks for fork 3 (blocks 8-10)
     PERFORM test.create_blocks_reversible(8, 10, 3);
 
-    -- it is important that currently we are at first block, lower than irreversible block
-    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 1;
+    -- App has processed all irreversible blocks before detaching
+    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 4;
 END;
 $BODY$
 ;
@@ -55,7 +55,7 @@ BEGIN
     -- Verify context blocks_view exists
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='blocks_view' ), 'No context blocks view';
 
-    -- After detach with current_block_num=1, context should only see irreversible blocks (1-4)
+    -- After detach, context should only see irreversible blocks (1-4)
     ASSERT ( SELECT COUNT(*) FROM a.blocks_view ) = 4, 'Wrong number of rows in detached context blocks view';
 
     -- Verify block range

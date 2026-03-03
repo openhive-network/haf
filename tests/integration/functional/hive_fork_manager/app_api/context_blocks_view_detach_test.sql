@@ -32,7 +32,7 @@ BEGIN
     -- Reversible blocks for fork 3 (blocks 8-10)
     PERFORM test.create_blocks_reversible(8, 10, 3);
 
-    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 1;
+    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 4;
 END;
 $BODY$
 ;

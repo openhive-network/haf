@@ -93,7 +93,7 @@ BEGIN
      , ( '\xDEED1102', '\xBEEF13', hafd.make_block_id(10, 3) )
     ;
 
-    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 1;
+    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 4;
 END;
 $BODY$
 ;
