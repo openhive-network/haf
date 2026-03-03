@@ -11,7 +11,7 @@ BEGIN
 
     -- Create blocks for testing - need blocks up to 1202
     -- Vacuum triggers when: is_livesync AND current_block_num % 1200 = 0
-    INSERT INTO hafd.blocks
+    INSERT INTO hafd.blocks (block_id, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger)
     SELECT
            hafd.make_block_id(gs, 0)  -- block_id = (block_num << 32) | fork_id
          , '\xBADD10'

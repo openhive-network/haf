@@ -339,7 +339,7 @@ BEGIN
 
     -- Finally delete blocks
     DELETE FROM hafd.blocks hb
-    WHERE hafd.block_id_to_num(hb.block_id) > __consistent_block;
+    WHERE hb.block_num > __consistent_block;
 
     UPDATE hafd.hive_state SET is_dirty = FALSE;
 END;

@@ -212,7 +212,7 @@ BEGIN
     SELECT _block.num
     WHERE EXISTS (
         SELECT 1 FROM hafd.blocks hb
-        WHERE hafd.block_id_to_num(hb.block_id) = _block.num
+        WHERE hb.block_num = _block.num
           AND hb.block_id != __block_id
     )
     ON CONFLICT (block_num) DO NOTHING;
@@ -538,10 +538,10 @@ BEGIN
     orphans AS (
         SELECT hb.block_id
         FROM hafd.blocks hb
-        JOIN conflicted_blocks cb ON hafd.block_id_to_num(hb.block_id) = cb.block_num
+        JOIN conflicted_blocks cb ON hb.block_num = cb.block_num
         WHERE EXISTS (
               SELECT 1 FROM hafd.blocks hb2
-              WHERE hafd.block_id_to_num(hb2.block_id) = cb.block_num
+              WHERE hb2.block_num = cb.block_num
                 AND hafd.block_id_to_fork(hb2.block_id) > hafd.block_id_to_fork(hb.block_id)
           )
     )
