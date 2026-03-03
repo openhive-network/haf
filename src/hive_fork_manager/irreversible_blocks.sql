@@ -170,6 +170,7 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
     -- id is pre-computed in C++ for massive sync performance
     -- Encoding: (block_num << 32) | pos_in_block
     id BIGINT NOT NULL,
+    custom_json_type_id SMALLINT DEFAULT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( block_id, id )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.operations', '');
