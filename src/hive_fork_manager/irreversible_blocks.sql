@@ -247,6 +247,13 @@ CREATE INDEX IF NOT EXISTS hive_operations_id_block_id_idx ON hafd.operations (i
 -- Index for id-only lookups when PK is (block_id, id)
 CREATE INDEX IF NOT EXISTS hive_operations_id_idx ON hafd.operations (id);
 
+-- BRIN indexes for efficient range scans during batch joins in context views.
+-- With pages_per_range=16, these are tiny (<1 MB) but dramatically speed up
+-- range-bounded queries like "block_id BETWEEN X AND Y" that are common in
+-- non-forking/all-irreversible views during massive sync.
+CREATE INDEX IF NOT EXISTS hive_transactions_block_id_brin ON hafd.transactions USING BRIN (block_id) WITH (pages_per_range = 16);
+CREATE INDEX IF NOT EXISTS hive_operations_block_id_brin ON hafd.operations USING BRIN (block_id) WITH (pages_per_range = 16);
+
 -- Clustering for get_account_history performance
 CLUSTER hafd.account_operations USING hive_account_operations_uq1;
 
