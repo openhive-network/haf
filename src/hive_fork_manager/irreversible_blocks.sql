@@ -243,6 +243,9 @@ CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.op
 -- id encodes (block_num|pos), so same id = same operation across forks
 CREATE INDEX IF NOT EXISTS hive_operations_id_block_id_idx ON hafd.operations (id, block_id DESC);
 
+-- Composite index to optimize sync for applications like HAFBE that filter by op_type_id
+CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_id_idx ON hafd.operations (op_type_id, id);
+
 -- Index for id-only lookups when PK is (block_id, id)
 CREATE INDEX IF NOT EXISTS hive_operations_id_idx ON hafd.operations (id);
 
