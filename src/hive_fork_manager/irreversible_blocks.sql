@@ -39,16 +39,18 @@ CREATE TABLE IF NOT EXISTS hafd.blocks (
     current_hbd_supply hafd.hbd_amount,
     dhf_interval_ledger hafd.hbd_amount,
 
+    block_num INTEGER GENERATED ALWAYS AS (hafd.block_id_to_num(block_id)) STORED,
+
     CONSTRAINT pk_hive_blocks PRIMARY KEY( block_id )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.blocks', '');
 
--- Optimized expression index for blocks_view canonical block selection
--- Uses fork_id only (not full block_id) since block_num is already in first column
--- This reduces index size by ~33% compared to using full block_id (~8 bytes/row vs ~12 bytes/row)
+-- Physical block_num + block_id index for blocks_view canonical block selection
+-- Matches the DISTINCT ON (block_num) ORDER BY block_num, block_id DESC pattern
+-- exactly, enabling backward index scans without a separate sort step.
 CREATE INDEX IF NOT EXISTS hive_blocks_block_num_idx ON hafd.blocks (
-    hafd.block_id_to_num(block_id),
-    hafd.block_id_to_fork(block_id) DESC
+    block_num,
+    block_id DESC
 );
 
 CREATE INDEX IF NOT EXISTS hive_blocks_producer_account_id_idx ON hafd.blocks (producer_account_id);
@@ -59,7 +61,8 @@ CREATE INDEX IF NOT EXISTS hive_blocks_producer_account_id_idx ON hafd.blocks (p
 -- filter in blocks_view, avoiding heap access (~3.1 GB at 30M blocks)
 CREATE INDEX IF NOT EXISTS hive_blocks_created_at_idx ON hafd.blocks USING btree ( created_at ) INCLUDE ( block_id );
 
-CREATE STATISTICS IF NOT EXISTS blocks_block_num_stats ON (hafd.block_id_to_num(block_id)) FROM hafd.blocks;
+-- No extended statistics needed for block_num: PostgreSQL collects per-column
+-- stats automatically for physical columns (unlike the old expression stat).
 
 -- =============================================================================
 -- hafd.hive_state - System state tracking
@@ -237,6 +240,10 @@ CREATE INDEX IF NOT EXISTS hive_transactions_block_id_to_num_idx ON hafd.transac
     hafd.block_id_to_fork(block_id) DESC
 );
 
+-- Index for transactions_view DISTINCT ON join: enables nested-loop index lookup
+-- on block_id when joining visible_blocks CTE result to transactions
+CREATE INDEX IF NOT EXISTS hive_transactions_block_id_idx ON hafd.transactions (block_id);
+
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, op_type_id);
 
 -- Index for operations_view canonical selection: finds highest block_id per (block_num, pos_in_block)
@@ -245,13 +252,6 @@ CREATE INDEX IF NOT EXISTS hive_operations_id_block_id_idx ON hafd.operations (i
 
 -- Index for id-only lookups when PK is (block_id, id)
 CREATE INDEX IF NOT EXISTS hive_operations_id_idx ON hafd.operations (id);
-
--- BRIN indexes for efficient range scans during batch joins in context views.
--- With pages_per_range=16, these are tiny (<1 MB) but dramatically speed up
--- range-bounded queries like "block_id BETWEEN X AND Y" that are common in
--- non-forking/all-irreversible views during massive sync.
-CREATE INDEX IF NOT EXISTS hive_transactions_block_id_brin ON hafd.transactions USING BRIN (block_id) WITH (pages_per_range = 16);
-CREATE INDEX IF NOT EXISTS hive_operations_block_id_brin ON hafd.operations USING BRIN (block_id) WITH (pages_per_range = 16);
 
 -- Clustering for get_account_history performance
 CLUSTER hafd.account_operations USING hive_account_operations_uq1;

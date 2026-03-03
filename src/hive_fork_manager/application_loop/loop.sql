@@ -163,9 +163,9 @@ $body$
 DECLARE
     __result INTEGER;
 BEGIN
-    SELECT EXTRACT(EPOCH FROM (now() - hb.created_at))::INT / 3 + hafd.block_id_to_num(hb.block_id) INTO __result
+    SELECT EXTRACT(EPOCH FROM (now() - hb.created_at))::INT / 3 + hb.block_num INTO __result
     FROM hafd.blocks hb
-    JOIN hafd.hive_state hs ON hafd.block_id_to_num(hs.consistent_block) = hafd.block_id_to_num(hb.block_id)
+    JOIN hafd.hive_state hs ON hafd.block_id_to_num(hs.consistent_block) = hb.block_num
     LIMIT 1;
 
     RETURN __result;

@@ -452,9 +452,9 @@ BEGIN
     SELECT hc.irreversible_block INTO _context_state.irreversible_block_num
     FROM hafd.contexts hc WHERE hc.name = _context;
 
-    SELECT MIN( hafd.block_id_to_num(hb.block_id) ), MAX( hafd.block_id_to_num(hb.block_id) )
+    SELECT MIN( hb.block_num ), MAX( hb.block_num )
     FROM hafd.blocks hb
-    WHERE hafd.block_id_to_num(hb.block_id) > _context_state.current_block_num AND hafd.block_id_to_num(hb.block_id) <= _context_state.irreversible_block_num
+    WHERE hb.block_num > _context_state.current_block_num AND hb.block_num <= _context_state.irreversible_block_num
     INTO __next_block_to_process, __last_block_to_process;
 
     IF __next_block_to_process IS NULL THEN
@@ -490,9 +490,9 @@ DECLARE
     __last_block_to_process INT;
     __result hive.blocks_range;
 BEGIN
-    SELECT MIN( hafd.block_id_to_num(hb.block_id) ), MAX( hafd.block_id_to_num(hb.block_id) )
+    SELECT MIN( hb.block_num ), MAX( hb.block_num )
     FROM hafd.blocks hb
-    WHERE hafd.block_id_to_num(hb.block_id) > _context_state.current_block_num AND hafd.block_id_to_num(hb.block_id) <= _context_state.irreversible_block_num
+    WHERE hb.block_num > _context_state.current_block_num AND hb.block_num <= _context_state.irreversible_block_num
     INTO __next_block_to_process, __last_block_to_process;
 
     IF __next_block_to_process IS NULL THEN

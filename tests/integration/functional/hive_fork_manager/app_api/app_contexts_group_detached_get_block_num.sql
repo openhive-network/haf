@@ -8,7 +8,7 @@ $BODY$
 BEGIN
     -- Create blocks 1-2 (block 2 has producer_id 6)
     PERFORM test.create_blocks(1, 1);
-    INSERT INTO hafd.blocks VALUES
+    INSERT INTO hafd.blocks (block_id, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger) VALUES
         ( hafd.make_block_id(2, 0), '\xBADD20', '\xCAFE20', '2016-06-22 19:10:24-07'::timestamp, 6, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
 
     -- Create accounts

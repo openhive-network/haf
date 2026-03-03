@@ -508,7 +508,7 @@ BEGIN
             COALESCE(hafd.block_id_to_num(hs.consistent_block), 0),
             CASE 
                 WHEN hs.consistent_block IS NULL THEN
-                    COALESCE((SELECT MAX(hafd.block_id_to_num(hb.block_id)) FROM hafd.blocks hb), 0)
+                    COALESCE((SELECT MAX(hb.block_num) FROM hafd.blocks hb), 0)
                 ELSE 0
             END
         ) INTO __result
