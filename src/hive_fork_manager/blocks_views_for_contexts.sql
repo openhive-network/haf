@@ -4,16 +4,26 @@
 -- These functions create views that present data for specific application contexts.
 -- With the hybrid schema:
 --   - blocks: uses block_id (for fork tracking)
---   - transactions: uses block_num (original compact format)
---   - operations: uses id (encoded block_num|seq|type)
---   - account_operations: uses operation_id
---   - accounts: uses block_num
---   - applied_hardforks: uses block_num
+--   - transactions: uses block_id
+--   - operations: uses id (encoded block_num|seq|type) + block_id
+--   - account_operations: uses block_id
+--   - accounts: uses block_id
+--   - applied_hardforks: uses block_id
 --
+-- PERFORMANCE STRATEGY:
 -- blocks_view_internal handles canonical block selection using a 3-level
 -- block_conflicts fast-path (empty table → no conflicts → full anti-join).
--- Data views (transactions, operations, etc.) simply JOIN blocks_view_internal
--- on block_id to inherit this filtering efficiently.
+--
+-- operations_view and transactions_view use direct scans (no JOIN with
+-- blocks_view_internal) to leverage existing functional indexes:
+--   - operations: hive_operations_block_num_trx_in_block_idx on operation_id_to_block_num(id)
+--   - transactions: hive_transactions_block_id_to_num_idx on block_id_to_num(block_id)
+-- When app queries add constant block_num range bounds (e.g. BETWEEN X AND Y),
+-- PostgreSQL pushes them as Index Cond on these functional indexes.
+--
+-- Other data views (account_operations, accounts, signatures, applied_hardforks,
+-- operations_view_extended) keep JOIN with blocks_view_internal since they either
+-- lack suitable functional indexes or need columns from the blocks table.
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION hive.create_context_data_view( _context_name TEXT )
@@ -284,8 +294,8 @@ $BODY$
 ;
 
 -- =============================================================================
--- transactions_view - Uses block_id from transactions table
--- JOINs blocks_view_internal which already handles canonical block selection
+-- transactions_view - Direct scan with inline fork visibility
+-- Uses functional index hive_transactions_block_id_to_num_idx for range scans
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION hive.create_transactions_view( _context_name TEXT )
@@ -303,21 +313,50 @@ BEGIN
     WHERE hc.name = _context_name;
 
     IF __is_forking THEN
+        -- Forking context: direct scan with inline fork visibility + PK-range dedup.
+        -- Uses functional index hive_transactions_block_id_to_num_idx when the
+        -- application query provides constant block_num range bounds (e.g. BETWEEN X AND Y).
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.transactions_view AS
-            SELECT b.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
+            SELECT hafd.block_id_to_num(ht.block_id) AS block_num,
+                   ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
                    ht.ref_block_prefix, ht.expiration, ht.signature
-            FROM hafd.transactions ht
-            JOIN %s.blocks_view_internal b ON b.block_id = ht.block_id
+            FROM hafd.transactions ht, %s.context_data_view c, hafd.hive_state hs
+            WHERE hafd.block_id_to_num(ht.block_id) <= c.current_block_num
+              AND (
+                  (hafd.block_id_to_num(ht.block_id) <= c.irreversible_block
+                   AND hafd.block_id_to_fork(ht.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
+                  OR
+                  (hafd.block_id_to_num(ht.block_id) > c.irreversible_block
+                   AND hafd.block_id_to_fork(ht.block_id) <= c.fork_id)
+              )
+              AND (
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+                  OR NOT EXISTS (
+                      SELECT 1 FROM hafd.blocks hb2
+                      WHERE hb2.block_id > ht.block_id
+                        AND hb2.block_id < (((ht.block_id >> 32) + 1) << 32)
+                        AND (
+                            (hafd.block_id_to_num(ht.block_id) <= c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
+                            OR
+                            (hafd.block_id_to_num(ht.block_id) > c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
+                        )
+                  )
+              )
             ;', __schema, __schema
         );
     ELSE
+        -- Non-forking context: fork visibility filter only, no NOT EXISTS dedup needed.
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.transactions_view AS
-            SELECT b.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
+            SELECT hafd.block_id_to_num(ht.block_id) AS block_num,
+                   ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
                    ht.ref_block_prefix, ht.expiration, ht.signature
-            FROM hafd.transactions ht
-            JOIN %s.blocks_view_internal b ON b.block_id = ht.block_id
+            FROM hafd.transactions ht, hafd.hive_state hs
+            WHERE hafd.block_id_to_num(ht.block_id) <= (SELECT c.min_block FROM %s.context_data_view c)
+              AND hafd.block_id_to_fork(ht.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
             ;', __schema, __schema
         );
     END IF;
@@ -339,12 +378,17 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
+    -- All irreversible: fork visibility filter only, no NOT EXISTS dedup needed.
+    -- Uses c.irreversible_block (not min_block) because after detach
+    -- current_block_num may be less than irreversible_block.
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.transactions_view AS
-        SELECT b.num AS block_num, ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
+        SELECT hafd.block_id_to_num(ht.block_id) AS block_num,
+               ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
                ht.ref_block_prefix, ht.expiration, ht.signature
-        FROM hafd.transactions ht
-        JOIN %s.blocks_view_internal b ON b.block_id = ht.block_id
+        FROM hafd.transactions ht, hafd.hive_state hs
+        WHERE hafd.block_id_to_num(ht.block_id) <= (SELECT c.irreversible_block FROM %s.context_data_view c)
+          AND hafd.block_id_to_fork(ht.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
         ;', __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'transactions_view');
@@ -370,8 +414,8 @@ $BODY$
 ;
 
 -- =============================================================================
--- operations_view - Uses id encoding (block_num|seq|type)
--- JOINs blocks_view_internal which already handles canonical block selection
+-- operations_view - Direct scan with inline fork visibility
+-- Uses functional index hive_operations_block_num_trx_in_block_idx for range scans
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION hive.create_operations_view( _context_name TEXT )
@@ -389,33 +433,61 @@ BEGIN
     WHERE hc.name = _context_name;
 
     IF __is_forking THEN
+        -- Forking context: direct scan with inline fork visibility + PK-range dedup.
+        -- Uses functional index hive_operations_block_num_trx_in_block_idx
+        -- (on operation_id_to_block_num(id)) when the application query provides
+        -- constant block_num range bounds.
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.operations_view AS
             SELECT
                 ho.id,
-                b.num AS block_num,
+                hafd.operation_id_to_block_num(ho.id) AS block_num,
                 ho.trx_in_block, ho.op_pos,
                 ho.op_type_id,
                 ho.body_binary,
                 ho.body_binary::jsonb AS body,
                 ho.custom_json_type_id
-            FROM hafd.operations ho
-            JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
+            FROM hafd.operations ho, %s.context_data_view c, hafd.hive_state hs
+            WHERE hafd.operation_id_to_block_num(ho.id) <= c.current_block_num
+              AND (
+                  (hafd.block_id_to_num(ho.block_id) <= c.irreversible_block
+                   AND hafd.block_id_to_fork(ho.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
+                  OR
+                  (hafd.block_id_to_num(ho.block_id) > c.irreversible_block
+                   AND hafd.block_id_to_fork(ho.block_id) <= c.fork_id)
+              )
+              AND (
+                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
+                  OR NOT EXISTS (
+                      SELECT 1 FROM hafd.blocks hb2
+                      WHERE hb2.block_id > ho.block_id
+                        AND hb2.block_id < (((ho.block_id >> 32) + 1) << 32)
+                        AND (
+                            (hafd.block_id_to_num(ho.block_id) <= c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
+                            OR
+                            (hafd.block_id_to_num(ho.block_id) > c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
+                        )
+                  )
+              )
             ;', __schema, __schema
         );
     ELSE
+        -- Non-forking context: fork visibility filter only, no NOT EXISTS dedup needed.
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.operations_view AS
             SELECT
                 ho.id,
-                b.num AS block_num,
+                hafd.operation_id_to_block_num(ho.id) AS block_num,
                 ho.trx_in_block, ho.op_pos,
                 ho.op_type_id,
                 ho.body_binary,
                 ho.body_binary::jsonb AS body,
                 ho.custom_json_type_id
-            FROM hafd.operations ho
-            JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
+            FROM hafd.operations ho, hafd.hive_state hs
+            WHERE hafd.operation_id_to_block_num(ho.id) <= (SELECT c.min_block FROM %s.context_data_view c)
+              AND hafd.block_id_to_fork(ho.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
             ;', __schema, __schema
         );
     END IF;
@@ -438,39 +510,23 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    IF __is_forking THEN
-        EXECUTE format(
-            'CREATE OR REPLACE VIEW %s.operations_view_extended AS
-            SELECT
-                ho.id,
-                b.num AS block_num,
-                ho.trx_in_block, ho.op_pos,
-                ho.op_type_id,
-                b.created_at AS timestamp,
-                ho.body_binary,
-                ho.body_binary::jsonb AS body,
-                ho.custom_json_type_id
-            FROM hafd.operations ho
-            JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
-            ;', __schema, __schema
-        );
-    ELSE
-        EXECUTE format(
-            'CREATE OR REPLACE VIEW %s.operations_view_extended AS
-            SELECT
-                ho.id,
-                b.num AS block_num,
-                ho.trx_in_block, ho.op_pos,
-                ho.op_type_id,
-                b.created_at AS timestamp,
-                ho.body_binary,
-                ho.body_binary::jsonb AS body,
-                ho.custom_json_type_id
-            FROM hafd.operations ho
-            JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
-            ;', __schema, __schema
-        );
-    END IF;
+    -- De-JOIN: use operations_view (which has its own functional-index-driven
+    -- scan) and join to blocks_view_internal on block_num for the timestamp.
+    EXECUTE format(
+        'CREATE OR REPLACE VIEW %s.operations_view_extended AS
+        SELECT
+            ov.id,
+            ov.block_num,
+            ov.trx_in_block, ov.op_pos,
+            ov.op_type_id,
+            b.created_at AS timestamp,
+            ov.body_binary,
+            ov.body,
+            ov.custom_json_type_id
+        FROM %s.operations_view ov
+        JOIN %s.blocks_view_internal b ON b.num = ov.block_num
+        ;', __schema, __schema, __schema
+    );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
 END;
 $BODY$
@@ -489,18 +545,22 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
+    -- All irreversible: fork visibility filter only, no NOT EXISTS dedup needed.
+    -- Uses c.irreversible_block (not min_block) because after detach
+    -- current_block_num may be less than irreversible_block.
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view AS
         SELECT
             ho.id,
-            b.num AS block_num,
+            hafd.operation_id_to_block_num(ho.id) AS block_num,
             ho.trx_in_block, ho.op_pos,
             ho.op_type_id,
             ho.body_binary,
             ho.body_binary::jsonb AS body,
             ho.custom_json_type_id
-        FROM hafd.operations ho
-        JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
+        FROM hafd.operations ho, hafd.hive_state hs
+        WHERE hafd.operation_id_to_block_num(ho.id) <= (SELECT c.irreversible_block FROM %s.context_data_view c)
+          AND hafd.block_id_to_fork(ho.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
         ;', __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view');
@@ -521,20 +581,21 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
+    -- All irreversible: de-JOIN same as forking/non-forking variant.
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view_extended AS
         SELECT
-            ho.id,
-            b.num AS block_num,
-            ho.trx_in_block, ho.op_pos,
-            ho.op_type_id,
+            ov.id,
+            ov.block_num,
+            ov.trx_in_block, ov.op_pos,
+            ov.op_type_id,
             b.created_at AS timestamp,
-            ho.body_binary,
-            ho.body_binary::jsonb AS body,
-            ho.custom_json_type_id
-        FROM hafd.operations ho
-        JOIN %s.blocks_view_internal b ON b.block_id = ho.block_id
-        ;', __schema, __schema
+            ov.body_binary,
+            ov.body,
+            ov.custom_json_type_id
+        FROM %s.operations_view ov
+        JOIN %s.blocks_view_internal b ON b.num = ov.block_num
+        ;', __schema, __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
 END;
