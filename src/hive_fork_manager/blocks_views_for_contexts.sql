@@ -163,9 +163,9 @@ BEGIN
             ', __schema, __schema, __schema, __schema
         );
     ELSE
-        -- Non-forking context: fork visibility filter ensures only blocks from
-        -- valid forks are visible. No NOT EXISTS dedup needed because irreversible
-        -- blocks have at most one version per (block_num, fork_id) visible.
+        -- Non-forking context: blocks up to min_block.
+        -- Fork filter omitted: non-forking contexts only exist during replay/massive sync
+        -- when there is a single fork, so the filter is pure overhead.
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
             SELECT
@@ -176,9 +176,8 @@ BEGIN
                 hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
                 hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
                 hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-            FROM hafd.blocks hb, hafd.hive_state hs
+            FROM hafd.blocks hb
             WHERE hafd.block_id_to_num(hb.block_id) <= (SELECT c.min_block FROM %s.context_data_view c)
-              AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
             SELECT num, hash, prev, created_at, producer_account_id,
@@ -210,9 +209,9 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    -- All irreversible: fork visibility filter only, no NOT EXISTS dedup needed.
-    -- Uses GREATEST(min_block, 1) as upper bound: min_block = LEAST(irreversible_block, current_block_num)
-    -- so it limits scans to the app's processing position (performant during massive sync).
+    -- All irreversible: blocks up to GREATEST(min_block, 1).
+    -- Fork filter omitted: all-irreversible contexts process only irreversible data
+    -- where each block_num has exactly one version after orphan fork cleanup.
     -- GREATEST(..., 1) handles the edge case where current_block_num = 0.
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
@@ -224,9 +223,8 @@ BEGIN
             hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
             hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
             hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-        FROM hafd.blocks hb, hafd.hive_state hs
+        FROM hafd.blocks hb
         WHERE hafd.block_id_to_num(hb.block_id) <= (SELECT GREATEST(c.min_block, 1) FROM %s.context_data_view c)
-          AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
         ;
         CREATE OR REPLACE VIEW %s.blocks_view AS
         SELECT num, hash, prev, created_at, producer_account_id,
@@ -315,15 +313,15 @@ BEGIN
             ;', __schema, __schema
         );
     ELSE
-        -- Non-forking context: fork visibility filter only, no NOT EXISTS dedup needed.
+        -- Non-forking context: transactions up to min_block.
+        -- Fork filter omitted: same rationale as non-forking blocks_view_internal.
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.transactions_view AS
             SELECT hafd.block_id_to_num(ht.block_id) AS block_num,
                    ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
                    ht.ref_block_prefix, ht.expiration, ht.signature
-            FROM hafd.transactions ht, hafd.hive_state hs
+            FROM hafd.transactions ht
             WHERE hafd.block_id_to_num(ht.block_id) <= (SELECT c.min_block FROM %s.context_data_view c)
-              AND hafd.block_id_to_fork(ht.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
             ;', __schema, __schema
         );
     END IF;
@@ -345,16 +343,15 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    -- All irreversible: fork visibility filter only, no NOT EXISTS dedup needed.
-    -- Uses GREATEST(min_block, 1) as upper bound for performance (see blocks view comment).
+    -- All irreversible: transactions up to GREATEST(min_block, 1).
+    -- Fork filter omitted: same rationale as all-irreversible blocks_view_internal.
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.transactions_view AS
         SELECT hafd.block_id_to_num(ht.block_id) AS block_num,
                ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
                ht.ref_block_prefix, ht.expiration, ht.signature
-        FROM hafd.transactions ht, hafd.hive_state hs
+        FROM hafd.transactions ht
         WHERE hafd.block_id_to_num(ht.block_id) <= (SELECT GREATEST(c.min_block, 1) FROM %s.context_data_view c)
-          AND hafd.block_id_to_fork(ht.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
         ;', __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'transactions_view');
@@ -439,7 +436,8 @@ BEGIN
             ;', __schema, __schema
         );
     ELSE
-        -- Non-forking context: fork visibility filter only, no NOT EXISTS dedup needed.
+        -- Non-forking context: operations up to min_block.
+        -- Fork filter omitted: same rationale as non-forking blocks_view_internal.
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.operations_view AS
             SELECT
@@ -450,9 +448,8 @@ BEGIN
                 ho.body_binary,
                 ho.body_binary::jsonb AS body,
                 ho.custom_json_type_id
-            FROM hafd.operations ho, hafd.hive_state hs
+            FROM hafd.operations ho
             WHERE hafd.operation_id_to_block_num(ho.id) <= (SELECT c.min_block FROM %s.context_data_view c)
-              AND hafd.block_id_to_fork(ho.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
             ;', __schema, __schema
         );
     END IF;
@@ -513,8 +510,8 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    -- All irreversible: fork visibility filter only, no NOT EXISTS dedup needed.
-    -- Uses GREATEST(min_block, 1) as upper bound for performance (see blocks view comment).
+    -- All irreversible: operations up to GREATEST(min_block, 1).
+    -- Fork filter omitted: same rationale as all-irreversible blocks_view_internal.
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view AS
         SELECT
@@ -525,9 +522,8 @@ BEGIN
             ho.body_binary,
             ho.body_binary::jsonb AS body,
             ho.custom_json_type_id
-        FROM hafd.operations ho, hafd.hive_state hs
+        FROM hafd.operations ho
         WHERE hafd.operation_id_to_block_num(ho.id) <= (SELECT GREATEST(c.min_block, 1) FROM %s.context_data_view c)
-          AND hafd.block_id_to_fork(ho.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
         ;', __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view');
