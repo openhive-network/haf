@@ -627,6 +627,8 @@ $BODY$
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
+-- App-scoped index management API
+-- -----------------------------------------------------------------------------
 -- hive.app_register_index_dependency(context, command)
 --
 -- Register an application index with HAF's index lifecycle management.
