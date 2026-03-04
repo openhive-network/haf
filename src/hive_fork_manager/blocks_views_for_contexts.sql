@@ -439,7 +439,7 @@ BEGIN
             ;', __schema, __schema
         );
     ELSE
-        -- Non-forking context: fork visibility filter only, no NOT EXISTS dedup needed.
+        -- Non-forking context: no fork filter needed (single fork during replay).
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.operations_view AS
             SELECT
@@ -450,9 +450,8 @@ BEGIN
                 ho.body_binary,
                 ho.body_binary::jsonb AS body,
                 ho.custom_json_type_id
-            FROM hafd.operations ho, hafd.hive_state hs
+            FROM hafd.operations ho
             WHERE hafd.operation_id_to_block_num(ho.id) <= (SELECT c.min_block FROM %s.context_data_view c)
-              AND hafd.block_id_to_fork(ho.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
             ;', __schema, __schema
         );
     END IF;
@@ -513,8 +512,7 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    -- All irreversible: fork visibility filter only, no NOT EXISTS dedup needed.
-    -- Uses GREATEST(min_block, 1) as upper bound for performance (see blocks view comment).
+    -- All irreversible: no fork filter needed (single fork during replay).
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view AS
         SELECT
@@ -525,9 +523,8 @@ BEGIN
             ho.body_binary,
             ho.body_binary::jsonb AS body,
             ho.custom_json_type_id
-        FROM hafd.operations ho, hafd.hive_state hs
+        FROM hafd.operations ho
         WHERE hafd.operation_id_to_block_num(ho.id) <= (SELECT GREATEST(c.min_block, 1) FROM %s.context_data_view c)
-          AND hafd.block_id_to_fork(ho.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
         ;', __schema, __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view');
