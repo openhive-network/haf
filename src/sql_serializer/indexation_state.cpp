@@ -532,7 +532,13 @@ void indexation_state::move_irreversible_blocks( cached_data_t& cached_data ) {
 }
 
 void indexation_state::flush_all_cached_data( cached_data_t& cached_data, int last_block_num ) {
-  force_trigger_flush_with_all_data( cached_data, last_block_num );
+  if ( get_state() == INDEXATION::LIVE ) {
+    // In LIVE mode, only flush irreversible blocks. Reversible blocks left in cache
+    // will be re-fetched from P2P on restart.
+    move_irreversible_blocks( cached_data );
+  } else {
+    force_trigger_flush_with_all_data( cached_data, last_block_num );
+  }
 }
 
 void
