@@ -11,9 +11,12 @@ BEGIN
     -- will choose wrongly execution plans
 
     ANALYZE hafd.operations;
-    ANALYZE hafd.operations_reversible;
     ANALYZE hafd.account_operations;
-    ANALYZE hafd.account_operations_reversible;
+
+    IF NOT hive.is_lite_mode() THEN
+        ANALYZE hafd.operations_reversible;
+        ANALYZE hafd.account_operations_reversible;
+    END IF;
 END;
 $BODY$
 ;
@@ -27,6 +30,26 @@ $BODY$
 DECLARE
     __fork_id BIGINT;
 BEGIN
+    IF hive.is_lite_mode() THEN
+        DELETE FROM hafd.account_operations
+            USING hafd.operations
+            WHERE hafd.account_operations.operation_id = hafd.operations.id
+              AND hafd.operation_id_to_block_num(hafd.operations.id) > _block_num_before_fork;
+        DELETE FROM hafd.applied_hardforks WHERE block_num > _block_num_before_fork;
+        DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) > _block_num_before_fork;
+        DELETE FROM hafd.transactions_multisig
+            USING hafd.transactions
+            WHERE hafd.transactions_multisig.trx_hash = hafd.transactions.trx_hash
+              AND hafd.transactions.block_num > _block_num_before_fork;
+        DELETE FROM hafd.transactions WHERE block_num > _block_num_before_fork;
+        UPDATE hafd.accounts SET block_num = NULL WHERE block_num > _block_num_before_fork;
+        DELETE FROM hafd.blocks WHERE num > _block_num_before_fork;
+
+        INSERT INTO hafd.events_queue( event, block_num )
+        VALUES( 'BACK_FROM_FORK', _block_num_before_fork );
+        RETURN;
+    END IF;
+
     INSERT INTO hafd.fork(block_num, time_of_fork)
     VALUES( _block_num_before_fork, LOCALTIMESTAMP );
 
@@ -73,6 +96,46 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.push_block_lite(
+      _block hafd.blocks
+    , _transactions hafd.transactions[]
+    , _signatures hafd.transactions_multisig[]
+    , _operations hafd.operations[]
+    , _accounts hafd.accounts[]
+    , _account_operations hafd.account_operations[]
+    , _applied_hardforks hafd.applied_hardforks[]
+)
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    INSERT INTO hafd.blocks VALUES( _block.* );
+    INSERT INTO hafd.transactions VALUES( ( unnest( _transactions ) ).* );
+    INSERT INTO hafd.transactions_multisig VALUES( ( unnest( _signatures ) ).* );
+    INSERT INTO hafd.operations(id, trx_in_block, op_type_id, op_pos, body_binary, custom_json_type_id)
+      SELECT id, trx_in_block, op_type_id, op_pos, body_binary, custom_json_type_id FROM unnest( _operations );
+    INSERT INTO hafd.accounts VALUES( ( unnest( _accounts ) ).* )
+      ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, block_num = EXCLUDED.block_num;
+    INSERT INTO hafd.account_operations VALUES( ( unnest( _account_operations ) ).* );
+    INSERT INTO hafd.applied_hardforks VALUES( ( unnest( _applied_hardforks ) ).* );
+
+    INSERT INTO hafd.events_queue( event, block_num )
+    VALUES( 'NEW_IRREVERSIBLE', _block.num );
+
+    UPDATE hafd.hive_state SET consistent_block = _block.num;
+
+    BEGIN
+        LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
+        PERFORM hive.remove_unecessary_events( _block.num );
+    EXCEPTION WHEN SQLSTATE '55P03' THEN
+        -- lock_not_available
+    END;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.set_irreversible( _block_num INT )
     RETURNS void
     LANGUAGE plpgsql
@@ -82,6 +145,22 @@ $BODY$
 DECLARE
     __irreversible_head_block hafd.blocks.num%TYPE;
 BEGIN
+    IF hive.is_lite_mode() THEN
+        -- In lite mode, data is already in irreversible tables (inserted by push_block_lite).
+        -- Just emit the event and update consistent_block.
+        INSERT INTO hafd.events_queue( event, block_num )
+        VALUES( 'NEW_IRREVERSIBLE', _block_num );
+        UPDATE hafd.hive_state SET consistent_block = _block_num;
+
+        BEGIN
+            LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
+            PERFORM hive.remove_unecessary_events( _block_num );
+        EXCEPTION WHEN SQLSTATE '55P03' THEN
+            -- lock_not_available
+        END;
+        RETURN;
+    END IF;
+
     SELECT COALESCE( MAX( num ), 0 ) INTO __irreversible_head_block FROM hafd.blocks;
 
     IF ( _block_num < __irreversible_head_block ) THEN
@@ -334,7 +413,7 @@ $BODY$
 
 
 
-CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hafd.blocks.num%TYPE, _first_block hafd.blocks.num%TYPE, _pruning integer )
+CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hafd.blocks.num%TYPE, _first_block hafd.blocks.num%TYPE, _pruning integer, _lite_mode boolean DEFAULT FALSE )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -343,21 +422,53 @@ $BODY$
 DECLARE
     __max_block hafd.blocks.num%TYPE;
     __last_pruning integer;
+    __existing_lite_mode boolean;
 BEGIN
+    -- Validate lite_mode consistency: cannot switch modes on an existing DB with data
+    SELECT lite_mode INTO __existing_lite_mode FROM hafd.hive_state;
+    SELECT COALESCE( MAX(num), 0 ) INTO __max_block FROM hafd.blocks;
+    IF __max_block > 0 THEN
+        ASSERT __existing_lite_mode = _lite_mode,
+            format('Cannot switch lite mode: database has %s blocks and lite_mode is %s, but requested %s',
+                   __max_block, __existing_lite_mode, _lite_mode);
+    END IF;
+
+    UPDATE hafd.hive_state SET lite_mode = _lite_mode;
+
     -- assumptions:
     -- sql-serializer WAL was replayed after (re)start
     -- at the moment of call hived finished restarting and did removing reversible data from state if it was desire
     PERFORM hive.remove_inconsistent_irreversible_data();
     SELECT MAX(num) INTO __max_block FROM hive.blocks_view;
-    -- we need remove with fork event blocks which are greater than head block in hived state(param _block_num)
-    -- because WAL was replayed, we are sure that we have situation before hived close
-    -- when hived did remove reversible data than we have two possibilities:
-    --  1. max(block_num) in HAF is greater than HB in state, lacking blocks are going to replay and HAF must prepare a new fork for them
-    --  2. max(block_num) in HAF is equal HB in state, newly replayed blocks will be new for HAF, no fork required
-    ASSERT COALESCE(__max_block,0) >= _block_num OR COALESCE(__max_block,0) < _first_block, 'Hived state cannot have more blocks on top micro fork than HAF';
-    -- when hived did not remove reversible data (i.e. is during reply) the situation is the same as for point 2 above -> no fork is required
-    IF __max_block > _block_num OR _block_num = 0 THEN --_block_num = 0 to ensure that at least 1 fork exists
-        PERFORM hive.back_from_fork( _block_num );
+
+    IF _lite_mode THEN
+        -- In lite mode, clean up blocks beyond _block_num directly from irreversible tables
+        IF __max_block > _block_num OR _block_num = 0 THEN
+            DELETE FROM hafd.account_operations
+                USING hafd.operations
+                WHERE hafd.account_operations.operation_id = hafd.operations.id
+                  AND hafd.operation_id_to_block_num(hafd.operations.id) > _block_num;
+            DELETE FROM hafd.applied_hardforks WHERE block_num > _block_num;
+            DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) > _block_num;
+            DELETE FROM hafd.transactions_multisig
+                USING hafd.transactions
+                WHERE hafd.transactions_multisig.trx_hash = hafd.transactions.trx_hash
+                  AND hafd.transactions.block_num > _block_num;
+            DELETE FROM hafd.transactions WHERE block_num > _block_num;
+            UPDATE hafd.accounts SET block_num = NULL WHERE block_num > _block_num;
+            DELETE FROM hafd.blocks WHERE num > _block_num;
+        END IF;
+    ELSE
+        -- we need remove with fork event blocks which are greater than head block in hived state(param _block_num)
+        -- because WAL was replayed, we are sure that we have situation before hived close
+        -- when hived did remove reversible data than we have two possibilities:
+        --  1. max(block_num) in HAF is greater than HB in state, lacking blocks are going to replay and HAF must prepare a new fork for them
+        --  2. max(block_num) in HAF is equal HB in state, newly replayed blocks will be new for HAF, no fork required
+        ASSERT COALESCE(__max_block,0) >= _block_num OR COALESCE(__max_block,0) < _first_block, 'Hived state cannot have more blocks on top micro fork than HAF';
+        -- when hived did not remove reversible data (i.e. is during reply) the situation is the same as for point 2 above -> no fork is required
+        IF __max_block > _block_num OR _block_num = 0 THEN --_block_num = 0 to ensure that at least 1 fork exists
+            PERFORM hive.back_from_fork( _block_num );
+        END IF;
     END IF;
 
     INSERT INTO hafd.hived_connections( block_num, git_sha, time )
@@ -472,7 +583,7 @@ BEGIN
         RETURN;
     END IF;
 
-    INSERT INTO hafd.hive_state VALUES(1,NULL, FALSE) ON CONFLICT DO NOTHING;
+    INSERT INTO hafd.hive_state VALUES(1, NULL, FALSE, 'START', 0, FALSE) ON CONFLICT DO NOTHING;
     INSERT INTO hafd.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
     INSERT INTO hafd.events_queue VALUES( hive.unreachable_event_id(), 'NEW_BLOCK', 2147483647 ) ON CONFLICT DO NOTHING;
     SELECT MAX(eq.id) + 1 FROM hafd.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;

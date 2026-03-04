@@ -31,6 +31,10 @@ CREATE OR REPLACE FUNCTION hive.app_create_context(
 AS
 $BODY$
 BEGIN
+    IF _is_forking AND hive.is_lite_mode() THEN
+        RAISE EXCEPTION 'Cannot create forking context in lite mode. Use _is_forking=FALSE.';
+    END IF;
+
     -- Any context always starts with block before genesis, the app may detach the context and execute 'massive sync'
     -- after massive sync the application must attach its context to last already synced block
     PERFORM hive.context_create(
@@ -61,6 +65,10 @@ CREATE OR REPLACE FUNCTION hive.app_create_context(
 AS
 $BODY$
 BEGIN
+    IF _is_forking AND hive.is_lite_mode() THEN
+        RAISE EXCEPTION 'Cannot create forking context in lite mode. Use _is_forking=FALSE.';
+    END IF;
+
     -- Any context always starts with block before genesis, the app may detach the context and execute 'massive sync'
     -- after massive sync the application must attach its context to last already synced block
     PERFORM hive.context_create(
@@ -199,7 +207,8 @@ BEGIN
     SELECT hive.get_sync_state() INTO __hive_sync_state;
 
     -- if there there is  registered table for given context
-    IF hive.app_are_forking( _context_names ) AND ( __hive_sync_state = 'LIVE' OR NOT hive.is_pruning_enabled() )
+    -- In lite mode, always use the non-forking path (defense-in-depth)
+    IF NOT hive.is_lite_mode() AND hive.app_are_forking( _context_names ) AND ( __hive_sync_state = 'LIVE' OR NOT hive.is_pruning_enabled() )
     THEN
         RETURN hive.app_next_block_forking_app( _context_names );
     END IF;
@@ -402,6 +411,10 @@ CREATE OR REPLACE FUNCTION hive.app_context_set_forking( _contexts hive.contexts
 AS
 $BODY$
 BEGIN
+    IF hive.is_lite_mode() THEN
+        RAISE EXCEPTION 'Cannot set forking mode in lite mode. Lite mode only supports non-forking contexts.';
+    END IF;
+
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
     -- detaching is the best method to remove reversible data and triggers

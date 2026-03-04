@@ -12,6 +12,20 @@ BEGIN
 END;
 $BODY$;
 
+CREATE OR REPLACE FUNCTION hive.is_lite_mode()
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+DECLARE
+    __lite_mode BOOLEAN := FALSE;
+BEGIN
+    SELECT COALESCE( lite_mode, FALSE ) INTO __lite_mode FROM hafd.hive_state;
+    RETURN __lite_mode;
+END;
+$BODY$;
+
 
 CREATE OR REPLACE FUNCTION hive.prune_blocks_data( _tail_size INTEGER  = 1 )
     RETURNS void
