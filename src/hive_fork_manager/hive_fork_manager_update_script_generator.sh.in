@@ -260,6 +260,20 @@ check_functions_were_updated() {
 # inject newer version of hash computation
 psql_do -d "$DB_NAME" -q -t -A -f "$SCRIPTPATH/update.sql"
 
+# Schema migrations: add columns that exist in new extension but not in old DB.
+# These must run BEFORE verify_table_schema so the schema hashes match.
+psql_do -d "$DB_NAME" -q -t -A -c "
+DO \$\$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'hafd' AND table_name = 'hive_state' AND column_name = 'lite_mode'
+    ) THEN
+        ALTER TABLE hafd.hive_state ADD COLUMN lite_mode boolean NOT NULL DEFAULT FALSE;
+    END IF;
+END \$\$;
+"
+
 verify_table_schema
 
 get_deployed_version
