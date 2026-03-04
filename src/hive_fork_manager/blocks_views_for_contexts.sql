@@ -225,9 +225,8 @@ BEGIN
             hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
             hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
             hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-        FROM hafd.blocks hb, hafd.hive_state hs
+        FROM hafd.blocks hb
         WHERE hafd.block_id_to_num(hb.block_id) <= (SELECT GREATEST(c.min_block, 1) FROM %s.context_data_view c)
-          AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
         ;
         CREATE OR REPLACE VIEW %s.blocks_view AS
         SELECT num, hash, prev, created_at, producer_account_id,
