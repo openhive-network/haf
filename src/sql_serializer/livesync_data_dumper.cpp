@@ -21,6 +21,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     , write_ahead_log_manager& write_ahead_log
     , uint32_t pruning
     , uint32_t wal_queue_depth
+    , bool lite_mode
     )
   : _plugin( plugin )
   , _chain_db( chain_db )
@@ -30,6 +31,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   , _write_ahead_log(write_ahead_log)
   , _processing_thread(transactions_controller, write_ahead_log, app, pruning, wal_queue_depth)
   , _pruning(pruning)
+  , _lite_mode(lite_mode)
   {
     auto blocks_callback = [this]( std::string&& _text ){
       _block = std::move( _text );
@@ -65,7 +67,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
         std::string sql_command;
         sql_command.reserve(estimated_size);
 
-        sql_command += "SELECT hive.push_block(";
+        sql_command += _lite_mode ? "SELECT hive.push_block_lite(" : "SELECT hive.push_block(";
         sql_command += _block;
         sql_command += "::hafd.blocks,ARRAY[";
         sql_command += transactions_str;
@@ -100,8 +102,10 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _applied_hardforks_writer = std::make_unique< applied_hardforks_container_t_writer >(applied_hardforks_callback,"Applied hardforks data writer", "hardfork", api_trigger, app);
 
     connect_irreversible_event();
-    connect_fork_event();
-    connect_block_fail_event();
+    if ( !_lite_mode ) {
+      connect_fork_event();
+      connect_block_fail_event();
+    }
 
     ilog( "livesync dumper created" );
   }
@@ -167,6 +171,11 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void livesync_data_dumper::on_irreversible_block( uint32_t block_num ) {
+    if ( _lite_mode ) {
+      // In lite mode, push_block_lite already updates consistent_block
+      return;
+    }
+
     // if sync has started not from first block (option psql-first-block), then
     // it may happen that we got irreversible block
     // event for blocks which are not dumped to the database

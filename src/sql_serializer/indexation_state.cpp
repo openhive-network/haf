@@ -132,6 +132,35 @@ private:
   int32_t last_flushed_block_num;
 };
 
+class lite_live_flush_trigger : public indexation_state::flush_trigger {
+public:
+  using flush_data_callback = std::function< void(cached_data_t& cached_data, int) >;
+  lite_live_flush_trigger( flush_data_callback callback ) : _flush_data_callback( callback ) {}
+  ~lite_live_flush_trigger() override = default;
+  void flush( cached_data_t& cached_data, int32_t last_block_num, int32_t irreversible_block_num ) override {
+    if ( irreversible_block_num == indexation_state::NO_IRREVERSIBLE_BLOCK ) {
+      return;
+    }
+
+    while ( !cached_data.blocks.empty() && cached_data.blocks.front().block_number <= static_cast<uint32_t>(irreversible_block_num) ) {
+      const auto current_block = cached_data.blocks.front().block_number;
+      cached_data_t single_block_data{0};
+
+      move_items_upto_block( single_block_data.blocks, cached_data.blocks, current_block );
+      move_items_upto_block( single_block_data.transactions, cached_data.transactions, current_block );
+      move_items_upto_block( single_block_data.transactions_multisig, cached_data.transactions_multisig, current_block );
+      move_items_upto_block( single_block_data.operations, cached_data.operations, current_block );
+      move_items_upto_block( single_block_data.accounts, cached_data.accounts, current_block );
+      move_items_upto_block( single_block_data.account_operations, cached_data.account_operations, current_block );
+      move_items_upto_block( single_block_data.applied_hardforks, cached_data.applied_hardforks, current_block );
+
+      _flush_data_callback( single_block_data, current_block );
+    }
+  }
+private:
+  flush_data_callback _flush_data_callback;
+};
+
 
 indexation_state::indexation_state(
     const sql_serializer_plugin& main_plugin
@@ -147,6 +176,7 @@ indexation_state::indexation_state(
   , uint32_t pruning_tail_size
   , write_ahead_log_manager& write_ahead_log
   , uint32_t wal_queue_depth
+  , bool lite_mode
 )
   : _main_plugin( main_plugin )
   , _chain_db( chain_db )
@@ -159,6 +189,7 @@ indexation_state::indexation_state(
   , _psql_first_block( psql_first_block )
   , _psql_pruning_tail_size( pruning_tail_size )
   , _psql_wal_queue_depth( wal_queue_depth )
+  , _lite_mode( lite_mode )
   , _irreversible_block_num( NO_IRREVERSIBLE_BLOCK )
   , _indexes_controler( db_url, psql_index_threshold, app )
   , _write_ahead_log{write_ahead_log}
@@ -400,13 +431,30 @@ indexation_state::update_state(
         , _write_ahead_log
         , _psql_pruning_tail_size
         , _psql_wal_queue_depth
+        , _lite_mode
         );
-      _trigger = std::make_unique< live_flush_trigger >(
-        [this]( cached_data_t& cached_data, int last_block_num ) {
-          force_trigger_flush_with_all_data( cached_data, last_block_num );
-        }
-        );
-      flush_all_data_to_reversible( cached_data );
+      if ( _lite_mode ) {
+        _trigger = std::make_unique< lite_live_flush_trigger >(
+          [this]( cached_data_t& cached_data, int last_block_num ) {
+            force_trigger_flush_with_all_data( cached_data, last_block_num );
+          }
+          );
+        // In lite mode, discard non-irreversible cached blocks instead of flushing to reversible
+        cached_data.blocks.clear();
+        cached_data.transactions.clear();
+        cached_data.transactions_multisig.clear();
+        cached_data.operations.clear();
+        cached_data.accounts.clear();
+        cached_data.account_operations.clear();
+        cached_data.applied_hardforks.clear();
+      } else {
+        _trigger = std::make_unique< live_flush_trigger >(
+          [this]( cached_data_t& cached_data, int last_block_num ) {
+            force_trigger_flush_with_all_data( cached_data, last_block_num );
+          }
+          );
+        flush_all_data_to_reversible( cached_data );
+      }
       ilog("PROFILE: Entered LIVE sync from start state: ${t} s ${b}",("t",(fc::time_point::now() - _start_state_time).to_seconds())("b",last_block_num));
       break;
       }
