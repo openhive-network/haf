@@ -439,7 +439,8 @@ BEGIN
             ;', __schema, __schema
         );
     ELSE
-        -- Non-forking context: no fork filter needed (single fork during replay).
+        -- Non-forking context: minimal view — no fork filter, no upper bound.
+        -- App queries provide their own block_num range which hits the expression index.
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.operations_view AS
             SELECT
@@ -451,8 +452,7 @@ BEGIN
                 ho.body_binary::jsonb AS body,
                 ho.custom_json_type_id
             FROM hafd.operations ho
-            WHERE hafd.operation_id_to_block_num(ho.id) <= (SELECT c.min_block FROM %s.context_data_view c)
-            ;', __schema, __schema
+            ;', __schema
         );
     END IF;
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view');
@@ -512,7 +512,8 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    -- All irreversible: no fork filter needed (single fork during replay).
+    -- All irreversible: minimal view — no fork filter, no upper bound.
+    -- App queries provide their own block_num range which hits the expression index.
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view AS
         SELECT
@@ -524,8 +525,7 @@ BEGIN
             ho.body_binary::jsonb AS body,
             ho.custom_json_type_id
         FROM hafd.operations ho
-        WHERE hafd.operation_id_to_block_num(ho.id) <= (SELECT GREATEST(c.min_block, 1) FROM %s.context_data_view c)
-        ;', __schema, __schema
+        ;', __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view');
 END;
