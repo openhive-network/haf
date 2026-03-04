@@ -11,8 +11,9 @@
 --   - applied_hardforks: uses block_id
 --
 -- PERFORMANCE STRATEGY:
--- blocks_view_internal handles canonical block selection using a 3-level
--- block_conflicts fast-path (empty table → no conflicts → full anti-join).
+-- blocks_view_internal uses stored block_num column for fast range filtering
+-- via hive_blocks_block_num_idx, and PK-range NOT EXISTS for fork deduplication
+-- (forking only; non-forking/irreversible use fork visibility filter alone).
 --
 -- operations_view and transactions_view use direct scans (no JOIN with
 -- blocks_view_internal) to leverage existing functional indexes:
@@ -119,10 +120,10 @@ BEGIN
         --   - Irreversible (block_num <= irreversible_block): from any fork <= consistent_block's fork_id
         --   - Reversible (block_num > irreversible_block): from any fork <= context's fork_id
         -- For each block_num, pick highest block_id among visible blocks
-        -- OPTIMIZATION: 3-level conflict check (same pattern as hive.blocks_view):
-        -- 1. block_conflicts empty → skip all dedup (replay/REINDEX fast path)
-        -- 2. This block_num not in block_conflicts → skip dedup for this block
-        -- 3. Block has conflicts → run expensive anti-join for canonical selection
+        -- Uses PK-range NOT EXISTS on pk_hive_blocks for efficient dedup:
+        --   hb2.block_id > hb.block_id AND hb2.block_id < (((hb.block_id >> 32) + 1) << 32)
+        -- gives Index Only Scan instead of Hash Anti Join.
+        -- Uses stored block_num column for fast range filtering via hive_blocks_block_num_idx.
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
             SELECT
@@ -144,18 +145,15 @@ BEGIN
               )
               AND (
                   NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
-                  OR
-                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hb.block_num)
-                  OR
-                  NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
-                      WHERE hb2.block_num = hb.block_num
-                        AND hb2.block_id > hb.block_id
+                  OR NOT EXISTS (
+                      SELECT 1 FROM hafd.blocks hb2
+                      WHERE hb2.block_id > hb.block_id
+                        AND hb2.block_id < (((hb.block_id >> 32) + 1) << 32)
                         AND (
-                            (hb2.block_num <= c.irreversible_block
-                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0))
+                            (hb.block_num <= c.irreversible_block
+                             AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0))
                             OR
-                            (hb2.block_num > c.irreversible_block
+                            (hb.block_num > c.irreversible_block
                              AND hafd.block_id_to_fork(hb2.block_id) <= c.fork_id)
                         )
                   )
@@ -171,10 +169,9 @@ BEGIN
             ', __schema, __schema, __schema, __schema
         );
     ELSE
-        -- Non-forking context: show blocks up to min_block
-        -- Uses same fork visibility rule as forking contexts for irreversible:
-        --   fork_id <= consistent_block's fork_id
-        -- OPTIMIZATION: 3-level conflict check for fast path when no conflicts
+        -- Non-forking context: fork visibility only, no dedup needed.
+        -- Uses scalar subselect for upper bound (evaluated once by planner).
+        -- Uses stored block_num column for fast range filtering via hive_blocks_block_num_idx.
         EXECUTE format(
             'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
             SELECT
@@ -185,21 +182,9 @@ BEGIN
                 hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
                 hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
                 hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-            FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
-            WHERE hb.block_num <= c.min_block
+            FROM hafd.blocks hb, hafd.hive_state hs
+            WHERE hb.block_num <= (SELECT c.min_block FROM %s.context_data_view c)
               AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
-              AND (
-                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
-                  OR
-                  NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hb.block_num)
-                  OR
-                  NOT EXISTS (
-                      SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
-                      WHERE hb2.block_num = hb.block_num
-                        AND hb2.block_id > hb.block_id
-                        AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
-                  )
-              )
             ;
             CREATE OR REPLACE VIEW %s.blocks_view AS
             SELECT num, hash, prev, created_at, producer_account_id,
@@ -231,9 +216,11 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
-    -- All irreversible: canonical block selection
-    -- Uses fork visibility rule: fork_id <= consistent_block's fork_id
-    -- OPTIMIZATION: 3-level conflict check for fast path when no conflicts
+    -- All irreversible: fork visibility only, no dedup needed.
+    -- Uses GREATEST(min_block, 1) as upper bound: min_block = LEAST(irreversible_block, current_block_num)
+    -- so it limits scans to the app's processing position (performant during massive sync).
+    -- GREATEST(..., 1) handles the edge case where current_block_num = 0.
+    -- Uses stored block_num column for fast range filtering via hive_blocks_block_num_idx.
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.blocks_view_internal AS
         SELECT
@@ -244,21 +231,9 @@ BEGIN
             hb.signing_key, hb.hbd_interest_rate, hb.total_vesting_fund_hive,
             hb.total_vesting_shares, hb.total_reward_fund_hive, hb.virtual_supply,
             hb.current_supply, hb.current_hbd_supply, hb.dhf_interval_ledger
-        FROM hafd.blocks hb, %s.context_data_view c, hafd.hive_state hs
-        WHERE hb.block_num <= c.irreversible_block
+        FROM hafd.blocks hb, hafd.hive_state hs
+        WHERE hb.block_num <= (SELECT GREATEST(c.min_block, 1) FROM %s.context_data_view c)
           AND hafd.block_id_to_fork(hb.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
-          AND (
-              NOT EXISTS (SELECT 1 FROM hafd.block_conflicts LIMIT 1)
-              OR
-              NOT EXISTS (SELECT 1 FROM hafd.block_conflicts bc WHERE bc.block_num = hb.block_num)
-              OR
-              NOT EXISTS (
-                  SELECT 1 FROM hafd.blocks hb2, hafd.hive_state hs2
-                  WHERE hb2.block_num = hb.block_num
-                    AND hb2.block_id > hb.block_id
-                    AND hafd.block_id_to_fork(hb2.block_id) <= COALESCE(hafd.block_id_to_fork(hs2.consistent_block), 0)
-              )
-          )
         ;
         CREATE OR REPLACE VIEW %s.blocks_view AS
         SELECT num, hash, prev, created_at, producer_account_id,
@@ -379,15 +354,14 @@ BEGIN
     WHERE hc.name = _context_name;
 
     -- All irreversible: fork visibility filter only, no NOT EXISTS dedup needed.
-    -- Uses c.irreversible_block (not min_block) because after detach
-    -- current_block_num may be less than irreversible_block.
+    -- Uses GREATEST(min_block, 1) as upper bound for performance (see blocks view comment).
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.transactions_view AS
         SELECT hafd.block_id_to_num(ht.block_id) AS block_num,
                ht.trx_in_block, ht.trx_hash, ht.ref_block_num,
                ht.ref_block_prefix, ht.expiration, ht.signature
         FROM hafd.transactions ht, hafd.hive_state hs
-        WHERE hafd.block_id_to_num(ht.block_id) <= (SELECT c.irreversible_block FROM %s.context_data_view c)
+        WHERE hafd.block_id_to_num(ht.block_id) <= (SELECT GREATEST(c.min_block, 1) FROM %s.context_data_view c)
           AND hafd.block_id_to_fork(ht.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
         ;', __schema, __schema
     );
@@ -546,8 +520,7 @@ BEGIN
     WHERE hc.name = _context_name;
 
     -- All irreversible: fork visibility filter only, no NOT EXISTS dedup needed.
-    -- Uses c.irreversible_block (not min_block) because after detach
-    -- current_block_num may be less than irreversible_block.
+    -- Uses GREATEST(min_block, 1) as upper bound for performance (see blocks view comment).
     EXECUTE format(
         'CREATE OR REPLACE VIEW %s.operations_view AS
         SELECT
@@ -559,7 +532,7 @@ BEGIN
             ho.body_binary::jsonb AS body,
             ho.custom_json_type_id
         FROM hafd.operations ho, hafd.hive_state hs
-        WHERE hafd.operation_id_to_block_num(ho.id) <= (SELECT c.irreversible_block FROM %s.context_data_view c)
+        WHERE hafd.operation_id_to_block_num(ho.id) <= (SELECT GREATEST(c.min_block, 1) FROM %s.context_data_view c)
           AND hafd.block_id_to_fork(ho.block_id) <= COALESCE(hafd.block_id_to_fork(hs.consistent_block), 0)
         ;', __schema, __schema
     );
