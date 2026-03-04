@@ -1285,11 +1285,7 @@ replay_restarts_with_app:
   tags:
     - public-runner-docker
 
-# DISABLED: This test needs redesign to account for WAL recovery.
-# It attempts to verify crash recovery but doesn't account for PostgreSQL WAL
-# or hived's sql_serializer WAL, which ensure consistent database state after crash.
-# See: https://gitlab.syncad.com/hive/haf/-/issues/314
-.replay_with_restart:
+replay_with_restart:
   extends: .job-defaults
   image:
     name: $HAF_IMAGE_NAME
