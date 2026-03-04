@@ -44,9 +44,6 @@ BEGIN
         DELETE FROM hafd.transactions WHERE block_num > _block_num_before_fork;
         UPDATE hafd.accounts SET block_num = NULL WHERE block_num > _block_num_before_fork;
         DELETE FROM hafd.blocks WHERE num > _block_num_before_fork;
-
-        INSERT INTO hafd.events_queue( event, block_num )
-        VALUES( 'BACK_FROM_FORK', _block_num_before_fork );
         RETURN;
     END IF;
 
