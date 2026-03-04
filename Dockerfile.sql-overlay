@@ -36,14 +36,18 @@ COPY extension_sql/ /usr/share/postgresql/${POSTGRES_VERSION}/extension/
 # Create symlink for the shared library (.so file)
 # The base image has libhfm-<BASE_COMMIT>.so, but the new control file references
 # libhfm-<GIT_SHA>.so. We create a symlink so both names work.
+# Fallback: if no commit-hashed .so exists, look for any libhfm*.so (older images).
 RUN cd /usr/lib/postgresql/${POSTGRES_VERSION}/lib && \
     if [ -n "${BASE_COMMIT}" ] && [ "${BASE_COMMIT}" != "${GIT_SHA}" ]; then \
         BASE_SO=$(ls libhfm-${BASE_COMMIT}*.so 2>/dev/null | head -1) && \
+        if [ -z "${BASE_SO}" ]; then \
+            BASE_SO=$(ls libhfm*.so 2>/dev/null | head -1); \
+        fi && \
         if [ -n "${BASE_SO}" ]; then \
             ln -sf "${BASE_SO}" "libhfm-${GIT_SHA}.so" && \
             echo "Created symlink: libhfm-${GIT_SHA}.so -> ${BASE_SO}"; \
         else \
-            echo "Warning: Base .so file not found for commit ${BASE_COMMIT}"; \
+            echo "ERROR: No libhfm*.so found in base image - cannot create overlay" && exit 1; \
         fi; \
     fi
 
