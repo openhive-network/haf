@@ -254,12 +254,12 @@ DECLARE
 BEGIN
     SELECT hc.events_id INTO __current_event_id FROM hafd.contexts hc WHERE hc.name = _contexts[ 1 ];
 
-    -- do not squash not initialzed context
+    PERFORM hive.update_irreversible( _contexts );
+
+    -- do not squash not initialized context
     IF __current_event_id = 0  THEN
             RETURN;
     END IF;
-
-    PERFORM hive.update_irreversible( _contexts );
 
     PERFORM hive.squash_end_massive_sync_events( _contexts );
 END;

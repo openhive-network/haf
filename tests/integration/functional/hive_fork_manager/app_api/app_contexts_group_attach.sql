@@ -15,6 +15,7 @@ BEGIN
     VALUES (5, 'initminer', 1)
     ;
 
+    PERFORM hive.end_massive_sync( 3 );
 
     CREATE SCHEMA A;
     CREATE SCHEMA B;
