@@ -49,6 +49,12 @@ $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='transactions_multisig_view' ), 'No context transactions multisig view';
 
+    -- Advance context to process all blocks so the view shows all data
+    PERFORM hive.app_next_block( 'context' ); -- block 1
+    PERFORM hive.app_next_block( 'context' ); -- block 2
+    PERFORM hive.app_next_block( 'context' ); -- block 3
+    PERFORM hive.app_next_block( 'context' ); -- block 4
+
     ASSERT NOT EXISTS (
         SELECT * FROM a.transactions_multisig_view
         EXCEPT SELECT * FROM ( VALUES

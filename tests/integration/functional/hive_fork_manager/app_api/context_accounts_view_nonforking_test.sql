@@ -36,6 +36,13 @@ $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='accounts_view' ), 'No context accounts view';
 
+    -- Advance context to process all blocks so the view shows all data
+    PERFORM hive.app_next_block( 'context' ); -- block 1
+    PERFORM hive.app_next_block( 'context' ); -- block 2
+    PERFORM hive.app_next_block( 'context' ); -- block 3
+    PERFORM hive.app_next_block( 'context' ); -- block 4
+    PERFORM hive.app_next_block( 'context' ); -- block 5
+
     ASSERT NOT EXISTS (
         SELECT * FROM a.accounts_view
         EXCEPT SELECT * FROM ( VALUES

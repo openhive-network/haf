@@ -62,24 +62,23 @@ $BODY$
 DECLARE
     __blocks hive.blocks_range := NULL;
 BEGIN
+    -- In irreversible-only mode, consistent_block=4 after push_block_lite(4),
+    -- so all 4 blocks are visible as irreversible from the start.
     SELECT * INTO __blocks FROM hive.app_next_block( 'context' );
     ASSERT __blocks IS NOT NULL, '(1) null block range';
-    ASSERT __blocks = (1,2), '(1) wrong range of blocks';
+    ASSERT __blocks = (1,4), '(1) wrong range of blocks, got ' || __blocks;
 
     SELECT * INTO __blocks FROM hive.app_next_block( 'context' );
     ASSERT __blocks IS NOT NULL, '(2) null block range';
-    ASSERT __blocks = (2,2), '(2) wrong range of blocks';
+    ASSERT __blocks = (2,4), '(2) wrong range of blocks, got ' || __blocks;
 
     SELECT * INTO __blocks FROM hive.app_next_block( 'context' );
     ASSERT __blocks IS NOT NULL, '(3) null block range';
-    ASSERT __blocks = (3,3), '(3) wrong range of blocks';
+    ASSERT __blocks = (3,4), '(3) wrong range of blocks, got ' || __blocks;
 
     SELECT * INTO __blocks FROM hive.app_next_block( 'context' );
-    ASSERT __blocks IS NULL, '(4) not null block range for irreversible event';
-
-    SELECT * INTO __blocks FROM hive.app_next_block( 'context' );
-    ASSERT __blocks IS NOT NULL, '(5) null block range';
-    ASSERT __blocks = (4,4), '(5) wrong range of blocks';
+    ASSERT __blocks IS NOT NULL, '(4) null block range';
+    ASSERT __blocks = (4,4), '(4) wrong range of blocks, got ' || __blocks;
 END;
 $BODY$
 ;
