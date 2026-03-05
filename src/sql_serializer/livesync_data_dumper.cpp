@@ -61,8 +61,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
         std::string account_operations_to_dump = "ARRAY[" + _account_operations_writer->get_merged_strings() + "]::hafd.account_operations_type[]";
         std::string applied_hardforks_to_dump = "ARRAY[" + std::move( _applied_hardforks ) + "]::hafd.applied_hardforks_type[]";
 
-        std::string sql_command = "SELECT hive.push_block(" +
-                block_to_dump +
+        std::string sql_command = _lite_mode ? "SELECT hive.push_block_lite(" : "SELECT hive.push_block(";
+        sql_command += block_to_dump +
           "," + transactions_to_dump +
           "," + signatures_to_dump +
           "," + operations_to_dump +

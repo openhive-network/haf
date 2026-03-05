@@ -238,6 +238,100 @@ $BODY$
 ;
 
 -- =============================================================================
+-- push_block_lite - Insert block data in lite mode (no fork tracking)
+-- =============================================================================
+-- In lite mode, blocks are treated as immediately irreversible.
+-- Uses the same *_type parameters as push_block for consistency.
+
+CREATE OR REPLACE FUNCTION hive.push_block_lite(
+      _block hafd.blocks_type
+    , _transactions hafd.transactions_type[]
+    , _signatures hafd.transactions_multisig_type[]
+    , _operations hafd.operations_type[]
+    , _accounts hafd.accounts_type[]
+    , _account_operations hafd.account_operations_type[]
+    , _applied_hardforks hafd.applied_hardforks_type[]
+)
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __fork_id hafd.fork.id%TYPE;
+    __block_id hafd.block_id;
+BEGIN
+    -- Get current fork_id (in lite mode there is only one fork)
+    SELECT hf.id
+    INTO __fork_id
+    FROM hafd.fork hf ORDER BY hf.id DESC LIMIT 1;
+
+    __block_id := hafd.make_block_id(_block.num, __fork_id);
+
+    -- Insert block
+    INSERT INTO hafd.blocks (
+        block_id, hash, prev, created_at, producer_account_id,
+        transaction_merkle_root, extensions, witness_signature, signing_key,
+        hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares,
+        total_reward_fund_hive, virtual_supply, current_supply,
+        current_hbd_supply, dhf_interval_ledger
+    ) VALUES (
+        __block_id, _block.hash, _block.prev, _block.created_at, _block.producer_account_id,
+        _block.transaction_merkle_root, _block.extensions, _block.witness_signature, _block.signing_key,
+        _block.hbd_interest_rate, _block.total_vesting_fund_hive, _block.total_vesting_shares,
+        _block.total_reward_fund_hive, _block.virtual_supply, _block.current_supply,
+        _block.current_hbd_supply, _block.dhf_interval_ledger
+    );
+
+    -- Insert transactions
+    INSERT INTO hafd.transactions (block_id, trx_in_block, trx_hash, ref_block_num, ref_block_prefix, expiration, signature)
+    SELECT __block_id, t.trx_in_block, t.trx_hash, t.ref_block_num, t.ref_block_prefix, t.expiration, t.signature
+    FROM unnest(_transactions) t;
+
+    -- Insert multisig signatures
+    INSERT INTO hafd.transactions_multisig (trx_hash, signature, block_id)
+    SELECT s.trx_hash, s.signature, __block_id
+    FROM unnest(_signatures) s;
+
+    -- Insert operations
+    INSERT INTO hafd.operations (block_id, trx_in_block, op_type_id, op_pos, body_binary, id, custom_json_type_id)
+    SELECT __block_id, o.trx_in_block, o.op_type_id, o.op_pos, o.body_binary, o.id, o.custom_json_type_id
+    FROM unnest(_operations) o;
+
+    -- Insert accounts
+    INSERT INTO hafd.accounts (id, name, block_id)
+    SELECT a.id, a.name, __block_id
+    FROM unnest(_accounts) a
+    ON CONFLICT ON CONSTRAINT uq_hive_accounts DO NOTHING;
+
+    -- Insert account_operations
+    INSERT INTO hafd.account_operations (account_id, transacting_account_id, account_op_seq_no, block_id, operation_id, op_type_id)
+    SELECT ao.account_id, ao.transacting_account_id, ao.account_op_seq_no, __block_id, ao.operation_id, ao.op_type_id
+    FROM unnest(_account_operations) ao;
+
+    -- Insert applied_hardforks
+    INSERT INTO hafd.applied_hardforks (hardfork_num, block_id, hardfork_vop_id)
+    SELECT h.hardfork_num, __block_id, h.hardfork_vop_id
+    FROM unnest(_applied_hardforks) h
+    ON CONFLICT (hardfork_num, block_id) DO NOTHING;
+
+    -- In lite mode, mark as immediately irreversible
+    INSERT INTO hafd.events_queue( event, block_num )
+    VALUES( 'NEW_IRREVERSIBLE', _block.num );
+
+    UPDATE hafd.hive_state SET consistent_block = __block_id;
+
+    BEGIN
+        LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
+        PERFORM hive.remove_unecessary_events( _block.num );
+    EXCEPTION WHEN SQLSTATE '55P03' THEN
+        -- lock_not_available
+    END;
+END;
+$BODY$
+;
+
+-- =============================================================================
 -- set_irreversible - Mark blocks as irreversible
 -- =============================================================================
 -- With hybrid structure, we delete orphan fork blocks.
