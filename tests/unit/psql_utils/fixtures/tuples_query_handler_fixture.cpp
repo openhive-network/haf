@@ -32,7 +32,7 @@ namespace Fixtures {
     }
 
     if (ExecutorStart_hook) {
-      EXPECT_CALL( *m_postgres_mock, executorStartHook( m_rootQuery.get(), _ )).Times( 1 ).WillRepeatedly(Return(true));
+      EXPECT_CALL( *m_postgres_mock, executorStartHook( m_rootQuery.get(), _ )).Times( 1 );
     } else {
       EXPECT_CALL( *m_postgres_mock, standard_ExecutorStart( m_rootQuery.get(), _ )).Times( 1 );
     }
