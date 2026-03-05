@@ -15,9 +15,6 @@ BEGIN
     VALUES (5, 'initminer', 1)
     ;
 
-    INSERT INTO hafd.fork VALUES( 2, 2, '2016-06-22 19:10:24-07'::timestamp );
-    INSERT INTO hafd.fork VALUES( 3, 3, '2016-06-22 19:10:25-07'::timestamp );
-
     CREATE SCHEMA A;
     CREATE SCHEMA B;
     CREATE SCHEMA C;
@@ -55,11 +52,8 @@ AS
 $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT * FROM hafd.contexts hc JOIN hafd.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context_a' AND hca.is_attached = TRUE ), 'Attach flag is still not set A';
-    ASSERT EXISTS ( SELECT * FROM hafd.contexts WHERE name='context_a' AND fork_id = 2 ), 'Wrong fork_id A';
     ASSERT EXISTS ( SELECT * FROM hafd.contexts hc JOIN hafd.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context_b' AND hca.is_attached = TRUE ), 'Attach flag is still not set B';
-    ASSERT EXISTS ( SELECT * FROM hafd.contexts WHERE name='context_b' AND fork_id = 2 ), 'Wrong fork_id B';
     ASSERT EXISTS ( SELECT * FROM hafd.contexts hc JOIN hafd.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context_c' AND hca.is_attached = TRUE ), 'Attach flag is still not set C';
-    ASSERT EXISTS ( SELECT * FROM hafd.contexts WHERE name='context_c' AND fork_id = 2 ), 'Wrong fork_id C';
 
     ASSERT ( SELECT COUNT(*) FROM hafd.shadow_a_table1 ) = 1, 'Trigger inserted something into shadow A.table1';
     ASSERT ( SELECT COUNT(*) FROM hafd.shadow_b_table1 ) = 1, 'Trigger inserted something into shadow B.table1';

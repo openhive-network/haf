@@ -5,8 +5,8 @@ AS
 $BODY$
 BEGIN
     CREATE SCHEMA A;
-    PERFORM hive.app_create_context( 'context', _schema => 'a', _is_forking =>FALSE );
-    PERFORM hive.app_create_context( 'context_b', _schema => 'a', _is_forking =>FALSE );
+    PERFORM hive.app_create_context( 'context', _schema => 'a' );
+    PERFORM hive.app_create_context( 'context_b', _schema => 'a' );
 
     -- hived inserts once irreversible block
     INSERT INTO hafd.blocks
@@ -89,8 +89,4 @@ BEGIN
 END
 $BODY$
 ;
-
-
-
-
 

@@ -18,26 +18,19 @@ BEGIN
 
     PERFORM hive.end_massive_sync(2);
 
-    INSERT INTO hafd.fork( id, block_num, time_of_fork)
-    VALUES ( 2, 6, '2020-06-22 19:10:25-07'::timestamp );
-
     CREATE SCHEMA A;
     PERFORM hive.app_create_context( 'attached_context', 'a' );
     PERFORM hive.app_create_context( 'attached_context2', 'a' );
     PERFORM hive.app_create_context( 'attached_context_not_insync_bn', 'a' );
     PERFORM hive.app_create_context( 'attached_context_not_insync_ir', 'a' );
     PERFORM hive.app_create_context( 'attached_context_not_insync_ev', 'a' );
-    PERFORM hive.app_create_context( 'attached_context_not_insync_fr', 'a' );
-    PERFORM hive.app_create_context( 'attached_context_not_insync_is_forking', _schema => 'a', _is_forking => FALSE );
     PERFORM hive.app_create_context( 'attached_context_not_insync_loop', _schema => 'a' );
 
     UPDATE hafd.contexts ctx
     SET
         current_block_num = 1
       , irreversible_block = 1
-      , back_from_fork = FALSE
       , events_id = 0
-      , fork_id = 1
     ;
 
     UPDATE hafd.contexts ctx
@@ -56,12 +49,6 @@ BEGIN
     SET
         events_id = 1
     WHERE ctx.name = 'attached_context_not_insync_ev'
-    ;
-
-    UPDATE hafd.contexts ctx
-    SET
-        fork_id = 2
-    WHERE ctx.name = 'attached_context_not_insync_fr'
     ;
 
     UPDATE hafd.contexts ctx
@@ -101,18 +88,6 @@ BEGIN
     END;
 
     BEGIN
-        PERFORM hive.app_check_contexts_synchronized( ARRAY[ 'attached_context', 'attached_context_not_insync_fr' ] );
-    EXCEPTION WHEN OTHERS THEN
-        ASSERT FALSE, 'Exception for fork id difference';
-    END;
-
-    BEGIN
-        PERFORM hive.app_check_contexts_synchronized( ARRAY[ 'attached_context', 'attached_context_not_insync_is_forking' ] );
-        ASSERT FALSE, 'No expected exception for is_forking difference';
-    EXCEPTION WHEN OTHERS THEN
-    END;
-
-    BEGIN
         PERFORM hive.app_check_contexts_synchronized( ARRAY[ 'attached_context', 'attached_context_not_insync_loop' ] );
         ASSERT FALSE, 'No expected exception for loop difference';
     EXCEPTION WHEN OTHERS THEN
@@ -121,8 +96,4 @@ BEGIN
 END;
 $BODY$
 ;
-
-
-
-
 
