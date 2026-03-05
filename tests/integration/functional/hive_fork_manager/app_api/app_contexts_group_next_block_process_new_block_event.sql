@@ -76,8 +76,8 @@ $BODY$
 BEGIN
     -- push_block_lite emits NEW_IRREVERSIBLE, not NEW_BLOCK
     ASSERT EXISTS ( SELECT FROM hafd.events_queue WHERE id = 2 AND event = 'NEW_IRREVERSIBLE' AND block_num = 2 ), 'No event added';
-    -- Events: 0:NEW_IRREVERSIBLE(0), 2:NEW_IRREVERSIBLE(2), unreachable sentinel (MASSIVE_SYNC was cleaned)
-    ASSERT ( SELECT COUNT(*) FROM hafd.events_queue ) = 3, 'Unexpected number of events';
+    -- Events: 0:NEW_IRREVERSIBLE(0), 1:MASSIVE_SYNC(1), 2:NEW_IRREVERSIBLE(2), unreachable sentinel
+    ASSERT ( SELECT COUNT(*) FROM hafd.events_queue ) = 4, 'Unexpected number of events';
 
     ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context' ) = 2, 'Wrong current block num';
 END
