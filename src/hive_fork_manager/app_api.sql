@@ -198,7 +198,7 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = __lead_context;
 
-    SELECT hir.consistent_block INTO __head_of_irreversible_block
+    SELECT COALESCE(hir.consistent_block, 0) INTO __head_of_irreversible_block
     FROM hafd.hive_state hir;
 
     IF __current_block_num > __head_of_irreversible_block THEN
@@ -208,7 +208,7 @@ BEGIN
 
     UPDATE hafd.contexts
     SET   events_id = 0 -- during app_next_block correct event will be found
-      , irreversible_block = __head_of_irreversible_block
+      , irreversible_block = COALESCE( __head_of_irreversible_block, 0 )
       , last_active_at = NOW()
     WHERE name =ANY( _contexts )
     ;

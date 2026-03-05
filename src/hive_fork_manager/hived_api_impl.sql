@@ -31,7 +31,7 @@ BEGIN
 
     DELETE FROM hafd.events_queue heq
     USING ( SELECT MIN( hc.events_id) as id FROM hafd.contexts hc ) as min_event
-    WHERE ( heq.id < __upper_bound_events_id OR __upper_bound_events_id IS NULL )  AND ( heq.id < min_event.id OR min_event.id IS NULL ) AND heq.id != 0 AND heq.id != hive.unreachable_event_id();
+    WHERE ( heq.id < __upper_bound_events_id OR __upper_bound_events_id IS NULL )  AND heq.id < min_event.id AND heq.id != 0 AND heq.id != hive.unreachable_event_id();
 
 END;
 $BODY$
