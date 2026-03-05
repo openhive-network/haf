@@ -1,5 +1,3 @@
--- Whe a table is deteted their triggers are removed automatically
--- and there is no need to remove hive_rowid column
 CREATE OR REPLACE FUNCTION hive.clean_after_uregister_table( _schema_name TEXT, _table_name TEXT )
     RETURNS void
     LANGUAGE 'plpgsql'
@@ -7,32 +5,18 @@ CREATE OR REPLACE FUNCTION hive.clean_after_uregister_table( _schema_name TEXT, 
 AS
 $BODY$
 DECLARE
-    __table_id INTEGER := NULL;
-    __shadow_table_name TEXT;
-    __trigger_funtion_name TEXT;
+    __table_id INTEGER;
 BEGIN
-    SELECT hrt.id, hrt.shadow_table_name
-    FROM hafd.registered_tables hrt
-    WHERE hrt.origin_table_schema = _schema_name AND  hrt.origin_table_name = _table_name INTO __table_id, __shadow_table_name;
+    SELECT hrt.id FROM hafd.registered_tables hrt
+    WHERE hrt.origin_table_schema = _schema_name AND hrt.origin_table_name = _table_name
+    INTO __table_id;
 
     IF __table_id IS NULL THEN
         RAISE EXCEPTION 'Table is not registered';
     END IF;
 
-    -- remove triggers functions
-    FOR  __trigger_funtion_name IN SELECT ht.function_name FROM hafd.triggers ht
-    WHERE ht.registered_table_id = __table_id
-    LOOP
-       EXECUTE format( 'DROP FUNCTION %s', __trigger_funtion_name );
-    END LOOP;
-
-    -- remove informations about triggers
     DELETE FROM hafd.triggers ht WHERE ht.registered_table_id = __table_id;
-
-    --drop shadow table
-    EXECUTE format( 'DROP TABLE hafd.%I', __shadow_table_name );
-
-    DELETE FROM hafd.registered_tables hrt WHERE  hrt.origin_table_schema = _schema_name AND hrt.origin_table_name = _table_name;
+    DELETE FROM hafd.registered_tables hrt WHERE hrt.origin_table_schema = _schema_name AND hrt.origin_table_name = _table_name;
 END;
 $BODY$
 ;
@@ -43,29 +27,8 @@ CREATE OR REPLACE FUNCTION hive.detach_table( _table_schema TEXT, _table_name TE
     VOLATILE
 AS
 $BODY$
-DECLARE
-    __table_id INTEGER := NULL;
-    __shadow_table_name TEXT;
-    __trigger_name TEXT;
-    __shadow_table_is_not_empty BOOL := FALSE;
 BEGIN
-    SELECT hrt.id, hrt.shadow_table_name
-    FROM hafd.registered_tables hrt
-    WHERE  hrt.origin_table_schema = lower( _table_schema ) AND hrt.origin_table_name = _table_name INTO __table_id, __shadow_table_name;
-
-    IF __table_id IS NULL THEN
-        RAISE EXCEPTION 'Table %.% is not registered', _table_schema, _table_name;
-    END IF;
-
-    EXECUTE format( 'SELECT EXISTS( SELECT * FROM hafd.%I LIMIT 1 )', __shadow_table_name ) INTO __shadow_table_is_not_empty;
-
-    IF __shadow_table_is_not_empty = TRUE THEN
-        RAISE EXCEPTION 'Cannot detach a table %.%. Shadow table hafd.% is not empty', _table_schema, _table_name, __shadow_table_name;
-    END IF;
-
-    PERFORM hive.drop_triggers( _table_schema, _table_name );
-
-    RETURN;
+    -- No-op in irreversible-only mode (no triggers to detach)
 END;
 $BODY$
 ;
@@ -76,29 +39,8 @@ CREATE OR REPLACE FUNCTION hive.attach_table( _table_schema TEXT, _table_name TE
     VOLATILE
 AS
 $BODY$
-DECLARE
-    __table_id INTEGER := NULL;
-    __shadow_table_name TEXT;
-    __context_is_forking BOOLEAN := NULL;
 BEGIN
-    SELECT hrt.id, hrt.shadow_table_name, hc.is_forking
-    FROM hafd.registered_tables hrt
-    JOIN hafd.contexts hc ON hc.id = hrt.context_id
-    JOIN hafd.contexts_attachment hca ON hc.id = hca.context_id
-    WHERE
-          hrt.origin_table_schema = lower( _table_schema )
-      AND hrt.origin_table_name = _table_name
-      AND hca.is_attached = FALSE
-    INTO __table_id, __shadow_table_name, __context_is_forking;
-
-    IF __table_id IS NULL THEN
-            RAISE EXCEPTION 'Table %.% is not registered or is already attached', _table_schema, _table_name;
-    END IF;
-
-    IF __context_is_forking = FALSE THEN
-        RETURN;
-    END IF;
-    PERFORM hive.create_triggers( _table_schema, _table_name, _context_id );
+    -- No-op in irreversible-only mode (no triggers to attach)
 END;
 $BODY$
 ;

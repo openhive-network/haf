@@ -12,11 +12,6 @@ BEGIN
 
     ANALYZE hafd.operations;
     ANALYZE hafd.account_operations;
-
-    IF NOT hive.is_lite_mode() THEN
-        ANALYZE hafd.operations_reversible;
-        ANALYZE hafd.account_operations_reversible;
-    END IF;
 END;
 $BODY$
 ;
@@ -27,32 +22,20 @@ CREATE OR REPLACE FUNCTION hive.back_from_fork( _block_num_before_fork INT )
     VOLATILE
 AS
 $BODY$
-DECLARE
-    __fork_id BIGINT;
 BEGIN
-    IF hive.is_lite_mode() THEN
-        -- Use operation_id_to_block_num() directly on account_operations to avoid
-        -- a JOIN to operations, which causes a sequential scan of the entire table.
-        DELETE FROM hafd.account_operations
-            WHERE hafd.operation_id_to_block_num(operation_id) > _block_num_before_fork;
-        DELETE FROM hafd.applied_hardforks WHERE block_num > _block_num_before_fork;
-        DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) > _block_num_before_fork;
-        DELETE FROM hafd.transactions_multisig
-            USING hafd.transactions
-            WHERE hafd.transactions_multisig.trx_hash = hafd.transactions.trx_hash
-              AND hafd.transactions.block_num > _block_num_before_fork;
-        DELETE FROM hafd.transactions WHERE block_num > _block_num_before_fork;
-        UPDATE hafd.accounts SET block_num = NULL WHERE block_num > _block_num_before_fork;
-        DELETE FROM hafd.blocks WHERE num > _block_num_before_fork;
-        RETURN;
-    END IF;
-
-    INSERT INTO hafd.fork(block_num, time_of_fork)
-    VALUES( _block_num_before_fork, LOCALTIMESTAMP );
-
-    SELECT MAX(hf.id) INTO __fork_id FROM hafd.fork hf;
-    INSERT INTO hafd.events_queue( event, block_num )
-    VALUES( 'BACK_FROM_FORK', __fork_id );
+    -- Use operation_id_to_block_num() directly on account_operations to avoid
+    -- a JOIN to operations, which causes a sequential scan of the entire table.
+    DELETE FROM hafd.account_operations
+        WHERE hafd.operation_id_to_block_num(operation_id) > _block_num_before_fork;
+    DELETE FROM hafd.applied_hardforks WHERE block_num > _block_num_before_fork;
+    DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) > _block_num_before_fork;
+    DELETE FROM hafd.transactions_multisig
+        USING hafd.transactions
+        WHERE hafd.transactions_multisig.trx_hash = hafd.transactions.trx_hash
+          AND hafd.transactions.block_num > _block_num_before_fork;
+    DELETE FROM hafd.transactions WHERE block_num > _block_num_before_fork;
+    UPDATE hafd.accounts SET block_num = NULL WHERE block_num > _block_num_before_fork;
+    DELETE FROM hafd.blocks WHERE num > _block_num_before_fork;
 END;
 $BODY$
 ;
@@ -71,24 +54,8 @@ CREATE OR REPLACE FUNCTION hive.push_block(
     VOLATILE
 AS
 $BODY$
-DECLARE
-    __fork_id hafd.fork.id%TYPE;
 BEGIN
-    SELECT hf.id
-    INTO __fork_id
-    FROM hafd.fork hf ORDER BY hf.id DESC LIMIT 1;
-
-    INSERT INTO hafd.events_queue( event, block_num )
-        VALUES( 'NEW_BLOCK', _block.num );
-
-    INSERT INTO hafd.blocks_reversible VALUES( _block.*, __fork_id );
-    INSERT INTO hafd.transactions_reversible VALUES( ( unnest( _transactions ) ).*, __fork_id );
-    INSERT INTO hafd.transactions_multisig_reversible VALUES( ( unnest( _signatures ) ).*, __fork_id );
-    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_type_id, op_pos, body_binary, custom_json_type_id, fork_id)
-      SELECT id, trx_in_block, op_type_id, op_pos, body_binary, custom_json_type_id, __fork_id FROM unnest( _operations );
-    INSERT INTO hafd.accounts_reversible VALUES( ( unnest( _accounts ) ).*, __fork_id );
-    INSERT INTO hafd.account_operations_reversible VALUES( ( unnest( _account_operations ) ).*, __fork_id );
-    INSERT INTO hafd.applied_hardforks_reversible VALUES( ( unnest( _applied_hardforks ) ).*, __fork_id );
+    RAISE EXCEPTION 'Not available in irreversible-only mode';
 END;
 $BODY$
 ;
@@ -145,57 +112,19 @@ CREATE OR REPLACE FUNCTION hive.set_irreversible( _block_num INT )
     VOLATILE
 AS
 $BODY$
-DECLARE
-    __irreversible_head_block hafd.blocks.num%TYPE;
 BEGIN
-    IF hive.is_lite_mode() THEN
-        -- In lite mode, data is already in irreversible tables (inserted by push_block_lite).
-        -- Just emit the event and update consistent_block.
-        INSERT INTO hafd.events_queue( event, block_num )
-        VALUES( 'NEW_IRREVERSIBLE', _block_num );
-        UPDATE hafd.hive_state SET consistent_block = _block_num;
-
-        BEGIN
-            LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
-            PERFORM hive.remove_unecessary_events( _block_num );
-        EXCEPTION WHEN SQLSTATE '55P03' THEN
-            -- lock_not_available
-        END;
-        RETURN;
-    END IF;
-
-    SELECT COALESCE( MAX( num ), 0 ) INTO __irreversible_head_block FROM hafd.blocks;
-
-    IF ( _block_num < __irreversible_head_block ) THEN
-        RETURN;
-    END IF;
-
-    -- copy to irreversible
-    PERFORM hive.copy_blocks_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_transactions_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_operations_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_signatures_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_accounts_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_account_operations_to_irreversible( __irreversible_head_block, _block_num );
-    PERFORM hive.copy_applied_hardforks_to_irreversible( __irreversible_head_block, _block_num );
-
-    -- if we cannot get exclusive lock for contexts row then we return and will back here
-    -- next time, when hived will try to remove blocks with next irreversible block
-    -- the contexts are locked by the apps during attach: hive.app_context_attach
-    BEGIN
-        LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
-        PERFORM hive.remove_unecessary_events( _block_num );
-        -- remove unneeded blocks and events
-        PERFORM hive.remove_obsolete_reversible_data( _block_num );
-    EXCEPTION WHEN SQLSTATE '55P03' THEN
-        -- 55P03 	lock_not_available https://www.postgresql.org/docs/current/errcodes-appendix.html
-    END;
-
-
-    -- application contexts will use the event to clear data in shadow tables
+    -- Data is already in irreversible tables (inserted by push_block_lite).
+    -- Just emit the event and update consistent_block.
     INSERT INTO hafd.events_queue( event, block_num )
     VALUES( 'NEW_IRREVERSIBLE', _block_num );
     UPDATE hafd.hive_state SET consistent_block = _block_num;
+
+    BEGIN
+        LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
+        PERFORM hive.remove_unecessary_events( _block_num );
+    EXCEPTION WHEN SQLSTATE '55P03' THEN
+        -- lock_not_available
+    END;
 END;
 $BODY$
 ;
@@ -214,7 +143,6 @@ BEGIN
      -- remove all events less than lowest context events_id
         LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
         PERFORM hive.remove_unecessary_events( _block_num );
-        PERFORM hive.remove_obsolete_reversible_data( _block_num );
     EXCEPTION WHEN SQLSTATE '55P03' THEN
         -- 55P03 	lock_not_available https://www.postgresql.org/docs/current/errcodes-appendix.html
     END;
@@ -360,26 +288,7 @@ CREATE OR REPLACE FUNCTION hive.disable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'blocks_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_multisig_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'operations_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'applied_hardforks_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'accounts_reversible' );
-    PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'account_operations_reversible' );
-
-
-
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'blocks_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'transactions_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'transactions_multisig_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'operations_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'applied_hardforks_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'accounts_reversible' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'account_operations_reversible' );
-
-    PERFORM hive.reanalyze_indexes_with_expressions(); --I wonder if reanalyzing is really needed when indexes are dropped
-
+    -- no-op in irreversible-only mode
 END;
 $BODY$
 ;
@@ -391,25 +300,7 @@ CREATE OR REPLACE FUNCTION hive.enable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
-    PERFORM hive.restore_indexes( 'hafd.blocks_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.transactions_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.transactions_multisig_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.operations_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.accounts_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.account_operations_reversible' );
-    PERFORM hive.restore_indexes( 'hafd.applied_hardforks_reversible' );
-
-
-
-    PERFORM hive.restore_foreign_keys( 'hafd.blocks_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.transactions_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.transactions_multisig_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.operations_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.accounts_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.account_operations_reversible' );
-    PERFORM hive.restore_foreign_keys( 'hafd.applied_hardforks_reversible' );
-
-    PERFORM hive.reanalyze_indexes_with_expressions();
+    -- no-op in irreversible-only mode
 END;
 $BODY$
 ;
@@ -425,58 +316,29 @@ $BODY$
 DECLARE
     __max_block hafd.blocks.num%TYPE;
     __last_pruning integer;
-    __existing_lite_mode boolean;
 BEGIN
-    -- Validate lite_mode consistency: cannot switch modes on an existing DB with data
-    SELECT lite_mode INTO __existing_lite_mode FROM hafd.hive_state;
-    SELECT COALESCE( MAX(num), 0 ) INTO __max_block FROM hafd.blocks;
-    IF __max_block > 0 THEN
-        ASSERT __existing_lite_mode = _lite_mode,
-            format('Cannot switch lite mode: database has %s blocks and lite_mode is %s, but requested %s',
-                   __max_block, __existing_lite_mode, _lite_mode);
-    END IF;
-
-    UPDATE hafd.hive_state SET lite_mode = _lite_mode;
-
     -- assumptions:
     -- sql-serializer WAL was replayed after (re)start
     -- at the moment of call hived finished restarting and did removing reversible data from state if it was desire
     PERFORM hive.remove_inconsistent_irreversible_data();
     SELECT MAX(num) INTO __max_block FROM hive.blocks_view;
 
-    IF _lite_mode THEN
-        -- In lite mode, clean up blocks beyond _block_num directly from irreversible tables.
-        -- Use operation_id_to_block_num() directly on account_operations to avoid
-        -- a JOIN to operations, which would cause a sequential scan of the entire
-        -- account_operations table (no index on operation_id).
-        IF __max_block > _block_num OR _block_num = 0 THEN
-            RAISE LOG 'hive.connect: cleaning up blocks beyond % (max_block=%)', _block_num, __max_block;
-            DELETE FROM hafd.account_operations
-                WHERE hafd.operation_id_to_block_num(operation_id) > _block_num;
-            DELETE FROM hafd.applied_hardforks WHERE block_num > _block_num;
-            DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) > _block_num;
-            DELETE FROM hafd.transactions_multisig
-                USING hafd.transactions
-                WHERE hafd.transactions_multisig.trx_hash = hafd.transactions.trx_hash
-                  AND hafd.transactions.block_num > _block_num;
-            DELETE FROM hafd.transactions WHERE block_num > _block_num;
-            UPDATE hafd.accounts SET block_num = NULL WHERE block_num > _block_num;
-            DELETE FROM hafd.blocks WHERE num > _block_num;
-        END IF;
-    ELSE
-        -- Log the state for diagnostics; both HAF-ahead (reversible blocks from
-        -- prior session) and HAF-behind (replay-blockchain past consistent_block)
-        -- are valid scenarios handled by back_from_fork below.
-        IF COALESCE(__max_block, 0) <> _block_num THEN
-            RAISE LOG 'hive.connect: max_block=%, _block_num=%, _first_block=%',
-                __max_block, _block_num, _first_block;
-        END IF;
-
-        -- If max_block > _block_num, we need to handle fork situation
-        -- _block_num = 0 ensures at least 1 fork exists
-        IF __max_block > _block_num OR _block_num = 0 THEN
-            PERFORM hive.back_from_fork( _block_num );
-        END IF;
+    -- Clean up blocks beyond _block_num directly from irreversible tables
+    -- Use operation_id_to_block_num() directly on account_operations to avoid
+    -- a JOIN to operations, which causes a sequential scan of the entire table.
+    IF __max_block > _block_num OR _block_num = 0 THEN
+        RAISE LOG 'hive.connect: cleaning up blocks beyond % (max_block=%)', _block_num, __max_block;
+        DELETE FROM hafd.account_operations
+            WHERE hafd.operation_id_to_block_num(operation_id) > _block_num;
+        DELETE FROM hafd.applied_hardforks WHERE block_num > _block_num;
+        DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) > _block_num;
+        DELETE FROM hafd.transactions_multisig
+            USING hafd.transactions
+            WHERE hafd.transactions_multisig.trx_hash = hafd.transactions.trx_hash
+              AND hafd.transactions.block_num > _block_num;
+        DELETE FROM hafd.transactions WHERE block_num > _block_num;
+        UPDATE hafd.accounts SET block_num = NULL WHERE block_num > _block_num;
+        DELETE FROM hafd.blocks WHERE num > _block_num;
     END IF;
 
     INSERT INTO hafd.hived_connections( block_num, git_sha, time )
@@ -591,24 +453,22 @@ BEGIN
         RETURN;
     END IF;
 
-    INSERT INTO hafd.hive_state VALUES(1, NULL, FALSE, 'START', 0, FALSE) ON CONFLICT DO NOTHING;
+    INSERT INTO hafd.hive_state VALUES(1, NULL, FALSE, 'START', 0) ON CONFLICT DO NOTHING;
     INSERT INTO hafd.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
     INSERT INTO hafd.events_queue VALUES( hive.unreachable_event_id(), 'NEW_BLOCK', 2147483647 ) ON CONFLICT DO NOTHING;
     SELECT MAX(eq.id) + 1 FROM hafd.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
     PERFORM SETVAL( 'hafd.events_queue_id_seq', __events_id, false );
 
-    INSERT INTO hafd.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp ) ON CONFLICT DO NOTHING;
-
     -- if contexts are created before starting hived
     UPDATE hafd.contexts hc
-    SET fork_id = 1, events_id = 0
-    FROM hafd.contexts_attachment  hac
+    SET events_id = 0
+    FROM hafd.contexts_attachment hac
     WHERE hac.context_id = hc.id
     AND hac.is_attached = TRUE;
 
     UPDATE hafd.contexts hc
-    SET fork_id = 1, events_id = hive.unreachable_event_id()
-    FROM hafd.contexts_attachment  hac
+    SET events_id = hive.unreachable_event_id()
+    FROM hafd.contexts_attachment hac
     WHERE hac.context_id = hc.id
     AND hac.is_attached = FALSE;
 END;

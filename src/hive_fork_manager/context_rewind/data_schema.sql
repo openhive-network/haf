@@ -12,12 +12,9 @@ CREATE TABLE IF NOT EXISTS hafd.contexts(
     schema TEXT NOT NULL,
     current_block_num INTEGER NOT NULL,
     irreversible_block INTEGER NOT NULL,
-    back_from_fork BOOL NOT NULL DEFAULT FALSE,
     events_id BIGINT, -- 0 - is a special fake event, means no events are processed, it is required to satisfy FK constraint
-    fork_id BIGINT,
     owner NAME NOT NULL,
     registering_state_provider BOOL NOT NULL DEFAULT FALSE,
-    is_forking BOOL NOT NULL DEFAULT TRUE,
     last_active_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, -- Stores last app activity time (updated by apps APIs like app_next_block)
     baseclass_id REGCLASS NOT NULL, -- id of context base table
     stages hafd.application_stages,
@@ -55,10 +52,8 @@ CREATE TABLE IF NOT EXISTS hafd.registered_tables(
 SELECT pg_catalog.pg_extension_config_dump('hafd.registered_tables', '');
 SELECT pg_catalog.pg_extension_config_dump('hafd.registered_tables_id_seq', '');
 
-
 CREATE INDEX IF NOT EXISTS hive_registered_tables_context_idx ON hafd.registered_tables( context_id );
 CREATE INDEX IF NOT EXISTS hive_registered_tables_owder_idx ON hafd.registered_tables( owner );
-
 
 CREATE TABLE IF NOT EXISTS hafd.triggers(
    id SERIAL PRIMARY KEY,
@@ -74,8 +69,4 @@ SELECT pg_catalog.pg_extension_config_dump('hafd.triggers_id_seq', '');
 
 CREATE INDEX IF NOT EXISTS hive_registered_triggers_table_id ON hafd.triggers( registered_table_id );
 CREATE INDEX IF NOT EXISTS hive_triggers_owner_idx ON hafd.triggers( owner );
-
-
-
-
 

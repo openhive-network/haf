@@ -22,7 +22,6 @@ $BODY$
 CREATE OR REPLACE FUNCTION hive.app_create_context(
       _name hafd.context_name
     , _schema TEXT
-    , _is_forking BOOLEAN = TRUE
     , _is_attached BOOLEAN = TRUE
 )
     RETURNS void
@@ -31,18 +30,12 @@ CREATE OR REPLACE FUNCTION hive.app_create_context(
 AS
 $BODY$
 BEGIN
-    IF _is_forking AND hive.is_lite_mode() THEN
-        RAISE EXCEPTION 'Cannot create forking context in lite mode. Use _is_forking=FALSE.';
-    END IF;
-
     -- Any context always starts with block before genesis, the app may detach the context and execute 'massive sync'
     -- after massive sync the application must attach its context to last already synced block
     PERFORM hive.context_create(
           _name
         , _schema
-        , ( SELECT MAX( hf.id ) FROM hafd.fork hf ) -- current fork id
         , COALESCE( ( SELECT hid.consistent_block FROM hafd.hive_state hid ), 0 ) -- head of irreversible block
-        , _is_forking
         , _is_attached
         , NULL
     );
@@ -57,7 +50,6 @@ CREATE OR REPLACE FUNCTION hive.app_create_context(
       _name hafd.context_name
     , _schema TEXT
     , _stages hafd.application_stages
-    , _is_forking BOOLEAN = TRUE
 )
     RETURNS void
     LANGUAGE plpgsql
@@ -65,18 +57,12 @@ CREATE OR REPLACE FUNCTION hive.app_create_context(
 AS
 $BODY$
 BEGIN
-    IF _is_forking AND hive.is_lite_mode() THEN
-        RAISE EXCEPTION 'Cannot create forking context in lite mode. Use _is_forking=FALSE.';
-    END IF;
-
     -- Any context always starts with block before genesis, the app may detach the context and execute 'massive sync'
     -- after massive sync the application must attach its context to last already synced block
     PERFORM hive.context_create(
             _name
         , _schema
-        , ( SELECT MAX( hf.id ) FROM hafd.fork hf ) -- current fork id
         , COALESCE( ( SELECT hid.consistent_block FROM hafd.hive_state hid ), 0 ) -- head of irreversible block
-        , _is_forking
         , False
         , _stages
     );
@@ -146,28 +132,8 @@ CREATE OR REPLACE FUNCTION hive.app_are_forking( _context_names hive.contexts_gr
     STABLE
 AS
 $BODY$
-DECLARE
-    __result TEXT[];
 BEGIN
-    PERFORM hive.app_check_contexts_synchronized( _context_names );
-
-    SELECT ARRAY_AGG( hc.name ) INTO __result
-    FROM hafd.contexts hc
-    WHERE hc.name::TEXT = ANY( _context_names ) AND hc.is_forking = TRUE;
-
-    IF array_length( __result, 1 ) IS NULL THEN
-        RETURN FALSE;
-    END IF;
-
-    IF array_length( __result, 1 ) = 0 THEN
-        RETURN FALSE;
-    END IF;
-
-    IF array_length( __result, 1 ) != array_length( _context_names, 1 ) THEN
-        RAISE EXCEPTION  'Group  %  consists forking and non forking contexts, and only % are forking.', _context_names, __result;
-    END IF;
-
-    RETURN TRUE;
+    RETURN FALSE;
 END;
 $BODY$
 ;
@@ -178,12 +144,8 @@ CREATE OR REPLACE FUNCTION hive.app_is_forking( _context_name hafd.context_name 
     STABLE
 AS
 $BODY$
-DECLARE
-    __result BOOL;
 BEGIN
-    -- if there there is a registered table for a given context
-    SELECT  * FROM hive.app_are_forking( ARRAY[ _context_name ] ) INTO __result;
-    RETURN __result;
+    RETURN FALSE;
 END;
 $BODY$
 ;
@@ -194,25 +156,9 @@ CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names hive.contexts_gro
     VOLATILE
 AS
 $BODY$
-DECLARE
-    __hive_sync_state hafd.sync_state;
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _context_names );
-
-    -- prevent auto-detaching the context when app is actively asking for new blocks
-    UPDATE hafd.contexts
-    SET last_active_at = NOW()
-    WHERE name =ANY(_context_names);
-
-    SELECT hive.get_sync_state() INTO __hive_sync_state;
-
-    -- if there there is  registered table for given context
-    -- In lite mode, always use the non-forking path (defense-in-depth)
-    IF NOT hive.is_lite_mode() AND hive.app_are_forking( _context_names ) AND ( __hive_sync_state = 'LIVE' OR NOT hive.is_pruning_enabled() )
-    THEN
-        RETURN hive.app_next_block_forking_app( _context_names );
-    END IF;
-
+    UPDATE hafd.contexts SET last_active_at = NOW() WHERE name =ANY(_context_names);
     RETURN hive.app_next_block_non_forking_app( _context_names );
 END;
 $BODY$
@@ -239,7 +185,6 @@ $BODY$
 DECLARE
     __head_of_irreversible_block hafd.blocks.num%TYPE:=0;
     __current_block_num INT;
-    __fork_id hafd.fork.id%TYPE := 1;
     __lead_context hafd.context_name := _contexts[1];
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _contexts );
@@ -261,12 +206,8 @@ BEGIN
             , _contexts, __current_block_num,  __head_of_irreversible_block;
     END IF;
 
-    SELECT MAX(hf.id) INTO __fork_id FROM hafd.fork hf WHERE hf.block_num <= GREATEST(__current_block_num, 1);
-
     UPDATE hafd.contexts
-    SET   fork_id = __fork_id
-      , irreversible_block = COALESCE( __head_of_irreversible_block, 0 )
-      , events_id = 0 -- during app_next_block correct event will be found
+    SET   events_id = 0 -- during app_next_block correct event will be found
       , last_active_at = NOW()
     WHERE name =ANY( _contexts )
     ;
@@ -364,34 +305,7 @@ CREATE OR REPLACE FUNCTION hive.app_context_set_non_forking( _contexts hive.cont
 AS
 $BODY$
 BEGIN
-    -- Idempotent: skip if all contexts are already non-forking
-    IF NOT EXISTS (SELECT 1 FROM hafd.contexts WHERE name = ANY(_contexts) AND is_forking) THEN
-        RETURN;
-    END IF;
-
-    PERFORM hive.app_check_contexts_synchronized( _contexts );
-
-    -- detaching is the best method to remove reversible data and triggers
-    PERFORM
-          hive.context_detach( context.* )
-    FROM unnest( _contexts ) as context;
-
-    UPDATE hafd.contexts hc
-    SET is_forking = false
-      , last_active_at = NOW()
-    WHERE hc.name = ANY( _contexts );
-
-    -- we are reattaching the contexts but the triggers won't be recreated
-    -- because now the contexts are non-forking
-    PERFORM
-        hive.context_attach( context.text, hc.irreversible_block )
-    FROM hafd.contexts hc
-    JOIN unnest( _contexts ) as context ON context.text = hc.name;
-
-    PERFORM hive.drop_rowid_index( hrt.origin_table_schema, hrt.origin_table_name )
-    FROM hafd.registered_tables hrt
-    JOIN hafd.contexts hc ON hrt.context_id = hc.id
-    JOIN unnest( _contexts ) as context ON context.text = hc.name;
+    -- Already non-forking in irreversible-only mode
 END;
 $BODY$
 ;
@@ -404,7 +318,7 @@ CREATE OR REPLACE FUNCTION hive.app_context_set_non_forking( _context hafd.conte
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_context_set_non_forking( ARRAY[ _context ] );
+    -- Already non-forking in irreversible-only mode
 END;
 $BODY$
 ;
@@ -416,38 +330,7 @@ CREATE OR REPLACE FUNCTION hive.app_context_set_forking( _contexts hive.contexts
 AS
 $BODY$
 BEGIN
-    IF hive.is_lite_mode() THEN
-        RAISE EXCEPTION 'Cannot set forking mode in lite mode. Lite mode only supports non-forking contexts.';
-    END IF;
-
-    -- Idempotent: skip if all contexts are already forking
-    IF NOT EXISTS (SELECT 1 FROM hafd.contexts WHERE name = ANY(_contexts) AND NOT is_forking) THEN
-        RETURN;
-    END IF;
-
-    PERFORM hive.app_check_contexts_synchronized( _contexts );
-
-    -- detaching is the best method to remove reversible data and triggers
-    PERFORM
-        hive.context_detach( context.* )
-    FROM unnest( _contexts ) as context;
-
-    UPDATE hafd.contexts hc
-    SET is_forking = true
-      , last_active_at = NOW()
-    WHERE hc.name = ANY( _contexts );
-    --recursive
-    -- to recreate triggers
-    PERFORM
-        hive.context_attach( context.text, hc.irreversible_block )
-    FROM hafd.contexts hc
-    JOIN unnest( _contexts ) as context ON context.text = hc.name;
-
-    PERFORM hive.create_rowid_index( hrt.origin_table_schema, hrt.origin_table_name )
-    FROM hafd.registered_tables hrt
-    JOIN hafd.contexts hc ON hrt.context_id = hc.id
-    JOIN unnest( _contexts ) as context ON context.text = hc.name;
-
+    RAISE EXCEPTION 'Cannot set forking mode in irreversible-only schema';
 END;
 $BODY$
 ;
@@ -460,7 +343,7 @@ CREATE OR REPLACE FUNCTION hive.app_context_set_forking( _context hafd.context_n
 AS
 $BODY$
 BEGIN
-    PERFORM hive.app_context_set_forking( ARRAY[ _context ] );
+    RAISE EXCEPTION 'Cannot set forking mode in irreversible-only schema';
 END;
 $BODY$
 ;
@@ -477,7 +360,6 @@ BEGIN
     SELECT schema INTO __schema
     FROM hafd.contexts hc
     WHERE hc.name = _context;
-    EXECUTE format( 'ALTER TABLE %I.%s ADD COLUMN hive_rowid BIGINT NOT NULL DEFAULT 0', _table_schema, _table_name );
     EXECUTE format( 'ALTER TABLE %I.%s INHERIT %I.%s', _table_schema, _table_name, __schema, _context );
 END;
 $BODY$
@@ -518,15 +400,7 @@ $BODY$
 DECLARE
     __result hafd.contexts.irreversible_block%TYPE;
 BEGIN
-    IF hive.app_is_forking( _context_name )
-    THEN
-        SELECT hc.irreversible_block INTO __result
-        FROM hafd.contexts hc
-        WHERE hc.name = _context_name;
-    ELSE
-        __result := COALESCE((SELECT hb.num from hafd.blocks hb ORDER BY num DESC LIMIT 1), 0);
-    END IF;
-
+    __result := COALESCE((SELECT hb.num from hafd.blocks hb ORDER BY num DESC LIMIT 1), 0);
     RETURN __result;
 END;
 $BODY$;
@@ -737,16 +611,6 @@ BEGIN
     FROM hafd.state_providers_registered hsp
     WHERE hsp.context_id = __context_id AND hsp.state_provider = _state_provider;
 
-    IF NOT hive.app_is_forking( _context ) THEN
-        RETURN;
-    END IF;
-
-    -- register tables
-    PERFORM
-          hive.app_register_table( 'hafd', unnest( hsp.tables ), _context )
-    FROM hafd.state_providers_registered hsp
-    WHERE hsp.context_id = __context_id AND hsp.state_provider = _state_provider;
-
 END;
 $BODY$
 ;
@@ -862,7 +726,6 @@ BEGIN
                    ctx.current_block_num
                  , hca.is_attached
                  , ctx.events_id
-                 , ctx.is_forking
                  , (ctx.loop).size_of_blocks_batch
                  , (ctx.loop).current_batch_end
                  , (ctx.loop).end_block_range
@@ -913,12 +776,10 @@ CREATE OR REPLACE FUNCTION hive.get_app_current_block_age(_contexts hive.context
     STABLE
 AS $BODY$
 BEGIN
-    RETURN now() - (select min(coalesce(hafd.blocks.created_at, hafd.blocks_reversible.created_at, to_timestamp(0))) from
+    RETURN now() - (select min(coalesce(hafd.blocks.created_at, to_timestamp(0))) from
                     UNNEST(_contexts) AS context_names(name)
                     LEFT JOIN hafd.contexts USING(name)
                     LEFT JOIN hafd.blocks on hafd.blocks.num = hafd.contexts.current_block_num
-                    LEFT JOIN hafd.blocks_reversible on hafd.blocks_reversible.num = hafd.contexts.current_block_num AND
-                                                        hafd.blocks_reversible.fork_id = hafd.contexts.fork_id
                     );
 END;
 $BODY$;
