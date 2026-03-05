@@ -2,6 +2,8 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.exc import MultipleResultsFound
 from sqlalchemy import text
 
+import pytest
+
 import test_tools as tt
 
 from haf_local_tools import make_fork, wait_for_irreversible_progress
@@ -25,6 +27,7 @@ def wait_for_haf_irreversible(session, block_num: int, timeout: float = 60.0, po
     )
 
 
+@pytest.mark.forking_only
 def test_undo_operations(prepared_networks_and_database_12_8):
     tt.logger.info(f'Start test_undo_operations')
 

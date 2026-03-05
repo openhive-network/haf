@@ -1,3 +1,5 @@
+import pytest
+
 import test_tools as tt
 
 from haf_local_tools import make_fork, wait_for_irreversible_progress
@@ -6,6 +8,7 @@ from haf_local_tools.tables import Transactions
 START_TEST_BLOCK = 108
 
 
+@pytest.mark.forking_only
 def test_undo_transactions(prepared_networks_and_database_12_8):
     tt.logger.info(f'Start test_undo_transactions')
 

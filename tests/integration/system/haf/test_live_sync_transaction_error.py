@@ -32,6 +32,7 @@ def display_blocks_information(node):
     return h_b, i_b
 
 
+@pytest.mark.forking_only
 def test_live_sync_transaction_error(haf_node):
     tt.logger.info(f'Start test_live_sync_error')
 

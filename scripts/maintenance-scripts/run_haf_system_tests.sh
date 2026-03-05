@@ -53,6 +53,6 @@ pytest -v --junitxml="${REPO_DIR}/scripts/tests/report.xml" --timeout=60
 echo -e "\e[0Ksection_end:$(date +%s):process_openapi_tests\r\e[0K"
 
 cd "${REPO_DIR}/tests/integration/system/haf"
-pytest --junitxml report.xml -n "${PYTEST_NUMBER_OF_PROCESSES}" -m "not mirrornet" "${ARGS[@]}"
+pytest --junitxml report.xml -n "${PYTEST_NUMBER_OF_PROCESSES}" -m "not mirrornet and not forking_only" "${ARGS[@]}"
 
 test_end

@@ -4,6 +4,8 @@ from sqlalchemy import cast
 from sqlalchemy.dialects.postgresql import JSONB
 import os
 
+import pytest
+
 import test_tools as tt
 
 from haf_local_tools import (
@@ -31,6 +33,7 @@ def display_blocks_information(node):
     return h_b, i_b
 
 
+@pytest.mark.forking_only
 def test_live_sync_apply_block_fail(haf_node):
     tt.logger.info(f'Start test_live_sync_error')
 

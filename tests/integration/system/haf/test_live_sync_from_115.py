@@ -1,6 +1,8 @@
 from sqlalchemy import cast
 from sqlalchemy.dialects.postgresql import JSONB
 
+import pytest
+
 import test_tools as tt
 
 from haf_local_tools import get_head_block, get_irreversible_block, wait_for_irreversible_progress, wait_for_irreversible_in_database, get_first_block_with_transaction
@@ -22,6 +24,7 @@ def display_blocks_information(node):
     return h_b, i_b
 
 
+@pytest.mark.forking_only
 def test_live_sync_from_115(prepared_networks_and_database_12_8_from_115):
     tt.logger.info(f'Start test_live_sync_from_115')
 

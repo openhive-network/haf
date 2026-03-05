@@ -111,6 +111,166 @@ ADD_TEST( NAME test_update_script
 
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/identifier_validations.sql )
 
+SET_TESTS_PROPERTIES(
+  test.functional.hive_fork_manager.context_rewind.schema_test
+  test.functional.update.hive_fork_manager.context_rewind.schema_test
+  test.functional.hive_fork_manager.context_rewind.register_table_test
+  test.functional.update.hive_fork_manager.context_rewind.register_table_test
+  test.functional.hive_fork_manager.context_rewind.register_table_edit_test
+  test.functional.update.hive_fork_manager.context_rewind.register_table_edit_test
+  test.functional.hive_fork_manager.context_rewind.register_table_edit_negative_test
+  test.functional.update.hive_fork_manager.context_rewind.register_table_edit_negative_test
+  test.functional.hive_fork_manager.context_rewind.register_table_edit_negative_rowid_test
+  test.functional.update.hive_fork_manager.context_rewind.register_table_edit_negative_rowid_test
+  test.functional.hive_fork_manager.context_rewind.register_table_drop_test
+  test.functional.update.hive_fork_manager.context_rewind.register_table_drop_test
+  test.functional.hive_fork_manager.context_rewind.detach_table_test
+  test.functional.update.hive_fork_manager.context_rewind.detach_table_test
+  test.functional.hive_fork_manager.context_rewind.attach_table_test
+  test.functional.update.hive_fork_manager.context_rewind.attach_table_test
+  test.functional.hive_fork_manager.context_rewind.detach_negative_unregistered_table_test
+  test.functional.update.hive_fork_manager.context_rewind.detach_negative_unregistered_table_test
+  test.functional.hive_fork_manager.context_rewind.detach_negative_not_empty_shadow_table_test
+  test.functional.update.hive_fork_manager.context_rewind.detach_negative_not_empty_shadow_table_test
+  test.functional.hive_fork_manager.context_rewind.detach_all_tables_test
+  test.functional.update.hive_fork_manager.context_rewind.detach_all_tables_test
+  test.functional.hive_fork_manager.context_rewind.detach_all_negative_tables_test
+  test.functional.update.hive_fork_manager.context_rewind.detach_all_negative_tables_test
+  test.functional.hive_fork_manager.context_rewind.detach_constraint_fk_test
+  test.functional.update.hive_fork_manager.context_rewind.detach_constraint_fk_test
+  test.functional.hive_fork_manager.context_rewind.attach_negative_unregistered_table_test
+  test.functional.update.hive_fork_manager.context_rewind.attach_negative_unregistered_table_test
+  test.functional.hive_fork_manager.context_rewind.attach_all_tables_test
+  test.functional.update.hive_fork_manager.context_rewind.attach_all_tables_test
+  test.functional.hive_fork_manager.context_rewind.attach_all_negative_tables_test
+  test.functional.update.hive_fork_manager.context_rewind.attach_all_negative_tables_test
+  test.functional.hive_fork_manager.context_rewind.drop_registered_table_test
+  test.functional.update.hive_fork_manager.context_rewind.drop_registered_table_test
+  test.functional.hive_fork_manager.context_rewind.drop_contraint_of_registered_table_test
+  test.functional.update.hive_fork_manager.context_rewind.drop_contraint_of_registered_table_test
+  test.functional.hive_fork_manager.context_rewind.register_table_no_context_test
+  test.functional.update.hive_fork_manager.context_rewind.register_table_no_context_test
+  test.functional.hive_fork_manager.context_rewind.register_table_public_schema_test
+  test.functional.update.hive_fork_manager.context_rewind.register_table_public_schema_test
+  test.functional.hive_fork_manager.context_rewind.register_table_to_two_contexts_negative_test
+  test.functional.update.hive_fork_manager.context_rewind.register_table_to_two_contexts_negative_test
+  test.functional.hive_fork_manager.context_rewind.register_table_one_role_creates_context_and_second_add_tables
+  test.functional.update.hive_fork_manager.context_rewind.register_table_one_role_creates_context_and_second_add_tables
+  test.functional.hive_fork_manager.context_rewind.register_table_non_forking_test
+  test.functional.update.hive_fork_manager.context_rewind.register_table_non_forking_test
+  test.functional.hive_fork_manager.context_rewind.register_table_search_path
+  test.functional.update.hive_fork_manager.context_rewind.register_table_search_path
+  test.functional.hive_fork_manager.context_rewind.contexts_limit_eq
+  test.functional.update.hive_fork_manager.context_rewind.contexts_limit_eq
+  test.functional.hive_fork_manager.context_rewind.contexts_limit_gt
+  test.functional.update.hive_fork_manager.context_rewind.contexts_limit_gt
+  test.functional.hive_fork_manager.context_rewind.contexts_limit_less
+  test.functional.update.hive_fork_manager.context_rewind.contexts_limit_less
+  test.functional.hive_fork_manager.context_rewind.create_context_test
+  test.functional.update.hive_fork_manager.context_rewind.create_context_test
+  test.functional.hive_fork_manager.context_rewind.create_context_negative
+  test.functional.update.hive_fork_manager.context_rewind.create_context_negative
+  test.functional.hive_fork_manager.context_rewind.context_next_block_test
+  test.functional.update.hive_fork_manager.context_rewind.context_next_block_test
+  test.functional.hive_fork_manager.context_rewind.trigger_on_insert_test
+  test.functional.update.hive_fork_manager.context_rewind.trigger_on_insert_test
+  test.functional.hive_fork_manager.context_rewind.trigger_on_delete_test
+  test.functional.update.hive_fork_manager.context_rewind.trigger_on_delete_test
+  test.functional.hive_fork_manager.context_rewind.trigger_on_update_test
+  test.functional.update.hive_fork_manager.context_rewind.trigger_on_update_test
+  test.functional.hive_fork_manager.context_rewind.trigger_on_truncate_test
+  test.functional.update.hive_fork_manager.context_rewind.trigger_on_truncate_test
+  test.functional.hive_fork_manager.context_rewind.trigger_on_insert_update_delete_test
+  test.functional.update.hive_fork_manager.context_rewind.trigger_on_insert_update_delete_test
+  test.functional.hive_fork_manager.context_rewind.trigger_on_multi_rows_insert_update_delete_test
+  test.functional.update.hive_fork_manager.context_rewind.trigger_on_multi_rows_insert_update_delete_test
+  test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_insert_test
+  test.functional.update.hive_fork_manager.context_rewind.trigger_3_tables_on_insert_test
+  test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_update_test
+  test.functional.update.hive_fork_manager.context_rewind.trigger_3_tables_on_update_test
+  test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_delete_test
+  test.functional.update.hive_fork_manager.context_rewind.trigger_3_tables_on_delete_test
+  test.functional.hive_fork_manager.context_rewind.trigger_3_tables_on_truncate_test
+  test.functional.update.hive_fork_manager.context_rewind.trigger_3_tables_on_truncate_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_insert_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_insert_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_delete_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_delete_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_update_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_update_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_truncate_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_truncate_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_insert_delete_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_insert_delete_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_insert_next_delete_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_insert_next_delete_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_update_delete_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_update_delete_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_update_next_delete_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_update_next_delete_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_update_some_rows_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_update_some_rows_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_delete_insert_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_delete_insert_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_delete_next_insert_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_delete_next_insert_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_insert_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_3_tables_insert_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_delete_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_3_tables_delete_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_update_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_3_tables_update_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_3_tables_truncate_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_3_tables_truncate_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_2_tables_schemas_insert_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_2_tables_schemas_insert_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_2_contexts_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_2_contexts_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_to_block_num_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_to_block_num_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_constraint_fk_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_constraint_fk_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_constraint_unique_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_constraint_unique_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_constraint_pk_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_constraint_pk_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_complex_type_update_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_complex_type_update_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_complex_type_insert_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_complex_type_insert_test
+  test.functional.hive_fork_manager.context_rewind.back_from_fork_complex_type_delete_test
+  test.functional.update.hive_fork_manager.context_rewind.back_from_fork_complex_type_delete_test
+  test.functional.hive_fork_manager.context_rewind.set_irreversible_block_test
+  test.functional.update.hive_fork_manager.context_rewind.set_irreversible_block_test
+  test.functional.hive_fork_manager.context_rewind.set_irreversible_block_negative_test
+  test.functional.update.hive_fork_manager.context_rewind.set_irreversible_block_negative_test
+  test.functional.hive_fork_manager.context_rewind.performance_insert_rows_test
+  test.functional.update.hive_fork_manager.context_rewind.performance_insert_rows_test
+  test.functional.hive_fork_manager.context_rewind.performance_back_from_insert_rows_test
+  test.functional.update.hive_fork_manager.context_rewind.performance_back_from_insert_rows_test
+  test.functional.hive_fork_manager.context_rewind.performance_delete_rows_test
+  test.functional.update.hive_fork_manager.context_rewind.performance_delete_rows_test
+  test.functional.hive_fork_manager.context_rewind.performance_back_from_delete_rows_test
+  test.functional.update.hive_fork_manager.context_rewind.performance_back_from_delete_rows_test
+  test.functional.hive_fork_manager.context_rewind.performance_update_rows_test
+  test.functional.update.hive_fork_manager.context_rewind.performance_update_rows_test
+  test.functional.hive_fork_manager.context_rewind.performance_back_from_update_rows_test
+  test.functional.update.hive_fork_manager.context_rewind.performance_back_from_update_rows_test
+  test.functional.hive_fork_manager.context_rewind.performance_truncate_rows_test
+  test.functional.update.hive_fork_manager.context_rewind.performance_truncate_rows_test
+  test.functional.hive_fork_manager.context_rewind.performance_back_from_truncate_rows_test
+  test.functional.update.hive_fork_manager.context_rewind.performance_back_from_truncate_rows_test
+  test.functional.hive_fork_manager.context_rewind.performance_insert_rows_one_by_one_test
+  test.functional.update.hive_fork_manager.context_rewind.performance_insert_rows_one_by_one_test
+  test.functional.hive_fork_manager.context_rewind.performance_delete_rows_one_by_one_test
+  test.functional.update.hive_fork_manager.context_rewind.performance_delete_rows_one_by_one_test
+  test.functional.hive_fork_manager.context_rewind.performance_update_rows_one_by_one_test
+  test.functional.update.hive_fork_manager.context_rewind.performance_update_rows_one_by_one_test
+  test.functional.hive_fork_manager.context_rewind.identifier_validations
+  test.functional.update.hive_fork_manager.context_rewind.identifier_validations
+  PROPERTIES LABELS "forking_only"
+)
+
  ADD_SQL_FUNCTIONAL_TEST( hived_api/schema_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/back_from_fork_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/push_block_test.sql )
@@ -159,6 +319,64 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( hived_api/connect_test_not_remove_reversible.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/set_sync_state.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/get_sync_state.sql )
+
+SET_TESTS_PROPERTIES(
+  test.functional.hive_fork_manager.hived_api.schema_test
+  test.functional.update.hive_fork_manager.hived_api.schema_test
+  test.functional.hive_fork_manager.hived_api.back_from_fork_test
+  test.functional.update.hive_fork_manager.hived_api.back_from_fork_test
+  test.functional.hive_fork_manager.hived_api.push_block_test
+  test.functional.update.hive_fork_manager.hived_api.push_block_test
+  test.functional.hive_fork_manager.hived_api.set_irreversible_test
+  test.functional.update.hive_fork_manager.hived_api.set_irreversible_test
+  test.functional.hive_fork_manager.hived_api.copy_blocks_to_irreversible
+  test.functional.update.hive_fork_manager.hived_api.copy_blocks_to_irreversible
+  test.functional.hive_fork_manager.hived_api.copy_transactions_to_irreversible_test
+  test.functional.update.hive_fork_manager.hived_api.copy_transactions_to_irreversible_test
+  test.functional.hive_fork_manager.hived_api.copy_operations_to_irreversible_test
+  test.functional.update.hive_fork_manager.hived_api.copy_operations_to_irreversible_test
+  test.functional.hive_fork_manager.hived_api.copy_signatures_to_irreversible_test
+  test.functional.update.hive_fork_manager.hived_api.copy_signatures_to_irreversible_test
+  test.functional.hive_fork_manager.hived_api.copy_applied_hardforks_to_irreversible_test
+  test.functional.update.hive_fork_manager.hived_api.copy_applied_hardforks_to_irreversible_test
+  test.functional.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible
+  test.functional.update.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible
+  test.functional.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible_3_contexts
+  test.functional.update.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible_3_contexts
+  test.functional.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible_no_contexts
+  test.functional.update.hive_fork_manager.hived_api.remove_obsolete_blocks_with_set_irreversible_no_contexts
+  test.functional.hive_fork_manager.hived_api.remove_obsolete_end_massive_sync_with_app_test
+  test.functional.update.hive_fork_manager.hived_api.remove_obsolete_end_massive_sync_with_app_test
+  test.functional.hive_fork_manager.hived_api.set_irreversible_not_copy_reversible_data_from_old_fork_test
+  test.functional.update.hive_fork_manager.hived_api.set_irreversible_not_copy_reversible_data_from_old_fork_test
+  test.functional.hive_fork_manager.hived_api.set_irreversible_not_copy_reversible_data_from_top_fork_test
+  test.functional.update.hive_fork_manager.hived_api.set_irreversible_not_copy_reversible_data_from_top_fork_test
+  test.functional.hive_fork_manager.hived_api.set_irreversible_cleaning_old_fork_data_test
+  test.functional.update.hive_fork_manager.hived_api.set_irreversible_cleaning_old_fork_data_test
+  test.functional.hive_fork_manager.hived_api.removing_inconsistent_irreversibele_data
+  test.functional.update.hive_fork_manager.hived_api.removing_inconsistent_irreversibele_data
+  test.functional.hive_fork_manager.hived_api.not_removing_inconsistent_irreversibele_data
+  test.functional.update.hive_fork_manager.hived_api.not_removing_inconsistent_irreversibele_data
+  test.functional.hive_fork_manager.hived_api.connect_test
+  test.functional.update.hive_fork_manager.hived_api.connect_test
+  test.functional.hive_fork_manager.hived_api.copy_accounts_to_irreversible
+  test.functional.update.hive_fork_manager.hived_api.copy_accounts_to_irreversible
+  test.functional.hive_fork_manager.hived_api.copy_account_operations_to_irreversible
+  test.functional.update.hive_fork_manager.hived_api.copy_account_operations_to_irreversible
+  test.functional.hive_fork_manager.hived_api.disable_indexes_reversible_test
+  test.functional.update.hive_fork_manager.hived_api.disable_indexes_reversible_test
+  test.functional.hive_fork_manager.hived_api.enable_indexes_reversible_test
+  test.functional.update.hive_fork_manager.hived_api.enable_indexes_reversible_test
+  test.functional.hive_fork_manager.hived_api.get_block_header_test
+  test.functional.update.hive_fork_manager.hived_api.get_block_header_test
+  test.functional.hive_fork_manager.hived_api.get_block_test
+  test.functional.update.hive_fork_manager.hived_api.get_block_test
+  test.functional.hive_fork_manager.hived_api.get_block_reversible_test
+  test.functional.update.hive_fork_manager.hived_api.get_block_reversible_test
+  test.functional.hive_fork_manager.hived_api.autodetach
+  test.functional.update.hive_fork_manager.hived_api.autodetach
+  PROPERTIES LABELS "forking_only"
+)
 
  ADD_SQL_FUNCTIONAL_TEST( app_api/create_context_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_remove_test.sql )
@@ -282,6 +500,86 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST(app_api/vacuum_request.sql)
  ADD_SQL_FUNCTIONAL_TEST(app_api/app_save_and_drop_indexes_in_app_schema.sql)
 
+SET_TESTS_PROPERTIES(
+  test.functional.hive_fork_manager.app_api.context_blocks_view_test
+  test.functional.update.hive_fork_manager.app_api.context_blocks_view_test
+  test.functional.hive_fork_manager.app_api.context_transactions_view_test
+  test.functional.update.hive_fork_manager.app_api.context_transactions_view_test
+  test.functional.hive_fork_manager.app_api.context_signatures_view_test
+  test.functional.update.hive_fork_manager.app_api.context_signatures_view_test
+  test.functional.hive_fork_manager.app_api.context_operations_view_test
+  test.functional.update.hive_fork_manager.app_api.context_operations_view_test
+  test.functional.hive_fork_manager.app_api.app_next_block_process_BFF_event
+  test.functional.update.hive_fork_manager.app_api.app_next_block_process_BFF_event
+  test.functional.hive_fork_manager.app_api.app_next_block_process_BFF_wrong_id
+  test.functional.update.hive_fork_manager.app_api.app_next_block_process_BFF_wrong_id
+  test.functional.hive_fork_manager.app_api.app_next_block_group_process_BFF_wrong_id
+  test.functional.update.hive_fork_manager.app_api.app_next_block_group_process_BFF_wrong_id
+  test.functional.hive_fork_manager.app_api.app_next_block_process_BFF_in_irreversible_range
+  test.functional.update.hive_fork_manager.app_api.app_next_block_process_BFF_in_irreversible_range
+  test.functional.hive_fork_manager.app_api.app_next_block_process_BFF_event_and_other
+  test.functional.update.hive_fork_manager.app_api.app_next_block_process_BFF_event_and_other
+  test.functional.hive_fork_manager.app_api.app_contexts_group_next_block_process_BFF_event
+  test.functional.update.hive_fork_manager.app_api.app_contexts_group_next_block_process_BFF_event
+  test.functional.hive_fork_manager.app_api.app_next_block_process_BFF_event_2_contexts
+  test.functional.update.hive_fork_manager.app_api.app_next_block_process_BFF_event_2_contexts
+  test.functional.hive_fork_manager.app_api.app_next_block_process_SET_IRREVERSIBLE_and_BFF_event
+  test.functional.update.hive_fork_manager.app_api.app_next_block_process_SET_IRREVERSIBLE_and_BFF_event
+  test.functional.hive_fork_manager.app_api.app_next_block_process_fork_and_MASSIVE_SYNC_event
+  test.functional.update.hive_fork_manager.app_api.app_next_block_process_fork_and_MASSIVE_SYNC_event
+  test.functional.hive_fork_manager.app_api.app_next_block_non_forking_app
+  test.functional.update.hive_fork_manager.app_api.app_next_block_non_forking_app
+  test.functional.hive_fork_manager.app_api.app_contexts_group_next_block_non_forking_app
+  test.functional.update.hive_fork_manager.app_api.app_contexts_group_next_block_non_forking_app
+  test.functional.hive_fork_manager.app_api.app_get_irreversible_block_forking
+  test.functional.update.hive_fork_manager.app_api.app_get_irreversible_block_forking
+  test.functional.hive_fork_manager.app_api.app_contexts_group_get_irreversible_block_forking
+  test.functional.update.hive_fork_manager.app_api.app_contexts_group_get_irreversible_block_forking
+  test.functional.hive_fork_manager.app_api.context_blocks_view_detach_test
+  test.functional.update.hive_fork_manager.app_api.context_blocks_view_detach_test
+  test.functional.hive_fork_manager.app_api.context_signatures_view_detach_test
+  test.functional.update.hive_fork_manager.app_api.context_signatures_view_detach_test
+  test.functional.hive_fork_manager.app_api.context_operations_view_detach_test
+  test.functional.update.hive_fork_manager.app_api.context_operations_view_detach_test
+  test.functional.hive_fork_manager.app_api.context_transactions_view_detach_test
+  test.functional.update.hive_fork_manager.app_api.context_transactions_view_detach_test
+  test.functional.hive_fork_manager.app_api.context_applied_hardforks_view_detach_test
+  test.functional.update.hive_fork_manager.app_api.context_applied_hardforks_view_detach_test
+  test.functional.hive_fork_manager.app_api.context_applied_hardforks_view_test
+  test.functional.update.hive_fork_manager.app_api.context_applied_hardforks_view_test
+  test.functional.hive_fork_manager.app_api.context_accounts_view_test
+  test.functional.update.hive_fork_manager.app_api.context_accounts_view_test
+  test.functional.hive_fork_manager.app_api.context_accounts_view_not_from_1_block_test
+  test.functional.update.hive_fork_manager.app_api.context_accounts_view_not_from_1_block_test
+  test.functional.hive_fork_manager.app_api.context_accounts_view_detach_test
+  test.functional.update.hive_fork_manager.app_api.context_accounts_view_detach_test
+  test.functional.hive_fork_manager.app_api.context_account_operations_view_detach_test
+  test.functional.update.hive_fork_manager.app_api.context_account_operations_view_detach_test
+  test.functional.hive_fork_manager.app_api.context_account_operations_view_test
+  test.functional.update.hive_fork_manager.app_api.context_account_operations_view_test
+  test.functional.hive_fork_manager.app_api.account_operations_view_test
+  test.functional.update.hive_fork_manager.app_api.account_operations_view_test
+  test.functional.hive_fork_manager.app_api.accounts_view_test
+  test.functional.update.hive_fork_manager.app_api.accounts_view_test
+  test.functional.hive_fork_manager.app_api.blocks_view_test
+  test.functional.update.hive_fork_manager.app_api.blocks_view_test
+  test.functional.hive_fork_manager.app_api.transactions_view_test
+  test.functional.update.hive_fork_manager.app_api.transactions_view_test
+  test.functional.hive_fork_manager.app_api.signatures_view_test
+  test.functional.update.hive_fork_manager.app_api.signatures_view_test
+  test.functional.hive_fork_manager.app_api.operations_view_test
+  test.functional.update.hive_fork_manager.app_api.operations_view_test
+  test.functional.hive_fork_manager.app_api.applied_hardforks_view_test
+  test.functional.update.hive_fork_manager.app_api.applied_hardforks_view_test
+  test.functional.hive_fork_manager.app_api.app_context_set_forking
+  test.functional.update.hive_fork_manager.app_api.app_context_set_forking
+  test.functional.hive_fork_manager.app_api.app_contexts_set_forking
+  test.functional.update.hive_fork_manager.app_api.app_contexts_set_forking
+  test.functional.hive_fork_manager.app_api.app_contexts_set_forking_back_and_again
+  test.functional.update.hive_fork_manager.app_api.app_contexts_set_forking_back_and_again
+  PROPERTIES LABELS "forking_only"
+)
+
  ADD_SQL_FUNCTIONAL_TEST( application_loop/validate_stages.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/current_stage.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/current_live_stage.sql )
@@ -315,9 +613,40 @@ SET_TESTS_PROPERTIES(
   test.functional.update.hive_fork_manager.application_loop.vacuum_shadow_tables
   PROPERTIES RUN_SERIAL TRUE
 )
+SET_TESTS_PROPERTIES(
+  test.functional.hive_fork_manager.application_loop.iteration_move_to_massive2
+  test.functional.update.hive_fork_manager.application_loop.iteration_move_to_massive2
+  test.functional.hive_fork_manager.application_loop.negative
+  test.functional.update.hive_fork_manager.application_loop.negative
+  test.functional.hive_fork_manager.application_loop.process_BFF_event
+  test.functional.update.hive_fork_manager.application_loop.process_BFF_event
+  test.functional.hive_fork_manager.application_loop.process_BFF_in_irreversible_range
+  test.functional.update.hive_fork_manager.application_loop.process_BFF_in_irreversible_range
+  test.functional.hive_fork_manager.application_loop.process_BFF_wrong_id
+  test.functional.update.hive_fork_manager.application_loop.process_BFF_wrong_id
+  test.functional.hive_fork_manager.application_loop.process_fork_and_MASSIVE_SYNC_event
+  test.functional.update.hive_fork_manager.application_loop.process_fork_and_MASSIVE_SYNC_event
+  test.functional.hive_fork_manager.application_loop.process_SET_IRREVERSIBLE_event
+  test.functional.update.hive_fork_manager.application_loop.process_SET_IRREVERSIBLE_event
+  test.functional.hive_fork_manager.application_loop.process_squash_MASSIVE_SYNC_event
+  test.functional.update.hive_fork_manager.application_loop.process_squash_MASSIVE_SYNC_event
+  test.functional.hive_fork_manager.application_loop.override_for_greater_batch
+  test.functional.update.hive_fork_manager.application_loop.override_for_greater_batch
+  test.functional.hive_fork_manager.application_loop.override_for_lesser_batch
+  test.functional.update.hive_fork_manager.application_loop.override_for_lesser_batch
+  test.functional.hive_fork_manager.application_loop.vacuum_shadow_tables
+  test.functional.update.hive_fork_manager.application_loop.vacuum_shadow_tables
+  PROPERTIES LABELS "forking_only"
+)
 
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork.sql )
  ADD_SQL_FUNCTIONAL_TEST( scenarios/massive_sync_live_blocks_and_fork_non_forking_app.sql )
+
+SET_TESTS_PROPERTIES(
+  test.functional.hive_fork_manager.scenarios.massive_sync_live_blocks_and_fork
+  test.functional.update.hive_fork_manager.scenarios.massive_sync_live_blocks_and_fork
+  PROPERTIES LABELS "forking_only"
+)
 
  ADD_SQL_FUNCTIONAL_TEST( state_providers/import_state_provider_negative.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/import_state_provider.sql )
@@ -341,6 +670,16 @@ SET_TESTS_PROPERTIES(
  ADD_SQL_FUNCTIONAL_TEST( state_providers/update_state_provider_runtime.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/import_state_provider_nonforking_app.sql )
 
+SET_TESTS_PROPERTIES(
+  test.functional.hive_fork_manager.state_providers.drop_state_provider
+  test.functional.update.hive_fork_manager.state_providers.drop_state_provider
+  test.functional.hive_fork_manager.state_providers.metadata_drop_state_provider
+  test.functional.update.hive_fork_manager.state_providers.metadata_drop_state_provider
+  test.functional.hive_fork_manager.state_providers.switch_state_provider_to_forkable
+  test.functional.update.hive_fork_manager.state_providers.switch_state_provider_to_forkable
+  PROPERTIES LABELS "forking_only"
+)
+
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_access_to_bob_negative.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_access_events_infrustructure.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/hived_access_alice_context_data.sql )
@@ -353,6 +692,18 @@ SET_TESTS_PROPERTIES(
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_access_to_bob.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/can_impersonate.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_impersonal_access_context.sql )
+
+SET_TESTS_PROPERTIES(
+  test.functional.hive_fork_manager.authorization.hived_access_alice_context_data
+  test.functional.update.hive_fork_manager.authorization.hived_access_alice_context_data
+  test.functional.hive_fork_manager.authorization.api_protection
+  test.functional.update.hive_fork_manager.authorization.api_protection
+  test.functional.hive_fork_manager.authorization.massive_sync_live_blocks_and_fork
+  test.functional.update.hive_fork_manager.authorization.massive_sync_live_blocks_and_fork
+  test.functional.hive_fork_manager.authorization.alice_cannot_change_context_owner_and_forking
+  test.functional.update.hive_fork_manager.authorization.alice_cannot_change_context_owner_and_forking
+  PROPERTIES LABELS "forking_only"
+)
 
  ADD_EXAMPLES_FUNCTIONAL_TESTS( examples/forking_application.py )
  ADD_EXAMPLES_FUNCTIONAL_TESTS( examples/non_forking_application.py )
@@ -408,6 +759,12 @@ SET_TESTS_PROPERTIES(
  ADD_SQL_FUNCTIONAL_TEST(application_log/hive_log_contexts_on_no_stage_app.sql)
  ADD_SQL_FUNCTIONAL_TEST(application_log/hive_log_contexts_simple.sql)
  ADD_SQL_FUNCTIONAL_TEST(application_log/remove_context.sql)
+
+SET_TESTS_PROPERTIES(
+  test.functional.hive_fork_manager.application_log.attach_context
+  test.functional.update.hive_fork_manager.application_log.attach_context
+  PROPERTIES LABELS "forking_only"
+)
 
  ADD_SQL_FUNCTIONAL_TEST(pruning/application_no_blocks.sql)
  ADD_SQL_FUNCTIONAL_TEST(pruning/no_application_no_blocks.sql)
