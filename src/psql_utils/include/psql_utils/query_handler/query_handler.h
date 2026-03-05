@@ -38,7 +38,7 @@ namespace PsqlTools::PsqlUtils {
       * Methods are not 'poor virtual' because not every handler will use them
       * Original hooks are started after these methods
       */
-      virtual void onRunQuery( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) {}
+      virtual void onRunQuery( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count ) {}
       virtual void onFinishQuery( QueryDesc* _queryDesc ) {}
 
       /**

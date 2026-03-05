@@ -38,8 +38,8 @@ namespace PsqlTools::PsqlUtils {
     virtual bool breakQuery() const;
 
   private:
-    void onRootQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) final;
-    void onSubQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once ) final;
+    void onRootQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count ) final;
+    void onSubQueryRun( QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count ) final;
     void onRootQueryFinish( QueryDesc* _queryDesc ) final;
     void onSubQueryFinish( QueryDesc* _queryDesc ) final;
     void onError( const QueryDesc& _queryDesc ) final;
