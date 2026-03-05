@@ -13,6 +13,7 @@ BEGIN
     VALUES (5, 'initminer', 1)
          , (6, 'alice', 1)
          , (7, 'bob', 1)
+         , (8, 'carol', 1)
     ;
 
     PERFORM hive.end_massive_sync( 1 );
