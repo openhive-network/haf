@@ -338,7 +338,7 @@ detect_changes:
           HFM_TESTS_CHANGED=true
           echo ""
           echo "=== HFM functional test files changed ==="
-          echo "$HFM_TEST_FILES" | head -10
+          echo "$HFM_TEST_FILES" | head -10 || true
         else
           HFM_TESTS_CHANGED=false
         fi
@@ -370,7 +370,7 @@ detect_changes:
             else
               echo ""
               echo "=== Changes since cache ($CACHE_COMMIT) ==="
-              echo "$CHANGED_SINCE_CACHE" | head -50
+              echo "$CHANGED_SINCE_CACHE" | head -50 || true
 
               NON_SKIP_FILES=$(echo "$CHANGED_SINCE_CACHE" | grep -vE "$SKIP_ALL_PATTERNS" || true)
               SQL_CHANGED=$(echo "$NON_SKIP_FILES" | grep -E "$SQL_PATTERNS" || true)
@@ -388,13 +388,13 @@ detect_changes:
                 echo ""
                 echo "=== SQL-only changes since cache — will use thin overlay build ==="
                 echo "SQL files changed:"
-                echo "$SQL_CHANGED" | head -10
+                echo "$SQL_CHANGED" | head -10 || true
               else
                 # C++ or other source changed since cache — must do full build
                 echo ""
                 echo "=== Full build required (source changed since cache) ==="
                 echo "Source files requiring build:"
-                echo "$NON_SQL_SOURCE" | head -20
+                echo "$NON_SQL_SOURCE" | head -20 || true
               fi
             fi
           else
