@@ -1,3 +1,5 @@
+import pytest
+
 import test_tools as tt
 
 from haf_local_tools import make_fork, wait_for_irreversible_progress
@@ -7,6 +9,7 @@ from haf_local_tools.tables import Blocks, Transactions, OperationsIrreversibleV
 START_TEST_BLOCK = 108
 
 
+@pytest.mark.forking_only
 def test_compare_forked_node_database(prepared_networks_and_database_12_8_with_2_sessions):
     tt.logger.info(f'Start test_compare_forked_node_database')
 

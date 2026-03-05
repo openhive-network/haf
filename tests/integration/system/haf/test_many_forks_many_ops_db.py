@@ -98,6 +98,7 @@ def trx_creator(wallet: tt.Wallet, identifier: int, start_memo: int, last_memo: 
     return f'[break {identifier}] Creating transactions finished...'
 
 #Some information in: https://gitlab.syncad.com/hive/haf/-/issues/118
+@pytest.mark.forking_only
 def test_many_forks_many_ops_db(prepared_networks_and_database_17_3):
     loguru.logger.enable("helpy")
     global break_cnt
