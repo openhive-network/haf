@@ -3,7 +3,7 @@ set -xeuo pipefail
 
 sudo apt-get update
 sudo apt-get -y install git cmake ninja-build build-essential liburing-dev libboost-all-dev libssl-dev bzip2 libbz2-dev libsnappy-dev \
-  python3-jinja2 libreadline-dev postgresql-server-dev-17 zopfli libpqxx-dev
+  python3-jinja2 libreadline-dev postgresql-server-dev-18 zopfli libpqxx-dev
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTPATH/.."
