@@ -78,8 +78,8 @@ $BODY$
 BEGIN
     ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context' ) = 3, 'Wrong current block num';
     ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context_b' ) = 3, 'Wrong current block num b';
-    ASSERT ( SELECT events_id FROM hafd.contexts WHERE name='context' ) = 4, 'Wrong events id';
-    ASSERT ( SELECT events_id FROM hafd.contexts WHERE name='context_b' ) = 4, 'Wrong events id b';
+    ASSERT ( SELECT events_id FROM hafd.contexts WHERE name='context' ) = 3, 'Wrong events id';
+    ASSERT ( SELECT events_id FROM hafd.contexts WHERE name='context_b' ) = 3, 'Wrong events id b';
     ASSERT ( SELECT irreversible_block FROM hafd.contexts WHERE name='context' ) = 3, 'Wrong irreversible';
     ASSERT ( SELECT irreversible_block FROM hafd.contexts WHERE name='context_b' ) = 3, 'Wrong irreversible b';
 

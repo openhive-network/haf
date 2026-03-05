@@ -95,13 +95,6 @@ BEGIN
     VALUES( 'NEW_IRREVERSIBLE', _block.num );
 
     UPDATE hafd.hive_state SET consistent_block = _block.num;
-
-    BEGIN
-        LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
-        PERFORM hive.remove_unecessary_events( _block.num );
-    EXCEPTION WHEN SQLSTATE '55P03' THEN
-        -- lock_not_available
-    END;
 END;
 $BODY$
 ;
