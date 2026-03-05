@@ -1,9 +1,7 @@
 CREATE OR REPLACE FUNCTION hive.context_create(
       _name hafd.context_name
     , _schema TEXT
-    , _fork_id BIGINT = 1
     , _irreversible_block INT = 0
-    , _is_forking BOOLEAN = TRUE
     , _is_attached BOOLEAN = TRUE
     , _stages hafd.application_stages = NULL
 )
@@ -24,15 +22,13 @@ BEGIN
     -- during initialization by hived it is changed to 0
     SELECT MIN(id) INTO __min_events_id FROM hafd.events_queue;
 
-    EXECUTE format( 'CREATE TABLE %I.%I( hive_rowid BIGSERIAL )', _schema, _name );
+    EXECUTE format( 'CREATE TABLE %I.%I()', _schema, _name );
     INSERT INTO hafd.contexts(
           name
         , current_block_num
         , irreversible_block
         , events_id
-        , fork_id
         , owner
-        , is_forking
         , last_active_at
         , schema
         , baseclass_id
@@ -43,9 +39,7 @@ BEGIN
           , 0
           , _irreversible_block
           , __min_events_id
-          , _fork_id
           , current_user
-          , _is_forking
           , NOW()
           , _schema
           , ( _schema || '.' || _name )::regclass
@@ -122,34 +116,8 @@ CREATE OR REPLACE FUNCTION hive.context_back_from_fork( _context TEXT, _block_nu
     VOLATILE
 AS
 $BODY$
-DECLARE
-    __trigger_name TEXT;
-    __registerd_table_schema TEXT;
-    __registerd_table_name TEXT;
 BEGIN
-    -- we need a flag for back_from_fork to returns from triggers immediatly
-    -- we cannot use ALTER TABLE DISABLE TRIGGERS because DDL event trigger cause an error:
-    -- Cannot ALTER TABLE "table" because it has pending trigger events, but only when origin tables have contstraints
-    UPDATE hafd.contexts SET back_from_fork = TRUE WHERE name = _context AND current_block_num > _block_num_before_fork;
-
-    SET CONSTRAINTS ALL DEFERRED;
-
-    PERFORM
-    hive.back_from_fork_one_table(
-                  hrt.origin_table_schema
-                , hrt.origin_table_name
-                , hrt.shadow_table_name
-                , _block_num_before_fork
-            )
-    FROM hafd.registered_tables hrt
-    JOIN hafd.contexts hc ON hrt.context_id = hc.id
-    WHERE hc.name = _context AND hc.current_block_num > _block_num_before_fork
-    ORDER BY hrt.id;
-
-    UPDATE hafd.contexts
-    SET   current_block_num = _block_num_before_fork
-        , back_from_fork = FALSE
-    WHERE name = _context AND current_block_num > _block_num_before_fork;
+    -- No-op in irreversible-only mode (no shadow tables to revert)
 END;
 $BODY$
 ;
@@ -175,19 +143,6 @@ BEGIN
 
     -- we are interested at which moment detach occur
     PERFORM hive.log_context( _context, 'DETACHED'::hafd.context_event );
-
-    PERFORM hive.context_back_from_fork( _context, __current_irreversible_block );
-
-    PERFORM
-    hive.remove_obsolete_operations( hrt.shadow_table_name, __current_block_num )
-            FROM hafd.registered_tables hrt
-            JOIN hafd.contexts hc ON hc.id = hrt.context_id
-            WHERE hc.name = _context
-            ORDER BY hrt.id;
-
-    PERFORM hive.detach_table( hrt.origin_table_schema, hrt.origin_table_name )
-    FROM hafd.registered_tables hrt
-    WHERE hrt.context_id = __context_id;
 
     UPDATE hafd.contexts
     SET events_id = hive.unreachable_event_id()
@@ -224,11 +179,6 @@ BEGIN
         RAISE EXCEPTION 'Context % has already processed block nr %', _context, _last_synced_block;
     END IF;
 
-
-    PERFORM hive.attach_table( hrt.origin_table_schema, hrt.origin_table_name, __context_id )
-    FROM hafd.registered_tables hrt
-    WHERE hrt.context_id = __context_id;
-
     UPDATE hafd.contexts
     SET
         current_block_num = _last_synced_block
@@ -263,13 +213,6 @@ BEGIN
     UPDATE hafd.contexts  SET irreversible_block = _block_num
                             , last_active_at = NOW()
     WHERE name = _context;
-
-    PERFORM
-    hive.remove_obsolete_operations( hrt.shadow_table_name, _block_num )
-            FROM hafd.registered_tables hrt
-            JOIN hafd.contexts hc ON hc.id = hrt.context_id
-            WHERE hc.name = _context
-            ORDER BY hrt.id;
 END;
 $BODY$
 ;

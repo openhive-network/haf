@@ -82,7 +82,6 @@ $$
 DECLARE
 __result BOOL := NULL;
 __r RECORD;
-__shadow_table_name TEXT := NULL;
 __origin_table_schema TEXT;
 __origin_table_name TEXT;
 __new_columns TEXT[];
@@ -91,7 +90,6 @@ __context_schema TEXT;
 BEGIN
     SELECT
         hive.ignore_registered_table_edition(command),
-        hrt.shadow_table_name,
         hrt.origin_table_schema,
         hrt.origin_table_name,
         hc.schema,
@@ -100,9 +98,9 @@ BEGIN
         ( SELECT * FROM pg_event_trigger_ddl_commands() ) as tr
         JOIN hafd.registered_tables hrt ON ( hrt.origin_table_schema || '.' || hrt.origin_table_name ) = tr.object_identity
         JOIN hafd.contexts hc ON hrt.context_id = hc.id
-    INTO __ignore_event, __shadow_table_name, __origin_table_schema, __origin_table_name, __context_schema;
+    INTO __ignore_event, __origin_table_schema, __origin_table_name, __context_schema;
 
-    IF __shadow_table_name IS NULL THEN
+    IF __origin_table_schema IS NULL THEN
         -- maybe ALTER INHERIT ( hive.<context_name> ) to register table into context
 
         PERFORM
@@ -124,29 +122,7 @@ BEGIN
         RETURN;
     END IF;
 
-    EXECUTE format( 'SELECT EXISTS( SELECT * FROM hafd.%I LIMIT 1 )', __shadow_table_name ) INTO __result;
-
-    IF __result = TRUE THEN
-        RAISE EXCEPTION 'Cannot edit structure of registered tables when some rows are not rewinded';
-    END IF;
-
-    SELECT EXISTS (
-        SELECT *
-        FROM information_schema.columns iss
-        WHERE iss.table_schema = __origin_table_schema
-            AND iss.table_name = __origin_table_name
-            AND iss.column_name = 'hive_rowid'
-    ) INTO __result;
-
-    IF __result = FALSE THEN
-        RAISE EXCEPTION 'Cannot remove hive_rowid column';
-    END IF;
-
-    -- drop shadow table with old format
-    EXECUTE format( 'DROP TABLE hafd.%I', __shadow_table_name );
-    PERFORM hive.create_shadow_table( __origin_table_schema, __origin_table_name );
-
-    --update information about columns
+    -- Update column information
     SELECT array_agg( iss.column_name::TEXT ) INTO __new_columns
     FROM information_schema.columns iss
     WHERE iss.table_schema = __origin_table_schema AND iss.table_name = __origin_table_name;
@@ -155,8 +131,7 @@ BEGIN
     SET origin_table_columns = __new_columns
     WHERE hrt.origin_table_name = lower( __origin_table_name ) AND hrt.origin_table_schema = lower( __origin_table_schema );
 
-    PERFORM hive.chceck_constrains( lower( __origin_table_schema ),  __origin_table_name );
-    PERFORM hive.create_revert_functions( lower( __origin_table_schema ),  __origin_table_name, __shadow_table_name, __new_columns );
+    PERFORM hive.chceck_constrains( lower( __origin_table_schema ), __origin_table_name );
 END;
 $$
 ;

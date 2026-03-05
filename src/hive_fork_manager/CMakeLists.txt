@@ -5,7 +5,6 @@ ADD_PSQL_EXTENSION(
              application_loop/stages.sql
              context_rewind/data_schema.sql
              events_queue.sql
-             forks.sql
              app_context.sql
              types/domains.sql
              types/operation/operation.sql
@@ -16,7 +15,6 @@ ADD_PSQL_EXTENSION(
              types/operation/operation_id.sql
              types/asset_unique_id.sql
              irreversible_blocks.sql
-             reversible_blocks.sql
              state_provider.sql
              hived_connections.sql
              hived_api_impl_indexes.sql
@@ -33,8 +31,6 @@ ADD_PSQL_EXTENSION(
             context_rewind/event_triggers.sql
             context_rewind/register_table.sql
             context_rewind/detach_table.sql
-            context_rewind/back_from_fork.sql
-            context_rewind/irreversible.sql
             context_rewind/rewind_api.sql
             # This file must be also specified here, as it contains functions which definitions should be always overwritten.
             types/operation/compatibility_with_old_haf_apps.sql
@@ -86,7 +82,6 @@ ADD_PSQL_EXTENSION(
 
             state_providers/update_providers.sql
 
-            vacuum_shadow_table.sql
 
 )
 

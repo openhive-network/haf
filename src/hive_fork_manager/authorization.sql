@@ -42,14 +42,7 @@ ALTER TABLE hafd.transactions_multisig OWNER TO hived_group;
 ALTER TABLE hafd.accounts OWNER TO hived_group;
 ALTER TABLE hafd.account_operations OWNER TO hived_group;
 ALTER TABLE hafd.hive_state OWNER TO hived_group;
-ALTER TABLE hafd.blocks_reversible OWNER TO hived_group;
-ALTER TABLE hafd.transactions_reversible OWNER TO hived_group;
-ALTER TABLE hafd.operations_reversible OWNER TO hived_group;
-ALTER TABLE hafd.transactions_multisig_reversible OWNER TO hived_group;
-ALTER TABLE hafd.accounts_reversible OWNER TO hived_group;
-ALTER TABLE hafd.account_operations_reversible OWNER TO hived_group;
 ALTER TABLE hafd.applied_hardforks OWNER TO hived_group;
-ALTER TABLE hafd.applied_hardforks_reversible OWNER TO hived_group;
 ALTER TABLE hafd.write_ahead_log_state OWNER TO hived_group;
 
 -- generic protection for tables in hive schema
@@ -72,7 +65,7 @@ GRANT ALL ON hafd.state_providers_registered TO hive_applications_group;
 GRANT ALL ON hafd.vacuum_requests TO hive_applications_group;
 
 -- protect an application rows aginst other applications
-REVOKE UPDATE( is_forking, owner ) ON hafd.contexts FROM GROUP hive_applications_group;
+REVOKE UPDATE( owner ) ON hafd.contexts FROM GROUP hive_applications_group;
 ALTER TABLE hafd.contexts ENABLE ROW LEVEL SECURITY;
 
 REVOKE UPDATE( owner ) ON hafd.contexts_attachment FROM GROUP hive_applications_group;
@@ -143,14 +136,6 @@ GRANT EXECUTE ON FUNCTION
     , hive.recluster_account_operations_if_index_dropped()
     , hive.restore_indexes( in _table_name TEXT )
     , hive.restore_foreign_keys( in _table_name TEXT )
-    , hive.copy_blocks_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
-    , hive.copy_transactions_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
-    , hive.copy_operations_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
-    , hive.copy_signatures_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
-    , hive.copy_accounts_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
-    , hive.copy_account_operations_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
-    , hive.copy_applied_hardforks_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
-    , hive.remove_obsolete_reversible_data( _new_irreversible_block INT )
     , hive.remove_unecessary_events( _new_irreversible_block INT )
     , hive.register_table( _table_schema TEXT,  _table_name TEXT, _context_name TEXT ) -- needs to alter tables when indexes are disabled
     , hive.chceck_constrains( _table_schema TEXT,  _table_name TEXT )
@@ -164,8 +149,6 @@ GRANT EXECUTE ON FUNCTION
     , hive.wait_for_contexts( _tail_size INTEGER )
     , hive.prune_blocks_data( _tail_size INTEGER )
     , hive.remove_inconsistent_irreversible_data()
-    , hive.disable_indexes_of_reversible()
-    , hive.enable_indexes_of_reversible()
     , hive.set_irreversible_dirty()
     , hive.set_irreversible_not_dirty()
     , hive.is_irreversible_dirty()
@@ -236,8 +219,6 @@ GRANT EXECUTE ON FUNCTION
     , hive.create_all_irreversible_account_operations_view
     , hive.create_all_irreversible_applied_hardforks_view
     , hive.context_back_from_fork
-    , hive.back_from_fork_one_table
-    , hive.remove_obsolete_operations
     , hive.detach_table
     , hive.app_check_contexts_synchronized(_contexts hive.contexts_group)
     , hive.set_sync_state( _new_state hafd.sync_state )
@@ -258,12 +239,6 @@ REVOKE EXECUTE ON FUNCTION
     , hive.push_block( hafd.blocks, hafd.transactions[], hafd.transactions_multisig[], hafd.operations[], hafd.accounts[], hafd.account_operations[], hafd.applied_hardforks[] )
     , hive.set_irreversible( INT )
     , hive.end_massive_sync( INTEGER )
-    , hive.copy_blocks_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
-    , hive.copy_transactions_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
-    , hive.copy_operations_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
-    , hive.copy_signatures_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
-    , hive.copy_applied_hardforks_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
-    , hive.remove_obsolete_reversible_data( _new_irreversible_block INT )
     , hive.remove_unecessary_events( _new_irreversible_block INT )
     , hive.initialize_extension_data()
     , hive.wait_for_contexts( _tail_size INTEGER )
