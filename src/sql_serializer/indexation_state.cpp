@@ -532,9 +532,19 @@ void indexation_state::move_irreversible_blocks( cached_data_t& cached_data ) {
 }
 
 void indexation_state::flush_all_cached_data( cached_data_t& cached_data, int last_block_num ) {
+  // Note: get_state() uses _cached_state_value (always populated after first set_state call),
+  // so this does not require a database query during destructor teardown.
   if ( get_state() == INDEXATION::LIVE ) {
     // In LIVE mode, only flush irreversible blocks. Reversible blocks left in cache
     // will be re-fetched from P2P on restart.
+    // Safety: move_irreversible_blocks() is safe here because in LIVE mode, blocks are
+    // processed and flushed one at a time via livesync_data_dumper (which asserts
+    // blocks.size() == 1). The cache therefore never accumulates more than one
+    // irreversible block, satisfying that assertion.
+    if ( !cached_data.blocks.empty() ) {
+      ilog( "LIVE shutdown: flushing irreversible blocks up to ${b}, discarding reversible blocks beyond that",
+            ("b", _irreversible_block_num) );
+    }
     move_irreversible_blocks( cached_data );
   } else {
     force_trigger_flush_with_all_data( cached_data, last_block_num );

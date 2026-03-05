@@ -68,10 +68,16 @@ do
   sleep 2
   echo "KILLING HAF's hived ${hived_pid}"
   kill -SIGINT $hived_pid
+
+  # Wait for graceful shutdown with timeout; SIGKILL if it hangs
+  SHUTDOWN_TIMEOUT=60
+  if ! timeout "$SHUTDOWN_TIMEOUT" tail --pid=$hived_pid -f /dev/null 2>/dev/null; then
+    echo "WARNING: hived did not exit within ${SHUTDOWN_TIMEOUT}s after SIGINT, sending SIGKILL"
+    kill -SIGKILL $hived_pid 2>/dev/null || true
+  fi
   wait $hived_pid
   hived_res=$?
   echo "KILLED HAF's hived ${hived_pid} with result ${hived_res}"
-
 
   if [ $hived_res -ne 0 ]
   then
