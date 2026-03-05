@@ -66,10 +66,6 @@ RUN git clone https://github.com/citusdata/pg_cron.git
 # Build and "install" pg_cron to a temporary location (using DESTDIR).
 WORKDIR /tmp/pg_cron
 
-# Apply patch to make pg_cron compatible with PostgreSQL 18
-RUN sed -i \
-  's/PortalDefineQuery(portal, NULL, sql, commandTag, plantree_list, NULL);/PortalDefineQuery(portal, NULL, sql, commandTag, plantree_list, NULL, NULL);/' \
-  src/pg_cron.c
 RUN make && make install DESTDIR=/pgcron
 
 FROM minimal-runtime-base AS minimal-runtime

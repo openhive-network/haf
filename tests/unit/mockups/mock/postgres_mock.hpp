@@ -17,7 +17,7 @@ extern ExecutorEnd_hook_type ExecutorEnd_hook;
 extern volatile sig_atomic_t QueryCancelPending;
 
 // mock-ed hooks
-bool executorStartHook(QueryDesc* _queryDesc, int _eflags);
+void executorStartHook(QueryDesc* _queryDesc, int _eflags);
 void executorRunHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count);
 void executorFinishHook(QueryDesc* _queryDesc);
 void executorEndHook(QueryDesc* _queryDesc);
@@ -68,7 +68,7 @@ public:
 
     virtual TimeoutId RegisterTimeout(TimeoutId id, timeout_handler_proc handler) = 0;
     virtual void disable_timeout(TimeoutId id, bool keep_indicator) = 0;
-    virtual bool standard_ExecutorStart(QueryDesc *queryDesc, int eflags) = 0;
+    virtual void standard_ExecutorStart(QueryDesc *queryDesc, int eflags) = 0;
     virtual void standard_ExecutorEnd(QueryDesc *queryDesc) = 0;
     virtual void standard_ExecutorRun(QueryDesc*, ScanDirection, uint64 ) = 0;
     virtual void standard_ExecutorFinish(QueryDesc*) = 0;
@@ -125,7 +125,7 @@ public:
     virtual int	bms_next_member(const Bitmapset* a, int prevbit) = 0;
 
     // Executor hooks
-    virtual bool executorStartHook(QueryDesc *queryDesc, int eflags) = 0;
+    virtual void executorStartHook(QueryDesc *queryDesc, int eflags) = 0;
     virtual void executorRunHook(QueryDesc *queryDesc, ScanDirection direction, uint64 count) = 0;
     virtual void executorFinishHook(QueryDesc *queryDesc) = 0;
     virtual void executorEndHook(QueryDesc *queryDesc) = 0;
@@ -156,7 +156,7 @@ public:
 
     MOCK_METHOD( TimeoutId, RegisterTimeout,(TimeoutId, timeout_handler_proc) );
     MOCK_METHOD( void, disable_timeout, (TimeoutId, bool) );
-    MOCK_METHOD( bool, standard_ExecutorStart, (QueryDesc*, int) );
+    MOCK_METHOD( void, standard_ExecutorStart, (QueryDesc*, int) );
     MOCK_METHOD( void, standard_ExecutorEnd, (QueryDesc*) );
     MOCK_METHOD( void, standard_ExecutorRun, (QueryDesc*, ScanDirection , uint64 ) );
     MOCK_METHOD( void, standard_ExecutorFinish, (QueryDesc*) );
@@ -217,7 +217,7 @@ public:
     MOCK_METHOD( int, bms_next_member, (const Bitmapset*, int));
 
     // Executor hooks
-    MOCK_METHOD( bool, executorStartHook, (QueryDesc*, int) );
+    MOCK_METHOD( void, executorStartHook, (QueryDesc*, int) );
     MOCK_METHOD( void, executorRunHook, (QueryDesc*, ScanDirection, uint64) );
     MOCK_METHOD( void, executorFinishHook, (QueryDesc*) );
     MOCK_METHOD( void, executorEndHook, (QueryDesc*) );

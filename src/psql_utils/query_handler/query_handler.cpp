@@ -12,11 +12,8 @@ namespace {
     }
   }
 
-  bool startQueryHook(QueryDesc *_queryDesc, int _eflags) {
+  void startQueryHook(QueryDesc *_queryDesc, int _eflags) {
     assert( g_topHandler );
-
-    // https://github.com/postgres/postgres/commit/525392d5727f469e9a5882e1d728917a4be56147
-    bool plan_valid = true;
 
     for (
       auto *currentHandler = g_topHandler; currentHandler; currentHandler = currentHandler->previousHandler()) {
@@ -26,9 +23,9 @@ namespace {
 
             if (!currentHandler->previousHandler()) { // bottom handler
               if (currentHandler->originalStartHook()) {
-                plan_valid = currentHandler->originalStartHook()( _queryDesc, _eflags );
+                currentHandler->originalStartHook()( _queryDesc, _eflags );
               } else {
-                plan_valid = standard_ExecutorStart( _queryDesc, _eflags );
+                standard_ExecutorStart( _queryDesc, _eflags );
               }
             }
         } //PG_TRY();
@@ -39,10 +36,9 @@ namespace {
         }
         PG_END_TRY();
     } // for
-    return plan_valid;
   }
 
-}
+  }
 
   void endQueryHook(QueryDesc* _queryDesc) {
     assert( g_topHandler );

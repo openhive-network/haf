@@ -45,7 +45,7 @@ namespace {
 
 int SPI_result = SPI_ERROR_NOATTRIBUTE;
 
-bool executorStartHook(QueryDesc* _queryDesc, int _eflags) {
+void executorStartHook(QueryDesc* _queryDesc, int _eflags) {
   assert(POSTGRES_MOCK.lock() && "No mock created, please execute first PostgresMock::create_and_get");
 
   EXECUTE_MOCK( executorStartHook( _queryDesc, _eflags ) );
@@ -181,7 +181,7 @@ void disable_timeout(TimeoutId id, bool keep_indicator) {
   EXECUTE_MOCK(disable_timeout( id, keep_indicator ));
 }
 
-bool standard_ExecutorStart(QueryDesc *queryDesc, int eflags) {
+void standard_ExecutorStart(QueryDesc *queryDesc, int eflags) {
   EXECUTE_MOCK(standard_ExecutorStart( queryDesc, eflags ));
 }
 

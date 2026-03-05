@@ -103,8 +103,6 @@ install_all_dev_packages() {
   git clone https://github.com/citusdata/pg_cron.git
   cd pg_cron
 
-  # Apply patch to make pg_cron compatible with PostgreSQL 18
-  sed -i 's/PortalDefineQuery(portal, NULL, sql, commandTag, plantree_list, NULL);/PortalDefineQuery(portal, NULL, sql, commandTag, plantree_list, NULL, NULL);/' src/pg_cron.c
   make && make install
   cd ..
   rm -r pg_cron
