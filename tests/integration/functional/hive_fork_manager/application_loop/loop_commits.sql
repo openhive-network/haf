@@ -15,6 +15,8 @@ BEGIN
     INSERT INTO hafd.accounts( id, name, block_num )
     VALUES (5, 'initminer', 1)
     ;
+
+    PERFORM hive.end_massive_sync( 5 );
 END;
 $BODY$;
 
