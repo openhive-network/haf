@@ -165,7 +165,7 @@ AS
 $BODY$
 BEGIN
     EXECUTE format(
-          'DROP INDEX %I.%I'
+          'DROP INDEX IF EXISTS %I.%I'
         , lower(_table_schema)
         , hive.get_rowid_index_name( _table_schema, _table_name )
     );
