@@ -70,16 +70,6 @@ END
 $BODY$
 ;
 
-CREATE OR REPLACE PROCEDURE haf_admin_test_error()
-    LANGUAGE 'plpgsql'
-AS
-$BODY$
-BEGIN
-    PERFORM hive.connect( '123456789', 2, 1, 0 );
-END
-$BODY$
-;
-
 CREATE OR REPLACE PROCEDURE haf_admin_test_then()
         LANGUAGE 'plpgsql'
 AS
