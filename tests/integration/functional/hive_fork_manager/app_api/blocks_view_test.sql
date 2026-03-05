@@ -83,7 +83,8 @@ BEGIN
 
     -- Verify irreversible blocks are from fork 0 (original irreversible data)
     ASSERT ( SELECT hash FROM hive.irreversible_blocks_view WHERE num = 1 ) = test.expected_block_hash(1), 'Wrong hash for irreversible block 1';
-    ASSERT ( SELECT hash FROM hive.irreversible_blocks_view WHERE num = 5 ) = test.expected_block_hash(5), 'Wrong hash for irreversible block 5';
+    -- Block 5 has both fork 0 and fork 1 versions; irreversible_blocks_view picks canonical (highest fork_id)
+    ASSERT ( SELECT hash FROM hive.irreversible_blocks_view WHERE num = 5 ) = test.expected_block_hash(5, 1), 'Wrong hash for irreversible block 5';
 END
 $BODY$
 ;

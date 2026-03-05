@@ -261,6 +261,10 @@ BEGIN
 
     UPDATE hafd.hive_state SET consistent_block = hafd.make_block_id(5, 0);
 
+    -- Record block conflicts for block_nums that have multiple fork versions
+    -- (normally populated by push_block(), but we insert data directly in tests)
+    INSERT INTO hafd.block_conflicts (block_num) VALUES (7), (8), (9);
+
     -- Set state to LIVE to enable orphan fork cleanup
     -- (remove_orphan_forks only executes during LIVE state)
     UPDATE hafd.hive_state SET state = 'LIVE';
