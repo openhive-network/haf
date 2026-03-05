@@ -46,8 +46,8 @@ BEGIN
     ASSERT ( SELECT event_type FROM hafd.contexts_log WHERE id = _last_entry_id ) = 'REMOVED', 'Wrong context reason != REMOVED';
     ASSERT ( SELECT application_stage FROM hafd.contexts_log WHERE id = _last_entry_id ) IS NULL, 'Wrong context stage != NULL';
     ASSERT ( SELECT application_block FROM hafd.contexts_log WHERE id = _last_entry_id ) = 50 , 'Wrong context app block';
-    ASSERT ( SELECT application_fork FROM hafd.contexts_log WHERE id = _last_entry_id ) = 1 , 'Wrong context app fork';
-    ASSERT ( SELECT head_fork_id FROM hafd.contexts_log WHERE id = _last_entry_id ) = 1 , 'Wrong context head fork';
+    ASSERT ( SELECT application_fork FROM hafd.contexts_log WHERE id = _last_entry_id ) = 0 , 'Wrong context app fork';
+    ASSERT ( SELECT head_fork_id FROM hafd.contexts_log WHERE id = _last_entry_id ) = 0 , 'Wrong context head fork';
     ASSERT ( SELECT head_block FROM hafd.contexts_log WHERE id = _last_entry_id ) = 50 , 'Wrong context head block';
 END;
 $BODY$

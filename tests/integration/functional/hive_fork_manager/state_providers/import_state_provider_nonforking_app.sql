@@ -32,7 +32,7 @@ AS
 $BODY$
 BEGIN
     CREATE SCHEMA A;
-    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a', _is_forking => False   );
+    PERFORM hive.app_create_context( _name =>  'context', _schema => 'a' );
     CREATE SCHEMA alice;
     CREATE TABLE alice.tab( id INT ) INHERITS( a.context );
 END;

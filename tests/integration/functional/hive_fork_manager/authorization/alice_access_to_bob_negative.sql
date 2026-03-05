@@ -119,30 +119,6 @@ BEGIN
         EXCEPTION WHEN OTHERS THEN
     END;
 
-    BEGIN
-            PERFORM * FROM hafd.shadow_alice_alice_table;
-    EXCEPTION WHEN OTHERS THEN
-            ASSERT FALSE, 'Alice cannot read her own shadow table';
-    END;
-
-    --BEGIN
-    --        PERFORM * FROM hafd.shadow_bob_bob_table;
-    --        ASSERT FALSE, 'Alice can read Bobs''s shadow table';
-    --EXCEPTION WHEN OTHERS THEN
-    --END;
-
-    BEGIN
-        UPDATE hafd.shadow_bob_bob_table SET hive_rowid = 0;
-        ASSERT FALSE, 'Alice can update Bob''s shadow table';
-    EXCEPTION WHEN OTHERS THEN
-    END;
-
-    BEGIN
-        DELETE FROM hafd.shadow_bob_bob_table;
-        ASSERT FALSE, 'Alice can delete from Bob''s shadow table';
-        EXCEPTION WHEN OTHERS THEN
-    END;
-
     ASSERT NOT EXISTS( SELECT * FROM hafd.triggers WHERE trigger_name='hive_insert_trigger_bob_bob_table' ), 'Alice can see Bobs''s trigers from hafd.triggers';
     ASSERT NOT EXISTS( SELECT * FROM hafd.registered_tables WHERE origin_table_name='bob_table' ), 'Alice can see Bobs''s tables from hafd.registered_tables';
 
@@ -272,30 +248,6 @@ BEGIN
         PERFORM * FROM bob.bob_table;
     EXCEPTION WHEN OTHERS THEN
         ASSERT FALSE, 'Bob cannot read his own table';
-    END;
-
-    BEGIN
-        PERFORM * FROM hafd.shadow_bob_bob_table;
-    EXCEPTION WHEN OTHERS THEN
-        ASSERT FALSE, 'Bob cannot read his own shadow table';
-    END;
-
-    --BEGIN
-    --    PERFORM * FROM hafd.shadow_alice_alice_table;
-    --    ASSERT FALSE, 'Bob can read Alice''s shadow table';
-    --EXCEPTION WHEN OTHERS THEN
-    --END;
-
-    BEGIN
-        UPDATE hafd.shadow_alice_alice_table SET hive_rowid = 0;
-        ASSERT FALSE, 'Bob can update Alice''s shadow table';
-    EXCEPTION WHEN OTHERS THEN
-    END;
-
-    BEGIN
-        DELETE FROM hafd.shadow_alice_alice_table;
-        ASSERT FALSE, 'Bob can delete from Alice''s shadow table';
-        EXCEPTION WHEN OTHERS THEN
     END;
 
     ASSERT NOT EXISTS( SELECT * FROM hafd.triggers WHERE trigger_name='hive_insert_trigger_alice_alice_table' ), 'Bob can see Alice''s trigers from hafd.triggers';

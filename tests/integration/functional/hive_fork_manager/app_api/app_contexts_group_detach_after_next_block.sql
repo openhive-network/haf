@@ -42,9 +42,6 @@ BEGIN
     INSERT INTO  C.table1( id ) VALUES ( 66 ),( 67);
     INSERT INTO  C.table1( id ) VALUES ( 300 ),( 301);
 
-    ASSERT ( SELECT count(*) FROM hafd.shadow_a_table1 ) = 4, 'shadow table has to be filled a';
-    ASSERT ( SELECT count(*) FROM hafd.shadow_b_table1 ) = 4, 'shadow table has to be filled b';
-    ASSERT ( SELECT count(*) FROM hafd.shadow_c_table1 ) = 4, 'shadow table has to be filled c';
 
     PERFORM hive.app_context_detach( ARRAY[ 'context_a', 'context_b', 'context_c' ] );
 END;

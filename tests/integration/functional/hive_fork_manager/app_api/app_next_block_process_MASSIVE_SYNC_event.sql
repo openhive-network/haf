@@ -18,7 +18,7 @@ BEGIN
     PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
     CREATE TABLE A.table1(id  INTEGER ) INHERITS( a.context );
 
-    PERFORM hive.push_block(
+    PERFORM hive.push_block_lite(
          ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
         , NULL
         , NULL
@@ -30,7 +30,7 @@ BEGIN
 
     PERFORM hive.set_irreversible( 2 );
 
-    PERFORM hive.push_block(
+    PERFORM hive.push_block_lite(
          ( 3, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
         , NULL
         , NULL
@@ -91,7 +91,6 @@ BEGIN
     ASSERT EXISTS ( SELECT *  FROM A.table1 WHERE id = 2 ), 'No id 2';
     ASSERT EXISTS ( SELECT *  FROM A.table1 WHERE id = 2 ), 'No id 3';
 
-    ASSERT NOT EXISTS ( SELECT * FROM hafd.shadow_a_table1 ), 'Shadow table is not empty';
 END
 $BODY$
 ;

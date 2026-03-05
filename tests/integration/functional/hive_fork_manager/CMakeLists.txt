@@ -375,6 +375,8 @@ SET_TESTS_PROPERTIES(
   test.functional.update.hive_fork_manager.hived_api.get_block_reversible_test
   test.functional.hive_fork_manager.hived_api.autodetach
   test.functional.update.hive_fork_manager.hived_api.autodetach
+  test.functional.hive_fork_manager.hived_api.connect_test_not_remove_reversible
+  test.functional.update.hive_fork_manager.hived_api.connect_test_not_remove_reversible
   PROPERTIES LABELS "forking_only"
 )
 
@@ -577,6 +579,10 @@ SET_TESTS_PROPERTIES(
   test.functional.update.hive_fork_manager.app_api.app_contexts_set_forking
   test.functional.hive_fork_manager.app_api.app_contexts_set_forking_back_and_again
   test.functional.update.hive_fork_manager.app_api.app_contexts_set_forking_back_and_again
+  test.functional.hive_fork_manager.app_api.app_next_block_after_attach_2
+  test.functional.update.hive_fork_manager.app_api.app_next_block_after_attach_2
+  test.functional.hive_fork_manager.app_api.app_contexts_group_next_block_after_attach_2
+  test.functional.update.hive_fork_manager.app_api.app_contexts_group_next_block_after_attach_2
   PROPERTIES LABELS "forking_only"
 )
 
@@ -636,6 +642,12 @@ SET_TESTS_PROPERTIES(
   test.functional.update.hive_fork_manager.application_loop.override_for_lesser_batch
   test.functional.hive_fork_manager.application_loop.vacuum_shadow_tables
   test.functional.update.hive_fork_manager.application_loop.vacuum_shadow_tables
+  test.functional.hive_fork_manager.application_loop.non_forking_app
+  test.functional.update.hive_fork_manager.application_loop.non_forking_app
+  test.functional.hive_fork_manager.application_loop.iteration_move_to_massive
+  test.functional.update.hive_fork_manager.application_loop.iteration_move_to_massive
+  test.functional.hive_fork_manager.application_loop.distance_to_hb_grew
+  test.functional.update.hive_fork_manager.application_loop.distance_to_hb_grew
   PROPERTIES LABELS "forking_only"
 )
 
@@ -645,6 +657,8 @@ SET_TESTS_PROPERTIES(
 SET_TESTS_PROPERTIES(
   test.functional.hive_fork_manager.scenarios.massive_sync_live_blocks_and_fork
   test.functional.update.hive_fork_manager.scenarios.massive_sync_live_blocks_and_fork
+  test.functional.hive_fork_manager.scenarios.massive_sync_live_blocks_and_fork_non_forking_app
+  test.functional.update.hive_fork_manager.scenarios.massive_sync_live_blocks_and_fork_non_forking_app
   PROPERTIES LABELS "forking_only"
 )
 
@@ -702,6 +716,8 @@ SET_TESTS_PROPERTIES(
   test.functional.update.hive_fork_manager.authorization.massive_sync_live_blocks_and_fork
   test.functional.hive_fork_manager.authorization.alice_cannot_change_context_owner_and_forking
   test.functional.update.hive_fork_manager.authorization.alice_cannot_change_context_owner_and_forking
+  test.functional.hive_fork_manager.authorization.alice_access_to_head_block_views
+  test.functional.update.hive_fork_manager.authorization.alice_access_to_head_block_views
   PROPERTIES LABELS "forking_only"
 )
 
@@ -709,6 +725,14 @@ SET_TESTS_PROPERTIES(
  ADD_EXAMPLES_FUNCTIONAL_TESTS( examples/non_forking_application.py )
  ADD_EXAMPLES_FUNCTIONAL_TESTS( examples/accounts_provider_application.py )
  ADD_EXAMPLES_FUNCTIONAL_TESTS( examples/accounts_provider_non_fork_application.py )
+
+SET_TESTS_PROPERTIES(
+  test.functional.hive_fork_manager.examples.forking_application
+  test.functional.hive_fork_manager.examples.non_forking_application
+  test.functional.hive_fork_manager.examples.accounts_provider_application
+  test.functional.hive_fork_manager.examples.accounts_provider_non_fork_application
+  PROPERTIES LABELS "forking_only"
+)
 
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/get_required_authorities.sql )
  ADD_SQL_FUNCTIONAL_TEST( shared_lib/get_impacted_accounts.sql )
@@ -751,6 +775,18 @@ SET_TESTS_PROPERTIES(
  ADD_SQL_FUNCTIONAL_TEST(deprecated/attach_detach_with_function/app_contexts_group_next_block_after_attach.sql)
  ADD_SQL_FUNCTIONAL_TEST(deprecated/attach_detach_with_function/app_next_block_after_attach.sql)
  ADD_SQL_FUNCTIONAL_TEST(deprecated/attach_detach_with_function/api_protection.sql )
+
+SET_TESTS_PROPERTIES(
+  test.functional.hive_fork_manager.deprecated.attach_detach_with_function.app_context_attach
+  test.functional.update.hive_fork_manager.deprecated.attach_detach_with_function.app_context_attach
+  test.functional.hive_fork_manager.deprecated.attach_detach_with_function.app_contexts_group_attach
+  test.functional.update.hive_fork_manager.deprecated.attach_detach_with_function.app_contexts_group_attach
+  test.functional.hive_fork_manager.deprecated.attach_detach_with_function.app_contexts_group_next_block_after_attach
+  test.functional.update.hive_fork_manager.deprecated.attach_detach_with_function.app_contexts_group_next_block_after_attach
+  test.functional.hive_fork_manager.deprecated.attach_detach_with_function.app_next_block_after_attach
+  test.functional.update.hive_fork_manager.deprecated.attach_detach_with_function.app_next_block_after_attach
+  PROPERTIES LABELS "forking_only"
+)
 
  ADD_SQL_FUNCTIONAL_TEST(application_log/attach_context.sql)
  ADD_SQL_FUNCTIONAL_TEST(application_log/change_stage.sql)

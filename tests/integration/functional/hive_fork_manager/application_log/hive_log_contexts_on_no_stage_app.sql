@@ -91,9 +91,9 @@ BEGIN
             AND application_stage = 'stage1'
             AND event_type = 'STATE_CHANGED'
             AND application_block = 1
-            AND application_fork = 1
+            AND application_fork = 0
             AND head_block  = 50
-            AND head_fork_id = 1
+            AND head_fork_id = 0
     ), 'No alice STATE_CHANGED entry';
 
     ASSERT EXISTS(
@@ -102,9 +102,9 @@ BEGIN
             AND application_stage = 'live'
             AND event_type = 'STATE_CHANGED'
             AND application_block = 1
-            AND application_fork = 1
+            AND application_fork = 0
             AND head_block  = 50
-            AND head_fork_id = 1
+            AND head_fork_id = 0
     ), 'No alice1 STATE_CHANGED entry';
 
     ASSERT EXISTS(
@@ -113,9 +113,9 @@ BEGIN
             AND application_stage = 'a2stage2'
             AND event_type = 'STATE_CHANGED'
             AND application_block = 1
-            AND application_fork = 1
+            AND application_fork = 0
             AND head_block  = 50
-            AND head_fork_id = 1
+            AND head_fork_id = 0
     ), 'No alice2 STATE_CHANGED entry a2stage2';
 
     ASSERT EXISTS(
@@ -124,9 +124,9 @@ BEGIN
           AND application_stage = 'live'
           AND event_type = 'STATE_CHANGED'
           AND application_block = 50
-          AND application_fork = 1
+          AND application_fork = 0
           AND head_block  = 50
-          AND head_fork_id = 1
+          AND head_fork_id = 0
     ), 'No alice2 STATE_CHANGED entry live';
 END;
 $BODY$;

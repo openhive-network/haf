@@ -150,6 +150,8 @@ GRANT EXECUTE ON FUNCTION
     , hive.wait_for_contexts( _tail_size INTEGER )
     , hive.prune_blocks_data( _tail_size INTEGER )
     , hive.remove_inconsistent_irreversible_data()
+    , hive.disable_indexes_of_reversible()
+    , hive.enable_indexes_of_reversible()
     , hive.set_irreversible_dirty()
     , hive.set_irreversible_not_dirty()
     , hive.is_irreversible_dirty()

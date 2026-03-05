@@ -1,3 +1,4 @@
+import pytest
 import test_tools as tt
 
 from haf_local_tools import wait_until_irreversible
@@ -5,6 +6,7 @@ from haf_local_tools import wait_until_irreversible
 
 START_TEST_BLOCK = 108
 
+@pytest.mark.forking_only
 def test_event_after_replay(prepared_networks_and_database_12_8):
     tt.logger.info(f'Start test_event_after_replay')
 

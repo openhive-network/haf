@@ -15,8 +15,6 @@ BEGIN
     VALUES (5, 'initminer', 1)
     ;
 
-    INSERT INTO hafd.fork VALUES( 2, 2, '2016-06-22 19:10:24-07'::timestamp );
-    INSERT INTO hafd.fork VALUES( 3, 3, '2016-06-22 19:10:25-07'::timestamp );
 
     CREATE SCHEMA A;
     PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
@@ -44,9 +42,7 @@ AS
 $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT * FROM hafd.contexts hc JOIN hafd.contexts_attachment hca ON hca.context_id=hc.id WHERE hc.name='context' AND hca.is_attached = TRUE ), 'Attach flag is still not set';
-    ASSERT EXISTS ( SELECT * FROM hafd.contexts WHERE name='context' AND fork_id = 2 ), 'Wrong fork_id';
 
-    ASSERT ( SELECT COUNT(*) FROM hafd.shadow_a_table1 ) = 1, 'Trigger inserted something into shadow table1';
 END;
 $BODY$
 ;
