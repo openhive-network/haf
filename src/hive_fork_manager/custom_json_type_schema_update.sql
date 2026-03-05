@@ -19,7 +19,10 @@ BEGIN
         ALTER TABLE hafd.operations ADD COLUMN custom_json_type_id SMALLINT DEFAULT NULL;
     END IF;
 
-    IF NOT EXISTS (
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'hafd' AND table_name = 'operations_reversible'
+    ) AND NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_schema = 'hafd' AND table_name = 'operations_reversible' AND column_name = 'custom_json_type_id'
     ) THEN
@@ -150,7 +153,10 @@ BEGIN
         ALTER TABLE hafd.account_operations ALTER COLUMN op_type_id SET NOT NULL;
     END IF;
 
-    IF NOT EXISTS (
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'hafd' AND table_name = 'account_operations_reversible'
+    ) AND NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_schema = 'hafd' AND table_name = 'account_operations_reversible' AND column_name = 'op_type_id'
     ) THEN
