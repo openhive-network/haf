@@ -32,7 +32,6 @@ SCHEMA_SOURCES=(
     application_loop/stages.sql
     context_rewind/data_schema.sql
     events_queue.sql
-    forks.sql
     app_context.sql
     types/domains.sql
     types/operation/operation.sql
@@ -43,7 +42,6 @@ SCHEMA_SOURCES=(
     types/operation/operation_id.sql
     types/asset_unique_id.sql
     irreversible_blocks.sql
-    reversible_blocks.sql
     state_provider.sql
     hived_connections.sql
     hived_api_impl_indexes.sql
@@ -64,8 +62,6 @@ DEPLOY_SOURCES=(
     context_rewind/event_triggers.sql
     context_rewind/register_table.sql
     context_rewind/detach_table.sql
-    context_rewind/back_from_fork.sql
-    context_rewind/irreversible.sql
     context_rewind/rewind_api.sql
     types/operation/compatibility_with_old_haf_apps.sql
     types/operation/operation_flow.sql
