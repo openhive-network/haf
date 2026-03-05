@@ -74,12 +74,12 @@ variables:
   DOCKER_BUILDER_TAG: "3dd346380da7f28cdaf3ef3955559c905d94bd1c"
   DOCKER_DIND_TAG: "3dd346380da7f28cdaf3ef3955559c905d94bd1c"
 
-  # Use ci-base-image with PostgreSQL 18 dev packages from common-ci-configuration
-  # uses registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:pypa_2_28-pg18-1
-  BUILDER_IMAGE_TAG: ":pypa_2_28-pg18-1"
-  HIVE_CI_BASE_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image${BUILDER_IMAGE_TAG}"
-  # Override PYTHON_IMAGE from common-ci-configuration to use Python 3.14
-  PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image${BUILDER_IMAGE_TAG}"
+  # Use Ubuntu-based ci-base-image with PostgreSQL 18 dev packages
+  # Ubuntu variant needed because hived is built on Ubuntu 24.04 and replay jobs
+  # run the binary directly on the ci-base-image (requires matching glibc)
+  BUILDER_IMAGE_TAG: ":ubuntu24.04-pg18-1"
+  HIVE_CI_BASE_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-ubuntu${BUILDER_IMAGE_TAG}"
+  PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-ubuntu${BUILDER_IMAGE_TAG}"
   CI_DEBUG_SERVICES: "true"
   SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
   TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
