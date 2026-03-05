@@ -12,8 +12,11 @@ namespace {
     }
   }
 
-  void startQueryHook(QueryDesc *_queryDesc, int _eflags) {
+  bool startQueryHook(QueryDesc *_queryDesc, int _eflags) {
     assert( g_topHandler );
+
+    // https://github.com/postgres/postgres/commit/525392d5727f469e9a5882e1d728917a4be56147
+    bool plan_valid = true;
 
     for (
       auto *currentHandler = g_topHandler; currentHandler; currentHandler = currentHandler->previousHandler()) {
@@ -23,9 +26,9 @@ namespace {
 
             if (!currentHandler->previousHandler()) { // bottom handler
               if (currentHandler->originalStartHook()) {
-                currentHandler->originalStartHook()( _queryDesc, _eflags );
+                plan_valid = currentHandler->originalStartHook()( _queryDesc, _eflags );
               } else {
-                standard_ExecutorStart( _queryDesc, _eflags );
+                plan_valid = standard_ExecutorStart( _queryDesc, _eflags );
               }
             }
         } //PG_TRY();
@@ -36,9 +39,10 @@ namespace {
         }
         PG_END_TRY();
     } // for
+    return plan_valid;
   }
 
-  }
+}
 
   void endQueryHook(QueryDesc* _queryDesc) {
     assert( g_topHandler );
@@ -68,7 +72,7 @@ namespace {
     } // for
   }
 
-  void onRunQueryHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once) {
+  void onRunQueryHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count) {
     assert( g_topHandler );
 
     for (
@@ -77,13 +81,13 @@ namespace {
       ; currentHandler = currentHandler->previousHandler() ) {
       PG_TRY();
       {
-        currentHandler->onRunQuery( _queryDesc, _direction, _count, _execute_once );
+        currentHandler->onRunQuery( _queryDesc, _direction, _count );
 
         if (!currentHandler->previousHandler()) { // bottom handler
           if (currentHandler->originalRunHook()) {
-            currentHandler->originalRunHook()( _queryDesc, _direction, _count, _execute_once );
+            currentHandler->originalRunHook()( _queryDesc, _direction, _count );
           } else {
-            standard_ExecutorRun( _queryDesc, _direction, _count, _execute_once );
+            standard_ExecutorRun( _queryDesc, _direction, _count );
           }
         }
       }
