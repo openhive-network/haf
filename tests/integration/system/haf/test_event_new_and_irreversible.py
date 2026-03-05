@@ -1,10 +1,12 @@
+import pytest
 import test_tools as tt
 
 from haf_local_tools import wait_until_irreversible
 
-#replay_all_nodes==false and TIMEOUT==300s therefore START_TEST_BLOCK has to be less than 100 blocks 
+#replay_all_nodes==false and TIMEOUT==300s therefore START_TEST_BLOCK has to be less than 100 blocks
 START_TEST_BLOCK = 50
 
+@pytest.mark.forking_only
 def test_event_new_and_irreversible(prepared_networks_and_database_12_8_without_block_log):
     tt.logger.info(f'Start test_event_new_and_irreversible')
 

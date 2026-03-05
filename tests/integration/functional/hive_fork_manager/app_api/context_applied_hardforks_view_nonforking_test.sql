@@ -4,9 +4,6 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    CREATE SCHEMA A;
-    PERFORM hive.app_create_context( 'context', _schema => 'a' );
-
     INSERT INTO hafd.operation_types
     VALUES (0, 'OP 0', FALSE )
         , ( 1, 'OP 1', FALSE )
@@ -43,6 +40,11 @@ BEGIN
          , ( 3, 3, hafd.operation_id(3, 0) )
          , ( 4, 4, hafd.operation_id(4, 0) )
     ;
+
+    PERFORM hive.end_massive_sync( 4 );
+
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( 'context', _schema => 'a' );
 END;
 $BODY$
 ;

@@ -4,9 +4,6 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_given()
 AS
 $BODY$
 BEGIN
-    CREATE SCHEMA A;
-    PERFORM hive.app_create_context( 'context', _schema => 'a' );
-
     INSERT INTO hafd.blocks
     VALUES
            ( 1, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
@@ -36,6 +33,11 @@ BEGIN
          , ( '\xDEED30', '\xBAAD30' )
          , ( '\xDEED40', '\xBAAD40' )
     ;
+
+    PERFORM hive.end_massive_sync( 4 );
+
+    CREATE SCHEMA A;
+    PERFORM hive.app_create_context( 'context', _schema => 'a' );
 END;
 $BODY$
 ;

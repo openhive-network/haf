@@ -1,3 +1,4 @@
+import pytest
 import test_tools as tt
 
 from haf_local_tools import create_app
@@ -7,6 +8,7 @@ import time
 
 from sqlalchemy.sql import text
 
+@pytest.mark.forking_only
 def test_application_index_many(haf_node):
     tt.logger.info(f'Start test_application_index_many')
 

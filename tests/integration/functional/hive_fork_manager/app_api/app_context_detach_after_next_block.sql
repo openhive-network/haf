@@ -28,7 +28,6 @@ BEGIN
     INSERT INTO  A.table1( id ) VALUES ( 66 ),( 67);
     INSERT INTO  A.table1( id ) VALUES ( 300 ),( 301);
 
-    ASSERT ( SELECT count(*) FROM hafd.shadow_a_table1 ) = 4, 'shadow table has to be filled';
 
     PERFORM hive.app_context_detach( 'context' );
 END;

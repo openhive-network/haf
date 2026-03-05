@@ -56,16 +56,16 @@ BEGIN
     ASSERT ( SELECT event_type FROM hafd.contexts_log WHERE id = 1 ) = 'CREATED', 'Wrong alice reason';
     ASSERT ( SELECT application_stage FROM hafd.contexts_log WHERE id = 1 ) IS NULL, 'Wrong alice stage';
     ASSERT ( SELECT application_block FROM hafd.contexts_log WHERE id = 1 ) = 0 , 'Wrong alice app block';
-    ASSERT ( SELECT application_fork FROM hafd.contexts_log WHERE id = 1 ) = 1 , 'Wrong alice app fork';
-    ASSERT ( SELECT head_fork_id FROM hafd.contexts_log WHERE id = 1 ) = 1 , 'Wrong alice head fork';
+    ASSERT ( SELECT application_fork FROM hafd.contexts_log WHERE id = 1 ) = 0 , 'Wrong alice app fork';
+    ASSERT ( SELECT head_fork_id FROM hafd.contexts_log WHERE id = 1 ) = 0 , 'Wrong alice head fork';
     ASSERT ( SELECT head_block FROM hafd.contexts_log WHERE id = 1 ) = 50 , 'Wrong alice head block';
 
     ASSERT EXISTS( SELECT 1 FROM hafd.contexts_log WHERE id = 2 AND context_name = 'alice1' ), 'No entry for alice1';
     ASSERT ( SELECT event_type FROM hafd.contexts_log WHERE id = 2 ) = 'CREATED', 'Wrong alice1 reason';
     ASSERT ( SELECT application_stage FROM hafd.contexts_log WHERE id = 2 ) IS NULL, 'Wrong alice1 stage';
     ASSERT ( SELECT application_block FROM hafd.contexts_log WHERE id = 2 ) = 0 , 'Wrong alice1 app block';
-    ASSERT ( SELECT application_fork FROM hafd.contexts_log WHERE id = 2 ) = 1 , 'Wrong alice1 app fork';
-    ASSERT ( SELECT head_fork_id FROM hafd.contexts_log WHERE id = 2 ) = 1 , 'Wrong alice1 head fork';
+    ASSERT ( SELECT application_fork FROM hafd.contexts_log WHERE id = 2 ) = 0 , 'Wrong alice1 app fork';
+    ASSERT ( SELECT head_fork_id FROM hafd.contexts_log WHERE id = 2 ) = 0 , 'Wrong alice1 head fork';
     ASSERT ( SELECT head_block FROM hafd.contexts_log WHERE id = 2 ) = 50 , 'Wrong alice1 head block';
 END;
 $BODY$;

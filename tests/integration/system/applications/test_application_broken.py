@@ -1,3 +1,4 @@
+import pytest
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.sql import text
 
@@ -30,6 +31,7 @@ def update_app_continuously(session, application_context, cycles):
         tt.logger.info(f'ctx_stats-update-app: cbn {ctx_stats[0]} irr {ctx_stats[1]}')
 
 
+@pytest.mark.forking_only
 def test_application_broken(prepared_networks_and_database_12_8_without_block_log):
     tt.logger.info(f'Start test_application_broken')
 

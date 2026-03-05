@@ -8,6 +8,7 @@ from haf_local_tools.system.haf import (connect_nodes, assert_index_exists, wait
 
 from sqlalchemy.sql import text
 
+@pytest.mark.forking_only
 def test_application_invalid_index(haf_node):
     tt.logger.info(f'Start test_application_invalid_index')
 

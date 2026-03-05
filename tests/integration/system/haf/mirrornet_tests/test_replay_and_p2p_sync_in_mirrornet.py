@@ -31,6 +31,7 @@ def get_blocks_to_verify(block_count: int) -> list[int]:
 
 
 @pytest.mark.mirrornet
+@pytest.mark.forking_only
 @pytest.mark.parametrize(
     "psql_index_threshold",
     [6000000, 3000000, 10],

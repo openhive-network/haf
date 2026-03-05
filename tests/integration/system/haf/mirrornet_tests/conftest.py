@@ -35,6 +35,7 @@ def log_timing(test_name: str, step: str, duration: float):
 
 def pytest_configure(config):
     """Clear timing file at start of test session."""
+    config.addinivalue_line("markers", "forking_only: test requires fork/reversible infrastructure")
     if TIMING_FILE.exists():
         TIMING_FILE.unlink()
 
