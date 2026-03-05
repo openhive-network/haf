@@ -198,7 +198,7 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = __lead_context;
 
-    SELECT COALESCE(hir.consistent_block, 0) INTO __head_of_irreversible_block
+    SELECT hir.consistent_block INTO __head_of_irreversible_block
     FROM hafd.hive_state hir;
 
     IF __current_block_num > __head_of_irreversible_block THEN

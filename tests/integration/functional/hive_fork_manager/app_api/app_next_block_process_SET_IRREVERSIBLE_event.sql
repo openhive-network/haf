@@ -69,7 +69,7 @@ AS
 $BODY$
 BEGIN
     ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context' ) = 3, 'Wrong current block num';
-    ASSERT ( SELECT events_id FROM hafd.contexts WHERE name='context' ) = 4, 'Wrong events id';
+    ASSERT ( SELECT events_id FROM hafd.contexts WHERE name='context' ) = 3, 'Wrong events id';
     ASSERT ( SELECT irreversible_block FROM hafd.contexts WHERE name='context' ) = 3, 'Wrong irreversible';
 
     ASSERT ( SELECT COUNT(*)  FROM A.table1 ) = 3, 'Wrong number of rows in app table';
