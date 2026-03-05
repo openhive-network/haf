@@ -7,18 +7,18 @@ AS
 $$
 DECLARE
     __ctx_current_block INTEGER;
-    __ctx_current_fork  BIGINT;
+    __ctx_current_fork  BIGINT := 0;
     __ctx_stage hafd.stage_name;
 
     __head_block INTEGER;
-    __head_fork BIGINT;
+    __head_fork BIGINT := 0;
 
     __date TIMESTAMP = now();
     __stage_latency INTERVAL;
     __previous_stage TEXT;
 BEGIN
-    SELECT hc.current_block_num, hc.fork_id
-    INTO __ctx_current_block, __ctx_current_fork
+    SELECT hc.current_block_num
+    INTO __ctx_current_block
     FROM hafd.contexts hc
     WHERE hc.name = _context_name;
 
@@ -27,10 +27,6 @@ BEGIN
     SELECT COALESCE(MAX(num), 0) -- it must support creating context before any block is added
     INTO __head_block
     FROM hive.blocks_view;
-
-    SELECT MAX(id)
-    INTO __head_fork
-    FROM hafd.fork;
 
     INSERT INTO hafd.contexts_log(
                                    context_name

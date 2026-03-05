@@ -18,11 +18,8 @@ CREATE OR REPLACE FUNCTION hive.is_lite_mode()
     STABLE
 AS
 $BODY$
-DECLARE
-    __lite_mode BOOLEAN := FALSE;
 BEGIN
-    SELECT COALESCE( lite_mode, FALSE ) INTO __lite_mode FROM hafd.hive_state;
-    RETURN __lite_mode;
+    RETURN TRUE;
 END;
 $BODY$;
 
