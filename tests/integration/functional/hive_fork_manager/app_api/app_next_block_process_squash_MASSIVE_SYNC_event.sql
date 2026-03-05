@@ -40,21 +40,20 @@ BEGIN
         , NULL
     );
 
-    -- simualates hived massive sync
+    -- simulates hived massive sync (block 3 already inserted by push_block_lite)
     INSERT INTO hafd.blocks
-    VALUES   ( 3, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-           , ( 4, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+    VALUES   ( 4, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
            , ( 5, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
            , ( 6, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    PERFORM hive.app_next_block( 'context' ); --block (1, 1), NEW_BLOCK(2) NOT PROCESSED 1
+    PERFORM hive.app_next_block( 'context' ); -- (1,1) irrev=1 initially
     INSERT INTO A.table1(id) VALUES ( 1 );
-    PERFORM hive.app_next_block( 'context' ); --block (2,2), NEW_BLOCK(2) 1
+    PERFORM hive.app_next_block( 'context' ); -- (2,3) irrev updated to 3
     INSERT INTO A.table1(id) VALUES ( 2 );
-    PERFORM hive.app_next_block( 'context' ); --NULL, NEW_IRREVERSIBLE 2
-    PERFORM hive.app_next_block( 'context' ); --(3,3) NEW_BLOCK(3) 3
+    PERFORM hive.app_next_block( 'context' ); -- (3,3) remaining block
     INSERT INTO A.table1(id) VALUES ( 3 );
+    PERFORM hive.app_next_block( 'context' ); -- NULL, caught up
 
     PERFORM hive.end_massive_sync(3);
     PERFORM hive.end_massive_sync(5);

@@ -84,24 +84,23 @@ $BODY$
 DECLARE
     __blocks hive.blocks_range;
 BEGIN
+    -- In irreversible-only mode, consistent_block=5 after push_block_lite(5),
+    -- so the context sees all blocks 2..5 as available (current_block_num=1 from given).
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
-    RAISE NOTICE 'wrong result %', __blocks;
     ASSERT __blocks IS NOT NULL, 'Null returned';
-    ASSERT __blocks.first_block = 2, 'Wrong first block';
-    ASSERT __blocks.last_block = 3, 'Wrong first block';
+    ASSERT __blocks.first_block = 2, 'Wrong first block, got ' || __blocks.first_block;
+    ASSERT __blocks.last_block = 5, 'Wrong last block, got ' || __blocks.last_block;
 
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
     ASSERT __blocks IS NOT NULL, 'Null returned 3';
     ASSERT __blocks.first_block = 3, 'Wrong first block 3';
-    ASSERT __blocks.last_block = 3, 'Wrong last block 3';
+    ASSERT __blocks.last_block = 5, 'Wrong last block 3, got ' || __blocks.last_block;
 
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
     ASSERT __blocks IS NOT NULL, 'Null returned 4';
     ASSERT __blocks.first_block = 4, 'Wrong first block 4';
-    ASSERT __blocks.last_block = 4, 'Wrong last block 4';
+    ASSERT __blocks.last_block = 5, 'Wrong last block 4, got ' || __blocks.last_block;
 
-    SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
-    ASSERT __blocks IS NULL, 'Null not returned for event IR(3)';
     SELECT * FROM hive.app_next_block( 'context' ) INTO __blocks;
     ASSERT __blocks IS NOT NULL, 'Null returned 5';
     ASSERT __blocks.first_block = 5, 'Wrong first block 5';

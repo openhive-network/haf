@@ -56,6 +56,12 @@ $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='applied_hardforks_view' ), 'No context applied_hardfroks view';
 
+    -- Advance context to process all blocks so the view shows all data
+    PERFORM hive.app_next_block( 'context' ); -- block 1
+    PERFORM hive.app_next_block( 'context' ); -- block 2
+    PERFORM hive.app_next_block( 'context' ); -- block 3
+    PERFORM hive.app_next_block( 'context' ); -- block 4
+
     ASSERT NOT EXISTS (
         SELECT * FROM a.applied_hardforks_view
         EXCEPT SELECT * FROM ( VALUES
@@ -67,7 +73,7 @@ BEGIN
     ) , 'Unexpected rows in the view';
 
     ASSERT ( SELECT COUNT(*) FROM a.applied_hardforks_view ) = 4, 'Not all rows are visible';
-    
+
 END;
 $BODY$
 ;

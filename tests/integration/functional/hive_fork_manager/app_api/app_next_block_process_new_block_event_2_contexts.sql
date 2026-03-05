@@ -55,20 +55,22 @@ DECLARE
     __first_blocks_2 hive.blocks_range;
     __second_blocks_2 hive.blocks_range;
 BEGIN
+    -- Both contexts start at current_block_num=0, irreversible_block=2.
+    -- push_block_lite emits NEW_IRREVERSIBLE so app_next_block processes ranges.
     SELECT * FROM hive.app_next_block( 'context' ) INTO __first_blocks;
-    ASSERT __first_blocks.first_block = 1 AND __first_blocks.last_block = 1, 'Wrong first block';
+    ASSERT __first_blocks.first_block = 1 AND __first_blocks.last_block = 2, 'Wrong first block range';
 
     SELECT * FROM hive.app_next_block( 'context' ) INTO __second_blocks;
     ASSERT __second_blocks.first_block = 2 AND __second_blocks.last_block = 2, 'Wrong second block';
 
     SELECT * FROM hive.app_next_block( 'context' ) INTO __third_blocks;
-    ASSERT __third_blocks.first_block IS NULL, 'Wrong second block';
+    ASSERT __third_blocks IS NULL, 'Expected NULL';
 
     SELECT * FROM hive.app_next_block( 'context2' ) INTO __first_blocks_2;
-    ASSERT __first_blocks_2.first_block = 1 AND __first_blocks_2.last_block = 1, 'Wrong first block context2';
+    ASSERT __first_blocks_2.first_block = 1 AND __first_blocks_2.last_block = 2, 'Wrong first block context2';
 
     SELECT * FROM hive.app_next_block( 'context2' ) INTO __second_blocks_2;
-    ASSERT __second_blocks_2.first_block = 2 AND __second_blocks_2.last_block =2, 'Wrong second block context2';
+    ASSERT __second_blocks_2.first_block = 2 AND __second_blocks_2.last_block = 2, 'Wrong second block context2';
 END
 $BODY$
 ;
@@ -78,8 +80,10 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    ASSERT EXISTS ( SELECT FROM hafd.events_queue WHERE id = 2 AND event = 'NEW_BLOCK' AND block_num = 2 ), 'No event added';
-    ASSERT ( SELECT COUNT(*) FROM hafd.events_queue ) = 4, 'Unexpected number of events';
+    -- push_block_lite emits NEW_IRREVERSIBLE, not NEW_BLOCK
+    ASSERT EXISTS ( SELECT FROM hafd.events_queue WHERE id = 2 AND event = 'NEW_IRREVERSIBLE' AND block_num = 2 ), 'No event added';
+    -- Events: 0:NEW_IRREVERSIBLE(0), 2:NEW_IRREVERSIBLE(2), unreachable sentinel (MASSIVE_SYNC was cleaned)
+    ASSERT ( SELECT COUNT(*) FROM hafd.events_queue ) = 3, 'Unexpected number of events';
 
     ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context' ) = 2, 'Wrong current block num';
     ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context2' ) = 2, 'Wrong current block num context 2';

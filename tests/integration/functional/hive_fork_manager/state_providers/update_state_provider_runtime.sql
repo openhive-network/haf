@@ -97,9 +97,8 @@ BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hafd' AND table_name  = 'context_accounts' ), 'Accounts table was not created';
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hafd' AND table_name  = 'context_tests1' ), 'Tests1 table was not created';
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='hafd' AND table_name  = 'context_tests2' ), 'Tests2 table was not created';
-    ASSERT ( SELECT COUNT(*) FROM hafd.registered_tables WHERE origin_table_schema = 'hafd' AND origin_table_name = 'context_accounts' AND context_id = 1 ) = 1, 'State provider table is not registered';
-    ASSERT ( SELECT COUNT(*) FROM hafd.registered_tables WHERE origin_table_schema = 'hafd' AND origin_table_name = 'context_tests1' AND context_id = 1 ) = 1, 'State provider tests1 is not registered';
-    ASSERT ( SELECT COUNT(*) FROM hafd.registered_tables WHERE origin_table_schema = 'hafd' AND origin_table_name = 'context_tests2' AND context_id = 1 ) = 1, 'State provider tests2 is not registered';
+    -- In irreversible-only schema, state provider tables are not registered in registered_tables
+    -- (no shadow tables/triggers needed), so we only verify they exist via information_schema above.
 
 
     ASSERT EXISTS (

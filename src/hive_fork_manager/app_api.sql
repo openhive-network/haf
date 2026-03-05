@@ -208,6 +208,7 @@ BEGIN
 
     UPDATE hafd.contexts
     SET   events_id = 0 -- during app_next_block correct event will be found
+      , irreversible_block = __head_of_irreversible_block
       , last_active_at = NOW()
     WHERE name =ANY( _contexts )
     ;
