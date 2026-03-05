@@ -15,6 +15,7 @@ BEGIN
     VALUES (5, 'initminer', 1)
     ;
 
+    PERFORM hive.end_massive_sync( 3 );
 
     CREATE SCHEMA A;
     PERFORM hive.app_create_context( _name =>  'context', _schema => 'a'  );
