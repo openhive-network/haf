@@ -44,24 +44,23 @@ BEGIN
         , NULL
     );
 
-    -- simualates hived massive sync
+    -- simulates hived massive sync (block 3 already inserted by push_block_lite)
     INSERT INTO hafd.blocks
-    VALUES   ( 3, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-           , ( 4, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
+    VALUES   ( 4, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
            , ( 5, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
            , ( 6, '\xBADD10', '\xCAFE10', '2016-06-22 19:10:21-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
     ;
 
-    PERFORM hive.app_next_block( ARRAY[ 'context', 'context_b' ] ); --block 1 (squash massive sync)
+    PERFORM hive.app_next_block( ARRAY[ 'context', 'context_b' ] ); -- (1,1) irrev=1 initially
     INSERT INTO A.table1(id) VALUES ( 1 );
     INSERT INTO B.table1(id) VALUES ( 1 );
-    PERFORM hive.app_next_block( ARRAY[ 'context', 'context_b' ]  ); --block 2 - irreversible
+    PERFORM hive.app_next_block( ARRAY[ 'context', 'context_b' ]  ); -- (2,3) irrev updated to 3
     INSERT INTO A.table1(id) VALUES ( 2 );
     INSERT INTO B.table1(id) VALUES ( 2 );
-    PERFORM hive.app_next_block( ARRAY[ 'context', 'context_b' ] ); --set irreversible block 2
-    PERFORM hive.app_next_block( ARRAY[ 'context', 'context_b' ] ); --block 3 --reversible
-    INSERT INTO A.table1(id) VALUES ( 3 ); --reversible
-    INSERT INTO B.table1(id) VALUES ( 3 ); --reversible
+    PERFORM hive.app_next_block( ARRAY[ 'context', 'context_b' ] ); -- (3,3) remaining block
+    INSERT INTO A.table1(id) VALUES ( 3 );
+    INSERT INTO B.table1(id) VALUES ( 3 );
+    PERFORM hive.app_next_block( ARRAY[ 'context', 'context_b' ] ); -- NULL, caught up
 
     PERFORM hive.end_massive_sync(6);
 END;

@@ -57,6 +57,12 @@ $BODY$
 BEGIN
     ASSERT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema='a' AND table_name='operations_view' ), 'No context operations view';
 
+    -- Advance context to process all blocks so the view shows all data
+    PERFORM hive.app_next_block( 'context' ); -- block 1
+    PERFORM hive.app_next_block( 'context' ); -- block 2
+    PERFORM hive.app_next_block( 'context' ); -- block 3
+    PERFORM hive.app_next_block( 'context' ); -- block 4
+
     ASSERT NOT EXISTS (
         SELECT o.id, o.trx_in_block, o.op_pos, o.body_binary, o.body FROM a.operations_view o
         EXCEPT SELECT * FROM ( VALUES

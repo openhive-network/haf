@@ -583,6 +583,10 @@ SET_TESTS_PROPERTIES(
   test.functional.update.hive_fork_manager.app_api.app_next_block_after_attach_2
   test.functional.hive_fork_manager.app_api.app_contexts_group_next_block_after_attach_2
   test.functional.update.hive_fork_manager.app_api.app_contexts_group_next_block_after_attach_2
+  test.functional.hive_fork_manager.app_api.app_context_set_non_forking
+  test.functional.update.hive_fork_manager.app_api.app_context_set_non_forking
+  test.functional.hive_fork_manager.app_api.app_contexts_set_non_forking_and_back_and_again
+  test.functional.update.hive_fork_manager.app_api.app_contexts_set_non_forking_and_back_and_again
   PROPERTIES LABELS "forking_only"
 )
 

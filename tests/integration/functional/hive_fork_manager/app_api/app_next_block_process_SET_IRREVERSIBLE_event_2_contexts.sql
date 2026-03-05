@@ -92,7 +92,8 @@ $BODY$
 BEGIN
     ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context' ) = 4, 'Wrong current block num';
     ASSERT ( SELECT events_id FROM hafd.contexts WHERE name='context' ) = 5, 'Wrong events id';
-    ASSERT ( SELECT irreversible_block FROM hafd.contexts WHERE name='context' ) = 3, 'Wrong irreversible';
+    -- update_irreversible copies consistent_block=4 into irreversible_block
+    ASSERT ( SELECT irreversible_block FROM hafd.contexts WHERE name='context' ) = 4, 'Wrong irreversible';
 
     ASSERT ( SELECT COUNT(*)  FROM A.table1 ) = 3, 'Wrong number of rows in app table';
     ASSERT EXISTS ( SELECT *  FROM A.table1 WHERE id = 1 ), 'No id 1';
@@ -102,7 +103,7 @@ BEGIN
 
     ASSERT ( SELECT current_block_num FROM hafd.contexts WHERE name='context2' ) = 4, 'Wrong current block num';
     ASSERT ( SELECT events_id FROM hafd.contexts WHERE name='context2' ) = 5, 'Wrong events id';
-    ASSERT ( SELECT irreversible_block FROM hafd.contexts WHERE name='context2' ) = 3, 'Wrong irreversible';
+    ASSERT ( SELECT irreversible_block FROM hafd.contexts WHERE name='context2' ) = 4, 'Wrong irreversible';
 
     ASSERT ( SELECT COUNT(*)  FROM B.table2 ) = 4, 'Wrong number of rows in app table context2';
     ASSERT EXISTS ( SELECT *  FROM B.table2 WHERE id = 1 ), 'No id 1';
