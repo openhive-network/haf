@@ -11,6 +11,7 @@ from haf_local_tools.system.haf import (
 )
 
 
+@pytest.mark.forking_only
 @pytest.mark.parametrize(
     "psql_index_threshold",
     [2147483647, 100000],

@@ -1,3 +1,4 @@
+import pytest
 import test_tools as tt
 
 from haf_local_tools import create_app
@@ -6,6 +7,7 @@ from haf_local_tools.system.haf import (connect_nodes, assert_index_exists, wait
 
 from sqlalchemy.sql import text
 
+@pytest.mark.forking_only
 def test_two_applications_one_index(haf_node):
     tt.logger.info(f'Start test_two_applications_one_index')
 

@@ -21,6 +21,7 @@ from haf_local_tools import (
 
 
 @pytest.mark.mirrornet
+@pytest.mark.forking_only
 @pytest.mark.parametrize(
     "psql_index_threshold",
     [6000000, 100000],

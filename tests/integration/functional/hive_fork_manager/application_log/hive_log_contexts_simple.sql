@@ -86,9 +86,9 @@ BEGIN
         AND application_stage = 'stage1'
         AND event_type = 'CREATED'
         AND application_block = 10
-        AND application_fork = 1
+        AND application_fork = 0
         AND head_block  = 50
-        AND head_fork_id = 1
+        AND head_fork_id = 0
     ), 'No CREATED entry';
 
     ASSERT EXISTS(
@@ -98,9 +98,9 @@ BEGIN
           AND application_stage = 'stage1'
           AND event_type = 'ATTACHED'
           AND application_block = 10
-          AND application_fork = 1
+          AND application_fork = 0
           AND head_block  = 50
-          AND head_fork_id = 1
+          AND head_fork_id = 0
     ), 'No ATTACHED entry';
 
     ASSERT EXISTS(
@@ -110,9 +110,9 @@ BEGIN
           AND application_stage = 'stage1'
           AND event_type = 'DETACHED'
           AND application_block = 10
-          AND application_fork = 1
+          AND application_fork = 0
           AND head_block  = 50
-          AND head_fork_id = 1
+          AND head_fork_id = 0
     ), 'No DETACHED entry';
 
     ASSERT EXISTS(
@@ -122,9 +122,9 @@ BEGIN
           AND application_stage = 'stage1'
           AND event_type = 'REMOVED'
           AND application_block = 10
-          AND application_fork = 1
+          AND application_fork = 0
           AND head_block  = 50
-          AND head_fork_id = 1
+          AND head_fork_id = 0
     ), 'No REMOVED entry';
 
     ASSERT EXISTS(
@@ -134,9 +134,9 @@ BEGIN
           AND application_stage = 'stage1'
           AND event_type = 'STATE_CHANGED'
           AND application_block = 10
-          AND application_fork = 1
+          AND application_fork = 0
           AND head_block  = 50
-          AND head_fork_id = 1
+          AND head_fork_id = 0
     ), 'No STATE_CHANGED entry';
 
     -- ---------------------------------------
@@ -147,9 +147,9 @@ BEGIN
                 AND application_stage IS NULL
                 AND event_type = 'CREATED'
                 AND application_block = 10
-                AND application_fork = 1
+                AND application_fork = 0
                 AND head_block  = 50
-                AND head_fork_id = 1
+                AND head_fork_id = 0
     ), 'No CREATED entry';
 
     ASSERT EXISTS(
@@ -159,9 +159,9 @@ BEGIN
             AND application_stage IS NULL
             AND event_type = 'ATTACHED'
             AND application_block = 10
-            AND application_fork = 1
+            AND application_fork = 0
             AND head_block  = 50
-            AND head_fork_id = 1
+            AND head_fork_id = 0
     ), 'No ATTACHED entry';
 
     ASSERT EXISTS(
@@ -171,9 +171,9 @@ BEGIN
             AND application_stage IS NULL
             AND event_type = 'DETACHED'
             AND application_block = 10
-            AND application_fork = 1
+            AND application_fork = 0
             AND head_block  = 50
-            AND head_fork_id = 1
+            AND head_fork_id = 0
     ), 'No DETACHED entry';
 
     ASSERT EXISTS(
@@ -183,9 +183,9 @@ BEGIN
             AND application_stage IS NULL
             AND event_type = 'REMOVED'
             AND application_block = 10
-            AND application_fork = 1
+            AND application_fork = 0
             AND head_block  = 50
-            AND head_fork_id = 1
+            AND head_fork_id = 0
     ), 'No REMOVED entry';
 
     ASSERT EXISTS(
@@ -195,9 +195,9 @@ BEGIN
             AND application_stage IS NULL
             AND event_type = 'STATE_CHANGED'
             AND application_block = 10
-            AND application_fork = 1
+            AND application_fork = 0
             AND head_block  = 50
-            AND head_fork_id = 1
+            AND head_fork_id = 0
     ), 'No STATE_CHANGED entry';
 
 

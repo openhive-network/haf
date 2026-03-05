@@ -53,6 +53,7 @@ WITNESSES_1M: list[str] = [
 
 
 @pytest.mark.mirrornet
+@pytest.mark.forking_only
 def test_app_autodetach(witness_node_with_haf, block_log_5m, tmp_path):
     block_log_1m = block_log_5m.truncate(tmp_path, 1000000)
 

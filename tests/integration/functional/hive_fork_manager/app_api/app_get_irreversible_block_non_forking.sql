@@ -39,7 +39,7 @@ BEGIN
     PERFORM hive.app_next_block( 'context' ); -- massive sync event
     ASSERT ( SELECT hive.app_get_irreversible_block( 'context' ) ) = 1, 'hive.app_get_irreversible_block !=1 (4)';
 
-    PERFORM hive.push_block(
+    PERFORM hive.push_block_lite(
         ( 2, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
         , NULL
         , NULL
@@ -50,7 +50,7 @@ BEGIN
     );
     ASSERT ( SELECT hive.app_get_irreversible_block( 'context' ) ) = 1, 'hive.app_get_irreversible_block !=1 (4)';
 
-    PERFORM hive.push_block(
+    PERFORM hive.push_block_lite(
         ( 3, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
         , NULL
         , NULL
