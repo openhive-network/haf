@@ -690,7 +690,7 @@ BEGIN
           AND status != 'missing'
     LOOP
         __start_time := clock_timestamp();
-        EXECUTE format('DROP INDEX IF EXISTS %s', __r.index_constraint_name);
+        EXECUTE format('DROP INDEX IF EXISTS %s.%s', split_part(__r.table_name, '.', 1), __r.index_constraint_name);
         __duration := clock_timestamp() - __start_time;
         UPDATE hafd.indexes_constraints
         SET status = 'missing'
