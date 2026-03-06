@@ -22,6 +22,7 @@ $BODY$
 CREATE OR REPLACE FUNCTION hive.app_create_context(
       _name hafd.context_name
     , _schema TEXT
+    , _is_forking BOOLEAN = FALSE
     , _is_attached BOOLEAN = TRUE
 )
     RETURNS void
@@ -50,6 +51,7 @@ CREATE OR REPLACE FUNCTION hive.app_create_context(
       _name hafd.context_name
     , _schema TEXT
     , _stages hafd.application_stages
+    , _is_forking BOOLEAN = FALSE
 )
     RETURNS void
     LANGUAGE plpgsql
