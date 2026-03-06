@@ -69,6 +69,12 @@ echo "Attempting to stop Postgresql..."
 echo "Forcing PostgreSQL checkpoint before shutdown..."
 psql -U haf_admin -d haf_block_log -c "CHECKPOINT;" || echo "Warning: CHECKPOINT failed (PostgreSQL may not be running)"
 
+# Update visibility maps and planner statistics before saving cache
+# Without this, Index Only Scans degrade to Heap Fetches on restored caches,
+# causing ~10% throughput regression in downstream app API queries
+echo "Running VACUUM ANALYZE on key tables..."
+psql -U haf_admin -d haf_block_log -c "VACUUM ANALYZE hafd.account_operations, hafd.operations, hafd.transactions, hafd.blocks;" || echo "Warning: VACUUM ANALYZE failed"
+
 postgres_pid=0
 if [ -f "/var/run/postgresql/$POSTGRES_VERSION-main.pid" ];
 then
