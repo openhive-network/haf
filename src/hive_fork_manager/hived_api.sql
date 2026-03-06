@@ -36,6 +36,9 @@ BEGIN
     DELETE FROM hafd.transactions WHERE block_num > _block_num_before_fork;
     UPDATE hafd.accounts SET block_num = NULL WHERE block_num > _block_num_before_fork;
     DELETE FROM hafd.blocks WHERE num > _block_num_before_fork;
+
+    -- Roll back consistent_block so apps don't read past deleted blocks
+    UPDATE hafd.hive_state SET consistent_block = LEAST( consistent_block, _block_num_before_fork );
 END;
 $BODY$
 ;
@@ -55,7 +58,8 @@ CREATE OR REPLACE FUNCTION hive.push_block(
 AS
 $BODY$
 BEGIN
-    RAISE EXCEPTION 'Not available in irreversible-only mode';
+    -- In irreversible-only mode, push_block delegates to push_block_lite
+    PERFORM hive.push_block_lite( _block, _transactions, _signatures, _operations, _accounts, _account_operations, _applied_hardforks );
 END;
 $BODY$
 ;
@@ -106,11 +110,11 @@ CREATE OR REPLACE FUNCTION hive.set_irreversible( _block_num INT )
 AS
 $BODY$
 BEGIN
-    -- Data is already in irreversible tables (inserted by push_block_lite).
-    -- Just emit the event and update consistent_block.
+    -- Data is already in irreversible tables (inserted by push_block/push_block_lite).
+    -- Just emit the event and advance consistent_block (never decrease it).
     INSERT INTO hafd.events_queue( event, block_num )
     VALUES( 'NEW_IRREVERSIBLE', _block_num );
-    UPDATE hafd.hive_state SET consistent_block = _block_num;
+    UPDATE hafd.hive_state SET consistent_block = GREATEST( consistent_block, _block_num );
 
     BEGIN
         LOCK TABLE hafd.contexts_attachment IN EXCLUSIVE MODE NOWAIT;
