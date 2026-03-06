@@ -76,6 +76,7 @@ ADD_PSQL_EXTENSION(
             asset_utils.sql
             transaction_utils.sql
 
+            vacuum_shadow_table.sql
             application_loop/stages_functions.sql
             application_loop/loop.sql
             application_loop/contexts_log_api.sql
