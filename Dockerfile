@@ -44,11 +44,9 @@ RUN apt-get update && \
     # Install Tokenizers (~48MB) for hivesense
     python3.14 -m pip install --target /usr/lib/python3/dist-packages --break-system-packages tokenizers pysbd && \
     # Install ParadeDB pg_search extension for BM25 search
-    # Get the latest release URL from GitHub
-    # TODO: Uncomment when pg_search is available for PostgreSQL 18
-    # curl -L "https://github.com/paradedb/paradedb/releases/download/v0.19.5/postgresql-18-pg-search_0.19.5-1PARADEDB-noble_amd64.deb" -o /tmp/pg_search.deb && \
-    # DEBIAN_FRONTEND=noninteractive apt-get install -y /tmp/pg_search.deb && \
-    # rm /tmp/pg_search.deb && \
+    curl -L "https://github.com/paradedb/paradedb/releases/download/v0.21.13/postgresql-18-pg-search_0.21.13-1PARADEDB-noble_amd64.deb" -o /tmp/pg_search.deb && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y /tmp/pg_search.deb && \
+    rm /tmp/pg_search.deb && \
     apt-get remove -y gnupg curl software-properties-common && \
     apt-get autoremove -y && \
     busybox --install -s
