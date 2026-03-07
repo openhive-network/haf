@@ -342,14 +342,15 @@ BEGIN
     FROM hive.parse_create_index_command(_create_index_command);
 
     -- Upsert the index dependency
+    -- Detect if the index already exists to set the correct initial status
     INSERT INTO hafd.indexes_constraints (
-        table_name, 
-        index_constraint_name, 
-        command, 
-        is_constraint, 
-        is_index, 
-        is_foreign_key, 
-        status, 
+        table_name,
+        index_constraint_name,
+        command,
+        is_constraint,
+        is_index,
+        is_foreign_key,
+        status,
         contexts
     )
     VALUES (
