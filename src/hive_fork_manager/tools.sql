@@ -21,3 +21,4 @@ $BODY$
 ;
 
 -- CI test: verify schema cache check
+-- CI test round 2
