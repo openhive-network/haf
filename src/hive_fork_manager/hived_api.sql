@@ -31,10 +31,10 @@ DECLARE
     __fork_id BIGINT;
 BEGIN
     IF hive.is_lite_mode() THEN
+        -- Use operation_id_to_block_num() directly on account_operations to avoid
+        -- a JOIN to operations, which causes a sequential scan of the entire table.
         DELETE FROM hafd.account_operations
-            USING hafd.operations
-            WHERE hafd.account_operations.operation_id = hafd.operations.id
-              AND hafd.operation_id_to_block_num(hafd.operations.id) > _block_num_before_fork;
+            WHERE hafd.operation_id_to_block_num(operation_id) > _block_num_before_fork;
         DELETE FROM hafd.applied_hardforks WHERE block_num > _block_num_before_fork;
         DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) > _block_num_before_fork;
         DELETE FROM hafd.transactions_multisig
@@ -108,6 +108,12 @@ CREATE OR REPLACE FUNCTION hive.push_block_lite(
 AS
 $BODY$
 BEGIN
+    -- Skip if this block already exists (idempotent). This happens when WAL replay
+    -- re-inserts blocks that were already committed to PostgreSQL before a crash.
+    IF EXISTS (SELECT 1 FROM hafd.blocks WHERE num = _block.num) THEN
+        RETURN;
+    END IF;
+
     INSERT INTO hafd.blocks VALUES( _block.* );
     INSERT INTO hafd.transactions VALUES( ( unnest( _transactions ) ).* );
     INSERT INTO hafd.transactions_multisig VALUES( ( unnest( _signatures ) ).* );
@@ -439,12 +445,14 @@ BEGIN
     SELECT MAX(num) INTO __max_block FROM hive.blocks_view;
 
     IF _lite_mode THEN
-        -- In lite mode, clean up blocks beyond _block_num directly from irreversible tables
+        -- In lite mode, clean up blocks beyond _block_num directly from irreversible tables.
+        -- Use operation_id_to_block_num() directly on account_operations to avoid
+        -- a JOIN to operations, which would cause a sequential scan of the entire
+        -- account_operations table (no index on operation_id).
         IF __max_block > _block_num OR _block_num = 0 THEN
+            RAISE LOG 'hive.connect: cleaning up blocks beyond % (max_block=%)', _block_num, __max_block;
             DELETE FROM hafd.account_operations
-                USING hafd.operations
-                WHERE hafd.account_operations.operation_id = hafd.operations.id
-                  AND hafd.operation_id_to_block_num(hafd.operations.id) > _block_num;
+                WHERE hafd.operation_id_to_block_num(operation_id) > _block_num;
             DELETE FROM hafd.applied_hardforks WHERE block_num > _block_num;
             DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) > _block_num;
             DELETE FROM hafd.transactions_multisig
