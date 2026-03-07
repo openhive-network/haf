@@ -358,6 +358,31 @@ detect_changes:
                 echo "Cache $TEST_COMMIT not ancestor of HEAD - skipping (incompatible branch)"
                 continue
               fi
+              # Verify schema-defining SQL sources haven't changed between cache commit and HEAD
+              # Table DDL changes make cached replay data incompatible (different DB schema)
+              # Function/procedure changes are fine — the overlay image updates them at startup
+              SCHEMA_SOURCES_PATH="src/hive_fork_manager"
+              SCHEMA_FILES=(
+                schemas.sql
+                context_rewind/data_schema_types.sql
+                context_rewind/data_schema.sql
+                events_queue.sql
+                app_context.sql
+                irreversible_blocks.sql
+                state_provider.sql
+                hived_api.sql
+                hived_api_impl_indexes.sql
+              )
+              SCHEMA_PATHS=()
+              for sf in "${SCHEMA_FILES[@]}"; do
+                SCHEMA_PATHS+=("${SCHEMA_SOURCES_PATH}/${sf}")
+              done
+              if ! git diff --quiet "$TEST_COMMIT" HEAD -- "${SCHEMA_PATHS[@]}" 2>/dev/null; then
+                echo "Cache $TEST_COMMIT has incompatible schema DDL changes - skipping"
+                echo "Changed schema files:"
+                git diff --name-only "$TEST_COMMIT" HEAD -- "${SCHEMA_PATHS[@]}" 2>/dev/null | head -10
+                continue
+              fi
               CACHE_COMMIT="$TEST_COMMIT"
               echo "Found cached data with valid images: $CACHE_COMMIT"
               break
