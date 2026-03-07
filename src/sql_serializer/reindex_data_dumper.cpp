@@ -1,4 +1,5 @@
 #include <hive/plugins/sql_serializer/reindex_data_dumper.h>
+#include <hive/plugins/sql_serializer/db_url_utils.h>
 
 #include <exception>
 
@@ -13,8 +14,12 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     , uint32_t pruning_tail_size) : app(app) {
     using namespace std::string_literals;
     ilog( "Starting reindexing dump to database with ${o} operations and ${t} transactions threads", ("o", operations_threads )("t", transactions_threads) );
-    _transactions_controller = transaction_controllers::build_own_transaction_controller( db_url, "reindex dumper", app );
-    _end_massive_sync_processor = std::make_unique< end_massive_sync_processor >( db_url, app );
+
+    const auto data_url = db_url_with_app(db_url, "hived_data");
+    const auto ctrl_url = db_url_with_app(db_url, "hived_reindex_ctrl");
+
+    _transactions_controller = transaction_controllers::build_own_transaction_controller( ctrl_url, "reindex dumper", app );
+    _end_massive_sync_processor = std::make_unique< end_massive_sync_processor >( data_url, app );
     constexpr auto ONE_THREAD_WRITERS_NUMBER = 4; // a thread for dumping blocks + a thread dumping multisignatures + a thread for accounts
     auto NUMBER_OF_PROCESSORS_THREADS = ONE_THREAD_WRITERS_NUMBER + operations_threads + transactions_threads + account_operation_threads;
     auto execute_end_massive_sync_callback = [this, pruning_tail_size](block_num_rendezvous_trigger::BLOCK_NUM _block_num ) {
@@ -25,16 +30,16 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
     auto api_trigger = std::make_shared< block_num_rendezvous_trigger >( NUMBER_OF_PROCESSORS_THREADS, execute_end_massive_sync_callback );
 
-    _block_writer = std::make_unique<block_data_container_t_writer>(db_url, "Block data writer", "block", api_trigger, app);
+    _block_writer = std::make_unique<block_data_container_t_writer>(data_url, "Block data writer", "block", api_trigger, app);
 
-    _transaction_writer = std::make_unique<transaction_data_container_t_writer>( transactions_threads, db_url, "Transaction data writer", "trx", api_trigger, app);
+    _transaction_writer = std::make_unique<transaction_data_container_t_writer>( transactions_threads, data_url, "Transaction data writer", "trx", api_trigger, app);
 
-    _transaction_multisig_writer = std::make_unique<transaction_multisig_data_container_t_writer>(db_url, "Transaction multisig data writer", "trx_multi", api_trigger, app);
+    _transaction_multisig_writer = std::make_unique<transaction_multisig_data_container_t_writer>(data_url, "Transaction multisig data writer", "trx_multi", api_trigger, app);
 
-    _operation_writer = std::make_unique<operation_data_container_t_writer>( operations_threads, db_url, "Operation data writer", "op", api_trigger, app);
-    _account_writer = std::make_unique<accounts_data_container_t_writer>( db_url, "Accounts data writer", "account", api_trigger, app);
-    _account_operations_writer = std::make_unique< account_operations_data_container_t_writer >( account_operation_threads, db_url, "Account operations data writer", "account_op", api_trigger, app);
-    _applied_hardforks_writer = std::make_unique< applied_hardforks_container_t_writer >( db_url, "Hardfork data writer", "hardfork", api_trigger, app);
+    _operation_writer = std::make_unique<operation_data_container_t_writer>( operations_threads, data_url, "Operation data writer", "op", api_trigger, app);
+    _account_writer = std::make_unique<accounts_data_container_t_writer>( data_url, "Accounts data writer", "account", api_trigger, app);
+    _account_operations_writer = std::make_unique< account_operations_data_container_t_writer >( account_operation_threads, data_url, "Account operations data writer", "account_op", api_trigger, app);
+    _applied_hardforks_writer = std::make_unique< applied_hardforks_container_t_writer >( data_url, "Hardfork data writer", "hardfork", api_trigger, app);
 
     mark_irreversible_data_as_dirty( true );
   }

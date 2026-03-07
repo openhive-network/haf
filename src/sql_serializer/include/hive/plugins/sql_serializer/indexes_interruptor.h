@@ -18,6 +18,9 @@ public:
 
 private:
   void run();
+  std::size_t cancel_backends(const char* app_name);
+
+  static constexpr int DATA_DUMP_GRACE_PERIOD_SECONDS = 15;
 
   const std::string _db_url;
   appbase::application& _app;

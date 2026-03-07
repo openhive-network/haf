@@ -2,6 +2,7 @@
 #include <hive/plugins/sql_serializer/indexes_controler.h>
 #include <hive/plugins/sql_serializer/queries_commit_data_processor.h>
 #include <hive/plugins/sql_serializer/indexes_interruptor.h>
+#include <hive/plugins/sql_serializer/db_url_utils.h>
 
 #include <appbase/application.hpp>
 
@@ -17,19 +18,6 @@
 namespace hive { namespace plugins { namespace sql_serializer {
 
 namespace {
-std::string db_url_with_app(const std::string& db_url, const char* app_name)
-{
-  const std::string app_kv = std::string("application_name=") + app_name;
-  if (db_url.find("application_name=") != std::string::npos)
-    return db_url;
-  const bool is_uri = db_url.rfind("postgres://", 0) == 0 || db_url.rfind("postgresql://", 0) == 0;
-  if (is_uri)
-  {
-    const char sep = (db_url.find('?') == std::string::npos) ? '?' : '&';
-    return db_url + sep + app_kv;
-  }
-  return db_url + " " + app_kv;
-}
 
 std::string db_url_as_user(const std::string& db_url, const char* user)
 {
