@@ -320,11 +320,14 @@ BEGIN
     PERFORM hive.remove_inconsistent_irreversible_data();
     SELECT MAX(num) INTO __max_block FROM hive.blocks_view;
 
-    -- Clean up blocks beyond _block_num directly from irreversible tables.
+    -- Clean up blocks beyond _block_num from irreversible tables.
+    -- This happens when hived's head (from shared_memory) is behind the database
+    -- (e.g., after WAL replay restored blocks that hived hasn't processed yet).
     -- Use operation_id_to_block_num() directly on account_operations to avoid
     -- a JOIN to operations, which would cause a sequential scan of the entire
     -- account_operations table (no index on operation_id).
     IF __max_block > _block_num OR _block_num = 0 THEN
+        RAISE LOG 'hive.connect: cleaning up blocks beyond % (max_block=%)', _block_num, __max_block;
         DELETE FROM hafd.account_operations
             WHERE hafd.operation_id_to_block_num(operation_id) > _block_num;
         DELETE FROM hafd.applied_hardforks WHERE block_num > _block_num;
