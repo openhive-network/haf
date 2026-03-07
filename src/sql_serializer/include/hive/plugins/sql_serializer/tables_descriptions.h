@@ -48,8 +48,22 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
-        return std::to_string(data.block_number) + "," + std::to_string(data.trx_in_block) + "," + escape_raw(data.hash) + "," +
-        std::to_string(data.ref_block_num) + "," + std::to_string(data.ref_block_prefix) + ",'" + data.expiration.to_iso_string() + "'," + escape_raw(data.signature);
+        std::string result;
+        result.reserve(256);
+        result += std::to_string(data.block_number);
+        result += ',';
+        result += std::to_string(data.trx_in_block);
+        result += ',';
+        result += escape_raw(data.hash);
+        result += ',';
+        result += std::to_string(data.ref_block_num);
+        result += ',';
+        result += std::to_string(data.ref_block_prefix);
+        result += ",'";
+        result += data.expiration.to_iso_string();
+        result += "',";
+        result += escape_raw(data.signature);
+        return result;
       }
       };
     };
@@ -87,10 +101,29 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
-        std::vector<char> opDeserialized = fc::raw::pack_to_vector( data.op );
+        // Compute packed size first (cheap size-only datastream, no allocation).
+        fc::datastream<size_t> size_packer;
+        fc::raw::pack(size_packer, data.op);
+        const size_t packed_size = size_packer.tellp();
 
-        std::string result = std::to_string(data.operation_id) + ',' + std::to_string(data.trx_in_block) + ',' +
-        std::to_string(data.op_type_id) + ',' + std::to_string(data.op_in_trx) + "," + escape_raw(opDeserialized) + "::bytea,";
+        // Pack into a reusable thread-local buffer (avoids heap allocation per call).
+        thread_local std::vector<char> opBuffer;
+        opBuffer.resize(packed_size);
+        fc::datastream<char*> ds(opBuffer.data(), packed_size);
+        fc::raw::pack(ds, data.op);
+
+        std::string result;
+        result.reserve(128);
+        result += std::to_string(data.operation_id);
+        result += ',';
+        result += std::to_string(data.trx_in_block);
+        result += ',';
+        result += std::to_string(data.op_type_id);
+        result += ',';
+        result += std::to_string(data.op_in_trx);
+        result += ',';
+        result += escape_raw(opBuffer);
+        result += "::bytea,";
         if( data.custom_json_type_id.valid() )
           result += std::to_string( *data.custom_json_type_id );
         else
