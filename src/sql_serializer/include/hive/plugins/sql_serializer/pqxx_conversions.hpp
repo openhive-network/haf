@@ -591,11 +591,13 @@ template<> struct string_traits<hive::protocol::operation>
     return end_of_data;
   }
   
-  static std::size_t size_buffer(const hive::protocol::operation& value)
+  static constexpr std::size_t size_buffer(const hive::protocol::operation&) noexcept
   {
-    fc::datastream<size_t> size_packer;
-    fc::raw::pack(size_packer, value);
-    return size_esc_bin(size_packer.tellp());
+    // Return a constant upper bound to avoid a full fc::raw::pack() just for size estimation.
+    // No single operation can exceed HIVE_MAX_TRANSACTION_SIZE (65536 bytes binary).
+    // size_esc_bin(65536) = 2 + 2*65536 + 1 = 131075 bytes.
+    // into_buf() will throw conversion_overrun if the buffer is actually too small.
+    return size_esc_bin(65536);
   }
 
   static hive::protocol::operation from_string(std::string_view text)
