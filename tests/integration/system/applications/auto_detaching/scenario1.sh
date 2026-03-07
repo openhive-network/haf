@@ -16,6 +16,20 @@ POSTRGRES_ADMIN_URL="postgresql://haf_admin@${POSTGRES_HOST}/haf_block_log"
 
 POSTGRES_ARGS="-aw -v ON_ERROR_STOP=ON"
 
+# Wait for PostgreSQL to be ready (handles Docker DNS propagation delay)
+echo "Waiting for PostgreSQL at ${POSTGRES_HOST}..."
+for i in $(seq 1 120); do
+  if pg_isready -h "${POSTGRES_HOST}" -U haf_admin -d haf_block_log -q 2>/dev/null; then
+    echo "PostgreSQL ready after ${i} attempts"
+    break
+  fi
+  if [ "$i" -eq 120 ]; then
+    echo "ERROR: PostgreSQL at ${POSTGRES_HOST} not ready after 120 attempts"
+    exit 1
+  fi
+  sleep 5
+done
+
 psql "${POSTRGRES_ADMIN_URL}" ${POSTGRES_ARGS} -f "${SCRIPTPATH}/test_app.sql"
 psql "${POSTRGRES_ADMIN_URL}" ${POSTGRES_ARGS} -f "${SCRIPTPATH}/test_utils.sql"
 psql "${POSTRGRES_APP_URL}" ${POSTGRES_ARGS} -f "${SCRIPTPATH}/scenario1.sql"
