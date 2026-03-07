@@ -336,16 +336,23 @@ detect_changes:
         NFS_CACHE_PATH="/nfs/ci-cache/haf"
         if [[ -d "$NFS_CACHE_PATH" ]]; then
           # Look through recent cache files to find one with valid Docker images
-          for TAR in $(ls -t "$NFS_CACHE_PATH"/*.tar 2>/dev/null | head -5); do
+          echo "Searching NFS cache for compatible replay data..."
+          CACHE_CANDIDATES=$(ls -t "$NFS_CACHE_PATH"/*.tar 2>/dev/null | head -5)
+          echo "Cache candidates (most recent first):"
+          for TAR in $CACHE_CANDIDATES; do echo "  $(basename "$TAR")"; done
+
+          for TAR in $CACHE_CANDIDATES; do
             TEST_COMMIT=$(basename "$TAR" .tar)
             CACHE_SHORT="${TEST_COMMIT:0:8}"
+            echo ""
+            echo "Checking cache candidate: ${CACHE_SHORT} (${TEST_COMMIT})"
 
             # Verify Docker images exist for all network types
             IMAGES_EXIST=true
             for NETWORK in "" "/testnet" "/mirrornet"; do
               IMG="registry.gitlab.syncad.com/hive/haf${NETWORK}:${CACHE_SHORT}"
               if ! docker manifest inspect "$IMG" >/dev/null 2>&1; then
-                echo "Image not found: $IMG"
+                echo "  SKIP: image not found: $IMG"
                 IMAGES_EXIST=false
                 break
               fi
@@ -355,9 +362,10 @@ detect_changes:
               # Verify cache commit is reachable from current branch to avoid schema mismatches
               # This prevents using caches from feature branches with incompatible schema changes
               if ! git merge-base --is-ancestor "$TEST_COMMIT" HEAD 2>/dev/null; then
-                echo "Cache $TEST_COMMIT not ancestor of HEAD - skipping (incompatible branch)"
+                echo "  SKIP: not ancestor of HEAD (incompatible branch)"
                 continue
               fi
+              echo "  OK: ancestor check passed"
               # Verify schema-defining SQL sources haven't changed between cache commit and HEAD
               # Table DDL changes make cached replay data incompatible (different DB schema)
               # Function/procedure changes are fine — the overlay image updates them at startup
@@ -378,18 +386,26 @@ detect_changes:
                 SCHEMA_PATHS+=("${SCHEMA_SOURCES_PATH}/${sf}")
               done
               if ! git diff --quiet "$TEST_COMMIT" HEAD -- "${SCHEMA_PATHS[@]}" 2>/dev/null; then
-                echo "Cache $TEST_COMMIT has incompatible schema DDL changes - skipping"
-                echo "Changed schema files:"
-                git diff --name-only "$TEST_COMMIT" HEAD -- "${SCHEMA_PATHS[@]}" 2>/dev/null | head -10
+                echo "  SKIP: schema DDL sources differ (incompatible table structure)"
+                echo "  Changed schema files:"
+                git diff --name-only "$TEST_COMMIT" HEAD -- "${SCHEMA_PATHS[@]}" 2>/dev/null | sed 's/^/    /' | head -10
                 continue
               fi
+              echo "  OK: schema DDL check passed"
               CACHE_COMMIT="$TEST_COMMIT"
-              echo "Found cached data with valid images: $CACHE_COMMIT"
+              echo "  ACCEPTED: using cache $CACHE_SHORT"
               break
             else
-              echo "Cache $TEST_COMMIT missing Docker images, trying next..."
+              echo "  SKIP: missing Docker images"
             fi
           done
+          if [[ -z "$CACHE_COMMIT" ]]; then
+            echo ""
+            echo "No compatible cache found among candidates"
+          else
+            echo ""
+            echo "Found cached data with valid images: $CACHE_COMMIT"
+          fi
         fi
 
         # For complete skip, we need cached data with images
