@@ -2,6 +2,7 @@
 
 #include <hive/protocol/config.hpp>
 #include <type_traits>
+#include <cstring>
 #include <fc/crypto/ripemd160.hpp>
 
 namespace pqxx {
@@ -18,6 +19,22 @@ namespace pqxx {
     {
       return hex_digits[c];
     }
+
+    // Lookup table: for each byte value 0-255, stores the two hex characters.
+    // Using uint16_t allows writing both hex chars with a single store.
+    struct hex_pair_table {
+      uint16_t pairs[256];
+      constexpr hex_pair_table() : pairs{} {
+        for (int i = 0; i < 256; ++i) {
+          char lo = hex_digits[i & 0x0f];
+          char hi = hex_digits[i >> 4];
+          // Store as hi,lo so a single uint16_t write puts them in memory order on little-endian
+          pairs[i] = static_cast<uint16_t>(static_cast<unsigned char>(hi)) |
+                     (static_cast<uint16_t>(static_cast<unsigned char>(lo)) << 8);
+        }
+      }
+    };
+    constexpr hex_pair_table hex_lut{};
     // Translate a hex digit to a nibble.  Return -1 if it's not a valid digit.
     constexpr int nibble(int c) noexcept
     {
@@ -40,8 +57,8 @@ namespace pqxx {
       for (auto const byte : binary_data)
       {
         auto uc{static_cast<unsigned char>(byte)};
-        *here++ = hex_digit(uc >> 4);
-        *here++ = hex_digit(uc & 0x0f);
+        memcpy(here, &hex_lut.pairs[uc], 2);
+        here += 2;
       }
 
       *here = '\0';
@@ -560,8 +577,11 @@ template<> struct string_traits<hive::protocol::operation>
     for (size_t i = 0; i < raw_size; ++i)
     {
       unsigned char as_unsigned = *raw_pointer--;
-      *cooked_pointer-- = hex_digit(as_unsigned & 0x0f);
-      *cooked_pointer-- = hex_digit(as_unsigned >> 4);
+      uint16_t pair = hex_lut.pairs[as_unsigned];
+      // pair stores hi in low byte, lo in high byte (little-endian: [hi, lo] in memory)
+      cooked_pointer[0] = static_cast<char>(pair >> 8);   // lo nibble hex char
+      cooked_pointer[-1] = static_cast<char>(pair & 0xff); // hi nibble hex char
+      cooked_pointer -= 2;
     }
 
     // we should now have everything encoded, and just need to add the \x

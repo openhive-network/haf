@@ -1,5 +1,6 @@
 #include <hive/plugins/sql_serializer/data_2_sql_tuple_base.h>
 
+#include <cstring>
 
 namespace hive{ namespace plugins{ namespace sql_serializer {
   std::string
@@ -20,17 +21,28 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   std::string
   data2_sql_tuple_base::sql_to_hex( const char* d, uint32_t s ) const
   {
+      // Lookup table: for each byte value 0-255, stores the two hex characters.
+      static const auto hex_lut = [] {
+        struct { char pairs[256][2]; } t{};
+        const char* digits = "0123456789abcdef";
+        for (int i = 0; i < 256; ++i) {
+          t.pairs[i][0] = digits[i >> 4];
+          t.pairs[i][1] = digits[i & 0x0f];
+        }
+        return t;
+      }();
+
       std::string r;
       r.resize( s * 2 + 4 );
       r[ 0 ] = '\'';
       r[ 1 ] = '\\';
       r[ 2 ] = 'x';
-      static const char* to_hex = "0123456789abcdef";
       uint8_t* c = (uint8_t*) d;
+      char* out = &r[3];
       for( uint32_t i = 0; i < s; ++i )
       {
-        r[3 + i*2] = to_hex[(c[i] >> 4)];
-        r[3 + i*2 + 1] = to_hex[(c[i] & 0x0f)];
+        memcpy(out, hex_lut.pairs[c[i]], 2);
+        out += 2;
       }
       r[s*2 + 3] = '\'';
       return r;
