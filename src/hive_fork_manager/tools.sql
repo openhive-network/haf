@@ -20,3 +20,4 @@ END;
 $BODY$
 ;
 
+-- CI test: verify schema cache check
