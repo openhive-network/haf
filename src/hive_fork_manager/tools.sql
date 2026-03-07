@@ -22,3 +22,4 @@ $BODY$
 
 -- CI test: verify schema cache check
 -- CI test round 2
+-- CI test round 3: verify with verbose logging
