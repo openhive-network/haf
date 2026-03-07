@@ -323,10 +323,12 @@ BEGIN
     -- Clean up blocks beyond _block_num from irreversible tables.
     -- This happens when hived's head (from shared_memory) is behind the database
     -- (e.g., after WAL replay restored blocks that hived hasn't processed yet).
+    -- Skip when _block_num=0 (--replay-blockchain): preserve existing irreversible
+    -- blocks since push_block_lite() will skip duplicates via its idempotency check.
     -- Use operation_id_to_block_num() directly on account_operations to avoid
     -- a JOIN to operations, which would cause a sequential scan of the entire
     -- account_operations table (no index on operation_id).
-    IF __max_block > _block_num OR _block_num = 0 THEN
+    IF _block_num > 0 AND __max_block > _block_num THEN
         RAISE LOG 'hive.connect: cleaning up blocks beyond % (max_block=%)', _block_num, __max_block;
         DELETE FROM hafd.account_operations
             WHERE hafd.operation_id_to_block_num(operation_id) > _block_num;
