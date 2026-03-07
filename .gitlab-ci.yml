@@ -40,8 +40,8 @@ variables:
   QUICK_TEST_HAF_IMAGE: ""    # Optional - defaults to registry.gitlab.syncad.com/hive/haf:develop
   QUICK_TEST_JOBS: ""         # Optional - additional jobs to run (comma-separated)
   # Auto-populated by detect_changes job:
-  AUTO_SKIP_BUILD: "false"    # Set to true when only tests/docs/SQL changed
-  AUTO_SKIP_REPLAY: "false"   # Set to true when only tests/docs changed (no SQL)
+  AUTO_SKIP_BUILD: "false"    # Set to true when only non-SQL tests/docs changed
+  AUTO_SKIP_REPLAY: "false"   # Set to true when only non-SQL tests/docs changed
   AUTO_CACHE_COMMIT: ""       # Most recent cached HAF commit
 
   # Set to "true" to run poetry update and test with latest dependency versions
@@ -274,8 +274,8 @@ detect_changes:
           BASE_SHA="$CI_MERGE_REQUEST_DIFF_BASE_SHA"
           echo "MR pipeline: comparing against target branch"
         elif [[ "${CI_PIPELINE_SOURCE:-}" == "push" ]]; then
-          BASE_SHA="HEAD~1"
-          echo "Push pipeline: comparing against previous commit"
+          BASE_SHA="${CI_COMMIT_BEFORE_SHA:-HEAD~1}"
+          echo "Push pipeline: comparing against pre-push state ($BASE_SHA)"
         else
           BASE_SHA=$(git merge-base HEAD origin/develop 2>/dev/null || echo "HEAD~1")
           echo "Other pipeline: comparing against develop"
@@ -293,14 +293,18 @@ detect_changes:
         # 3. Full build: C++ source changed - requires full compilation
 
         # Note: Avoid \.txt$ as it matches CMakeLists.txt
-        # Patterns for files that don't require any build
-        SKIP_ALL_PATTERNS="^tests/|^docs/|\.md$|^README|^CHANGELOG|^LICENSE"
+        # Patterns for files that don't require any build (test .sql files excluded
+        # since they're executed by hfm_functional_tests and must trigger a run)
+        SKIP_ALL_PATTERNS="^docs/|\.md$|^README|^CHANGELOG|^LICENSE"
+        SKIP_TEST_PATTERNS="^tests/.*\.(py|sh|cfg|ini|json|yaml|yml)$"
         # SQL files need thin overlay build but not full C++ compilation
         SQL_PATTERNS="\.sql$"
 
         # Check what files changed
-        NON_SKIP_FILES=$(echo "$CHANGED_FILES" | grep -vE "$SKIP_ALL_PATTERNS" || true)
+        NON_SKIP_FILES=$(echo "$CHANGED_FILES" | grep -vE "$SKIP_ALL_PATTERNS" | grep -vE "$SKIP_TEST_PATTERNS" || true)
         SQL_CHANGED=$(echo "$NON_SKIP_FILES" | grep -E "$SQL_PATTERNS" || true)
+        # Track if ANY .sql file changed (including under tests/) for hfm_functional_tests
+        ANY_SQL_CHANGED=$(echo "$CHANGED_FILES" | grep -E "$SQL_PATTERNS" || true)
         NON_SQL_SOURCE=$(echo "$NON_SKIP_FILES" | grep -vE "$SQL_PATTERNS" || true)
 
         # Determine build mode
@@ -385,6 +389,11 @@ detect_changes:
       echo "AUTO_SKIP_BUILD=$CAN_SKIP_BUILD" >> detect_changes.env
       echo "AUTO_SKIP_REPLAY=$CAN_SKIP_REPLAY" >> detect_changes.env
       echo "SQL_ONLY_CHANGE=$SQL_ONLY_CHANGE" >> detect_changes.env
+      if [[ -n "$ANY_SQL_CHANGED" ]]; then
+        echo "ANY_SQL_CHANGED=true" >> detect_changes.env
+      else
+        echo "ANY_SQL_CHANGED=false" >> detect_changes.env
+      fi
 
       # Export HAF_COMMIT and cached image info when we can use cached data
       if [[ "$CAN_SKIP_BUILD" == "true" || "$SQL_ONLY_CHANGE" == "true" ]]; then
@@ -798,22 +807,12 @@ haf_image_build_mirrornet:
     # Let GitLab init submodules - HAF runtime image doesn't have git
     GIT_SUBMODULE_STRATEGY: recursive
   script:
-    # Skip when image commit doesn't match source commit - this test validates extension
-    # upgrades and requires the image and source to be from the same commit.
-    # This happens in quick-test mode OR when only CI config changed (image reused).
+    # Skip only when no .sql files changed at all (pure docs/config change).
+    # When test .sql files change, we must run even with a cached image — the
+    # test files come from the source checkout, not the image.
     - |
-      if [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
-        echo "Skipping hfm_functional_tests - AUTO_SKIP_BUILD=true"
-        exit 0
-      fi
-      # Extract commit from image tag (e.g., registry.gitlab.syncad.com/hive/haf:756d1886)
-      IMAGE_COMMIT="${HAF_IMAGE_NAME##*:}"
-      SOURCE_COMMIT="${CI_COMMIT_SHORT_SHA}"
-      if [[ "$IMAGE_COMMIT" != "$SOURCE_COMMIT" ]]; then
-        echo "Skipping hfm_functional_tests - image/source commit mismatch"
-        echo "  Image commit:  $IMAGE_COMMIT (from $HAF_IMAGE_NAME)"
-        echo "  Source commit: $SOURCE_COMMIT"
-        echo "This test requires image and source from the same commit."
+      if [[ "${ANY_SQL_CHANGED:-true}" == "false" ]]; then
+        echo "Skipping hfm_functional_tests - no .sql files changed"
         exit 0
       fi
     # Fix workspace permissions - CI fetch strategy may leave directories owned by different users
