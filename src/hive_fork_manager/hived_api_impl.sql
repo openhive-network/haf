@@ -671,7 +671,7 @@ BEGIN
             SELECT 1 FROM pg_indexes
             WHERE schemaname = split_part(__table_name, '.', 1)
               AND indexname = __index_name
-        ) THEN 'created' ELSE 'missing' END,
+        ) THEN 'created'::hafd.index_status ELSE 'missing'::hafd.index_status END,
         ARRAY[__context_id]
     )
     ON CONFLICT (table_name, index_constraint_name) DO UPDATE
