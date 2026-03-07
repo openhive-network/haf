@@ -541,8 +541,8 @@ template<> struct string_traits<hive::protocol::operation>
     
     // we know that serializing an operation will never lead to 0 bytes.
     const size_t raw_size = datastream.tellp();
-    
-    if (end - begin < (long)size_buffer(value))
+
+    if (end - begin < (long)size_esc_bin(raw_size))
       throw conversion_overrun{"Could not write hive::protocol::operation: buffer too small."};
 
     // so at this point, we have a buffer with the binary data at the beginning
