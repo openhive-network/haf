@@ -661,13 +661,17 @@ BEGIN
         contexts
     )
     VALUES (
-        __table_name, 
-        __index_name, 
-        __canonicalized_command, 
-        FALSE, 
-        TRUE, 
-        FALSE, 
-        'missing', 
+        __table_name,
+        __index_name,
+        __canonicalized_command,
+        FALSE,
+        TRUE,
+        FALSE,
+        CASE WHEN EXISTS (
+            SELECT 1 FROM pg_indexes
+            WHERE schemaname = split_part(__table_name, '.', 1)
+              AND indexname = __index_name
+        ) THEN 'created' ELSE 'missing' END,
         ARRAY[__context_id]
     )
     ON CONFLICT (table_name, index_constraint_name) DO UPDATE
