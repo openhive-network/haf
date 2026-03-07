@@ -59,15 +59,13 @@ BEGIN
             RETURN;
     END IF;
 
-    -- register tables
+    -- register tables (flag stays TRUE to prevent re-registration on subsequent DDL events)
     UPDATE hafd.contexts SET registering_state_provider = TRUE WHERE name =  _context;
 
     PERFORM hive.app_register_table( 'hafd', unnest( hsp.tables ), _context )
     FROM hafd.state_providers_registered hsp
     JOIN hafd.contexts hc ON hc.id = hsp.context_id
     WHERE hc.name = _context;
-
-    UPDATE hafd.contexts SET registering_state_provider = FALSE WHERE name =  _context;
 END;
 $BODY$
 ;
