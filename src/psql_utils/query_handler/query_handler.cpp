@@ -68,7 +68,7 @@ namespace {
     } // for
   }
 
-  void onRunQueryHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count) {
+  void onRunQueryHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once) {
     assert( g_topHandler );
 
     for (
@@ -81,9 +81,9 @@ namespace {
 
         if (!currentHandler->previousHandler()) { // bottom handler
           if (currentHandler->originalRunHook()) {
-            currentHandler->originalRunHook()( _queryDesc, _direction, _count );
+            currentHandler->originalRunHook()( _queryDesc, _direction, _count, _execute_once );
           } else {
-            standard_ExecutorRun( _queryDesc, _direction, _count );
+            standard_ExecutorRun( _queryDesc, _direction, _count, _execute_once );
           }
         }
       }
