@@ -1,4 +1,5 @@
 --- Helper function able to verify roles authority relationship and returns true when _role_to_check has granted rights to impersonate as _required_role.
+--- Supports both direct grants and role membership chains.
 CREATE OR REPLACE FUNCTION hive.can_impersonate(_role_to_check IN TEXT, _required_role IN TEXT)
 RETURNS BOOLEAN
 LANGUAGE 'plpgsql'
