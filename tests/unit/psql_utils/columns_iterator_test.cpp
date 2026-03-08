@@ -12,7 +12,12 @@
 BOOST_FIXTURE_TEST_SUITE( columns_iterator, GmockFixture )
 
 BOOST_AUTO_TEST_CASE( positive_iteration_threw_columns ) {
+  // PG18 added CompactAttribute to TupleDescData layout; PG17 uses only FormData_pg_attribute
+#if PG_VERSION_NUM >= 180000
   auto desc = static_cast<TupleDescData*>(malloc( sizeof(TupleDescData) + 4*(sizeof(FormData_pg_attribute)+sizeof(CompactAttribute)) ));
+#else
+  auto desc = static_cast<TupleDescData*>(malloc( sizeof(TupleDescData) + 4*sizeof(FormData_pg_attribute) ));
+#endif
   desc->natts = 4;
 
   Form_pg_attribute attr0 = TupleDescAttr(desc, 0);
