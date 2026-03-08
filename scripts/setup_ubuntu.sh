@@ -47,7 +47,7 @@ install_ai_packages() {
   rm -rf /root/.cache ~/.cache /tmp/* /var/tmp/*
   find / -type d -name '__pycache__' -exec rm -rf {} +
 
-  pip3 install --break-system-packages tokenizers
+  pip3 install --break-system-packages tokenizers base58
 
   mkdir -p /home/hived/tokenizer-files
   cat << EOF > /tmp/download-tokenizer-files.py

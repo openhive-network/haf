@@ -49,7 +49,7 @@ RUN apt-get update && \
     # Add BeautifulSoup for hivesense preprocessing posts (3.1MB)
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3-bs4 python3-lxml && \
     # Install Tokenizers (~48MB) for hivesense
-    python3.14 -m pip install --target /usr/lib/python3/dist-packages --break-system-packages tokenizers pysbd && \
+    python3.14 -m pip install --target /usr/lib/python3/dist-packages --break-system-packages tokenizers pysbd base58 && \
     # Install ParadeDB pg_search extension for BM25 search
     curl -L "https://github.com/paradedb/paradedb/releases/download/v0.21.13/postgresql-${POSTGRES_VERSION}-pg-search_0.21.13-1PARADEDB-noble_amd64.deb" -o /tmp/pg_search.deb && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y /tmp/pg_search.deb && \
