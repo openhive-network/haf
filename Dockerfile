@@ -3,7 +3,7 @@
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG POSTGRES_VERSION=18
+ARG POSTGRES_VERSION=17
 ARG CI_IMAGE_TAG=ubuntu24.04-pg${POSTGRES_VERSION}-10
 
 ARG BUILD_IMAGE_TAG
@@ -108,6 +108,8 @@ WORKDIR /home/haf_admin
 
 FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py3.14-7 AS ci-base-image
 
+ARG POSTGRES_VERSION
+ENV POSTGRES_VERSION=${POSTGRES_VERSION}
 ENV PATH="/home/haf_admin/.local/bin:$PATH"
 
 SHELL ["/bin/bash", "-c"]
