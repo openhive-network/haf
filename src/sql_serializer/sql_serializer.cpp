@@ -1,3 +1,4 @@
+// Force fresh PG18 image build for A/B testing (no optimization changes)
 #include <hive/plugins/sql_serializer/sql_serializer_plugin.hpp>
 
 #include <hive/plugins/sql_serializer/cached_data.h>
