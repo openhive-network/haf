@@ -17,7 +17,7 @@ variables:
   HAF_CI_MODE: "1"
   # Hive ref for fetching CI helper scripts at runtime (symlinks don't work without submodule checkout)
   # Should match the ref used in scripts/ci-helpers/prepare_data_image_job.yml include
-  HIVE_SCRIPTS_REF: "8d24f312c29a3d61cf684b5bf707cc3b65d304cf"
+  HIVE_SCRIPTS_REF: "3f8bf00eb992941b02be8fd18726476c9df143e5"
 
   # =============================================================================
   # Quick Test / Auto-Skip Mode
@@ -782,8 +782,6 @@ haf_image_build_pg18:
     HIVE_NETWORK_TYPE: mainnet
     POSTGRES_VERSION: "18"
     PG_IMAGE_SUBPATH: "pg18"
-    # Use hive branch with POSTGRES_VERSION/PG_IMAGE_SUBPATH support in build scripts
-    HIVE_SCRIPTS_REF: "feature/pg18-ci-support"
   tags:
     - bigjob
 
@@ -1513,7 +1511,6 @@ prepare_haf_data_pg18:
     HAF_CACHE_TYPE: "haf18"
     DATA_CACHE_HAF_PREFIX: "/cache/haf18"
     DATA_CACHE_DIR: "/cache/haf18_${HAF_COMMIT}"
-    HIVE_SCRIPTS_REF: "feature/pg18-ci-support"
   after_script:
     - echo "Cleanup complete"
   tags:
