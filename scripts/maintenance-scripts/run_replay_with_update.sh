@@ -2,8 +2,9 @@
 set -xeuo pipefail
 
 sudo apt-get update
+POSTGRES_VERSION="${POSTGRES_VERSION:-17}"
 sudo apt-get -y install git cmake ninja-build build-essential liburing-dev libboost-all-dev libssl-dev bzip2 libbz2-dev libsnappy-dev \
-  python3-jinja2 libreadline-dev postgresql-server-dev-18 zopfli libpqxx-dev
+  python3-jinja2 libreadline-dev postgresql-server-dev-${POSTGRES_VERSION} zopfli libpqxx-dev
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTPATH/.."
