@@ -29,18 +29,19 @@ RUN bash -x ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-ac
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg curl ca-certificates software-properties-common && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
-    # PG18+ needs snapshot repo (pre-release); PG17 and below use standard pgdg
+    # PG18+ needs snapshot repo (pre-release); keep standard pgdg for extensions (pgvector, etc.)
     if [ "${POSTGRES_VERSION}" -ge 18 ]; then \
-        sed -i -e 's/Suites: noble-pgdg/Suites: noble-pgdg-snapshot/' -e "s/Components: main/Components: main ${POSTGRES_VERSION}/" /etc/apt/sources.list.d/pgdg.sources && \
-        echo 'Package: *' > /etc/apt/preferences.d/pgdg.pref && \
-        echo 'Pin: origin apt.postgresql.org' >> /etc/apt/preferences.d/pgdg.pref && \
-        echo 'Pin-Priority: 1001' >> /etc/apt/preferences.d/pgdg.pref; \
+        cp /etc/apt/sources.list.d/pgdg.sources /etc/apt/sources.list.d/pgdg-snapshot.sources && \
+        sed -i -e 's/Suites: noble-pgdg/Suites: noble-pgdg-snapshot/' -e "s/Components: main/Components: main ${POSTGRES_VERSION}/" /etc/apt/sources.list.d/pgdg-snapshot.sources && \
+        echo 'Package: *' > /etc/apt/preferences.d/pgdg-snapshot.pref && \
+        echo 'Pin: release n=noble-pgdg-snapshot' >> /etc/apt/preferences.d/pgdg-snapshot.pref && \
+        echo 'Pin-Priority: 1001' >> /etc/apt/preferences.d/pgdg-snapshot.pref; \
     fi && \
     # Add deadsnakes PPA for Python 3.14 manually (avoid add-apt-repository which fails in DinD due to IPv6/Launchpad API issues)
     echo "deb https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu noble main" > /etc/apt/sources.list.d/deadsnakes-ppa.list && \
     curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF23C5A6CF475977595C89F51BA6932366A755776" | gpg --batch --dearmor -o /etc/apt/trusted.gpg.d/deadsnakes-ppa.gpg && \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.14 python3.14-venv python3-pip postgresql-${POSTGRES_VERSION} postgresql-plpython3-${POSTGRES_VERSION} libpq5 \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.14 python3.14-venv python3-pip postgresql-${POSTGRES_VERSION} postgresql-${POSTGRES_VERSION}-pgvector postgresql-plpython3-${POSTGRES_VERSION} libpq5 \
                                                                               libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
     # Make Python 3.14 the default python3
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.14 1 && \
