@@ -68,7 +68,12 @@ namespace {
     } // for
   }
 
+  // PG17 added execute_once param; PG18 removed it again
+#if PG_VERSION_NUM >= 180000
+  void onRunQueryHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count) {
+#else
   void onRunQueryHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once) {
+#endif
     assert( g_topHandler );
 
     for (
@@ -81,9 +86,17 @@ namespace {
 
         if (!currentHandler->previousHandler()) { // bottom handler
           if (currentHandler->originalRunHook()) {
+#if PG_VERSION_NUM >= 180000
+            currentHandler->originalRunHook()( _queryDesc, _direction, _count );
+#else
             currentHandler->originalRunHook()( _queryDesc, _direction, _count, _execute_once );
+#endif
           } else {
+#if PG_VERSION_NUM >= 180000
+            standard_ExecutorRun( _queryDesc, _direction, _count );
+#else
             standard_ExecutorRun( _queryDesc, _direction, _count, _execute_once );
+#endif
           }
         }
       }

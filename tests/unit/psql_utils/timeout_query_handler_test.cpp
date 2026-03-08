@@ -217,11 +217,11 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     // THEN PART 1
     // setup timeout
     EXPECT_CALL( *m_postgres_mock, disable_timeout( ::testing::_, ::testing::_ ) ).Times(0);
-    EXPECT_CALL( *m_postgres_mock, standard_ExecutorRun( m_rootQuery.get(), direction, count ) ).Times(1);
+    EXPECT_CALL( *m_postgres_mock, standard_ExecutorRun( m_rootQuery.get(), direction, count EXECUTOR_RUN_EXTRA_MATCHERS ) ).Times(1);
 
     // WHEN
     // pretend executor hook call
-    ExecutorRun_hook( m_rootQuery.get(), direction, count );
+    ExecutorRun_hook( m_rootQuery.get(), direction, count EXECUTOR_RUN_EXTRA_ARGS );
 
     // THEN PART 2
     BOOST_ASSERT( m_unitUnderTest->isRootQueryPending() );
@@ -235,12 +235,12 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
 
     // THEN PART 1
     EXPECT_CALL( *m_postgres_mock, disable_timeout( ::testing::_, ::testing::_ ) ).Times(0);
-    EXPECT_CALL( *m_postgres_mock, executorRunHook( m_rootQuery.get(), direction, count ) ).Times(1);
-    EXPECT_CALL( *m_postgres_mock, standard_ExecutorRun( ::testing::_, ::testing::_, ::testing::_ ) ).Times(0);
+    EXPECT_CALL( *m_postgres_mock, executorRunHook( m_rootQuery.get(), direction, count EXECUTOR_RUN_EXTRA_MATCHERS ) ).Times(1);
+    EXPECT_CALL( *m_postgres_mock, standard_ExecutorRun( ::testing::_, ::testing::_, ::testing::_ EXECUTOR_RUN_EXTRA_MATCHERS ) ).Times(0);
 
     // WHEN
     // pretend executor hook call
-    ExecutorRun_hook( m_rootQuery.get(), direction, count );
+    ExecutorRun_hook( m_rootQuery.get(), direction, count EXECUTOR_RUN_EXTRA_ARGS );
 
     // THEN PART 2
     BOOST_ASSERT( m_unitUnderTest->isRootQueryPending() );
@@ -305,12 +305,12 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     EXPECT_CALL( *m_postgres_mock, disable_timeout( _, _ ) ).Times(1);
 
     // we pretend an error by jumping to the beginning of a handler's body
-    ON_CALL( *m_postgres_mock, executorRunHook( _, _, _ ) ).WillByDefault(
+    ON_CALL( *m_postgres_mock, executorRunHook( _, _, _ EXECUTOR_RUN_EXTRA_MATCHERS ) ).WillByDefault(
         []{ ereport( ERROR, ( errcode( ERRCODE_DATA_EXCEPTION ) ) );}
     );
 
     // WHEN
-    EXPECT_PG_ERROR( ExecutorRun_hook( m_rootQuery.get(), BackwardScanDirection, 15 ) );
+    EXPECT_PG_ERROR( ExecutorRun_hook( m_rootQuery.get(), BackwardScanDirection, 15 EXECUTOR_RUN_EXTRA_ARGS ) );
 
     // THEN
     // a postgres error shall reset handler state
@@ -321,8 +321,8 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     using namespace ::testing;
     // GIVEN
     moveToPendingRootQuery();
-    EXPECT_CALL( *m_postgres_mock, executorRunHook( _, _, _ ) ).Times(1);
-    ExecutorRun_hook( m_rootQuery.get(), BackwardScanDirection, 15 );
+    EXPECT_CALL( *m_postgres_mock, executorRunHook( _, _, _ EXECUTOR_RUN_EXTRA_MATCHERS ) ).Times(1);
+    ExecutorRun_hook( m_rootQuery.get(), BackwardScanDirection, 15 EXECUTOR_RUN_EXTRA_ARGS );
     EXPECT_CALL( *m_postgres_mock, disable_timeout( _, _ ) ).Times(1);
 
     // we pretend an error by jumping to the beginning of a handler's body
@@ -342,10 +342,10 @@ BOOST_FIXTURE_TEST_SUITE( start_query_handler, Fixtures::TimeoutQueryHandlerFixt
     using namespace ::testing;
     // GIVEN
     moveToPendingRootQuery();
-    EXPECT_CALL( *m_postgres_mock, executorRunHook( _, _, _ ) ).Times(1);
+    EXPECT_CALL( *m_postgres_mock, executorRunHook( _, _, _ EXECUTOR_RUN_EXTRA_MATCHERS ) ).Times(1);
     EXPECT_CALL( *m_postgres_mock, disable_timeout( _, _ ) ).Times(2); // 1 -on end, 2 -on error
     EXPECT_CALL( *m_postgres_mock, executorFinishHook( _ ) ).Times( 1 );
-    ExecutorRun_hook( m_rootQuery.get(), BackwardScanDirection, 15 );
+    ExecutorRun_hook( m_rootQuery.get(), BackwardScanDirection, 15 EXECUTOR_RUN_EXTRA_ARGS );
     ExecutorFinish_hook( m_rootQuery.get() );
 
     // we pretend an error by jumping to the beginning of a handler's body
