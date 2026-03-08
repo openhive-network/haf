@@ -293,7 +293,7 @@ COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/hive/scripts/" /hom
 COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/ci_postgresql.conf" /home/haf_admin/source/docker/
 COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/postgresql.conf" /etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
 # Fix hardcoded PG version paths in postgresql.conf (cluster_name, hba_file, ident_file, pid_file)
-RUN sed -i "s|/18/|/${POSTGRES_VERSION}/|g; s|'18/|'${POSTGRES_VERSION}/|g" /etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
+RUN sudo sed -i "s|/18/|/${POSTGRES_VERSION}/|g; s|'18/|'${POSTGRES_VERSION}/|g" /etc/postgresql/${POSTGRES_VERSION}/main/postgresql.conf
 COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/pg_hba.conf" /etc/postgresql/$POSTGRES_VERSION/main/pg_hba.conf.default
 
 COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/cron_jobs.sql" .
