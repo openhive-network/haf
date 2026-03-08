@@ -21,8 +21,12 @@ hive/
 cmake/
 CMakeLists.txt
 Dockerfile
+Dockerfile.sql-overlay
 docker/
-scripts/
+scripts/haf/
+scripts/maintenance-scripts/
+scripts/setup_ubuntu.sh
+scripts/generate_extension_sql.sh
 common_includes/
 .gitmodules"
 

@@ -451,8 +451,8 @@ detect_changes:
     # Smart image build thresholds - re-tag when gap > 20, rebuild when > 25
     RETAG_THRESHOLD: "20"
     SEARCH_DEPTH: "25"
-    # Source patterns that trigger rebuilds (from source-patterns.sh)
-    SOURCE_PATTERNS: "src/,hive/,cmake/,CMakeLists.txt,Dockerfile,docker/,scripts/,common_includes/,.gitmodules"
+    # Source patterns loaded dynamically from source-patterns.sh in before_script
+    SOURCE_PATTERNS: ""
   needs:
     - job: detect_changes
       artifacts: true
@@ -463,6 +463,11 @@ detect_changes:
     - !reference [.docker_image_builder_job_template, before_script]
     # Fix git safe.directory issue on some runners (CVE-2022-24765)
     - git config --global --add safe.directory '*'
+    # Load source patterns from the single source of truth
+    - |
+      SOURCE_PATTERNS=$("${CI_PROJECT_DIR}/scripts/ci-helpers/source-patterns.sh")
+      echo "Loaded SOURCE_PATTERNS: $SOURCE_PATTERNS"
+      export SOURCE_PATTERNS
     # Fetch required scripts from hive repo (symlinks don't work without submodule checkout)
     - |
       HIVE_RAW_URL="https://gitlab.syncad.com/hive/hive/-/raw/${HIVE_SCRIPTS_REF}/scripts/ci-helpers"
@@ -498,6 +503,14 @@ detect_changes:
         CACHED_COMMIT="${QUICK_TEST_HAF_COMMIT}"
         if [[ -z "$CACHED_COMMIT" ]]; then
           echo "ERROR: QUICK_TEST=true but QUICK_TEST_HAF_COMMIT not set"
+          exit 1
+        fi
+        # Validate that the cache file actually exists
+        CACHE_FILE="/nfs/ci-cache/haf/${CACHED_COMMIT}.tar"
+        if [[ ! -f "$CACHE_FILE" ]]; then
+          echo "ERROR: Cache file not found for QUICK_TEST_HAF_COMMIT=$CACHED_COMMIT"
+          echo "Expected: $CACHE_FILE"
+          echo "Find available caches: ssh hive-builder-10 'ls -lt /nfs/ci-cache/haf/*.tar | head -5'"
           exit 1
         fi
       # Check for automatic skip mode (from detect_changes)
@@ -548,6 +561,7 @@ detect_changes:
         --commit="${CI_COMMIT_SHA}"
         --retag-threshold="${RETAG_THRESHOLD}"
         --search-depth="${SEARCH_DEPTH}"
+        --verify-image
         --output=smart_build_decision.env
       )
 
