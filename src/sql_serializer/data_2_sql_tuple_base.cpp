@@ -74,6 +74,40 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   {
     if(text.empty()) return "E''";
 
+    // Fast path: if entire string is printable ASCII, skip UTF-8 decode.
+    // Account names, permlinks, and most extensions are pure ASCII.
+    bool all_printable_ascii = true;
+    for (unsigned char ch : text)
+    {
+      if (ch < 0x20 || ch > 0x7E)
+      {
+        all_printable_ascii = false;
+        break;
+      }
+    }
+
+    if (all_printable_ascii)
+    {
+      std::string ret;
+      ret.reserve( 2 + text.size() + 2 ); // E' + content + '  (may grow for escapes)
+      ret = "E'";
+      for (char c : text)
+      {
+        switch(c)
+        {
+          case '\\': ret += "\\134"; break;
+          case '\'': ret += "\\047"; break;
+          case '%':  ret += "\\045"; break;
+          case '_':  ret += "\\137"; break;
+          case ':':  ret += "\\072"; break;
+          default:   ret += c; break;
+        }
+      }
+      ret += '\'';
+      return ret;
+    }
+
+    // Slow path: full UTF-8 decode for strings containing non-ASCII or control characters
     std::wstring utf32;
     utf32.reserve( text.size() );
     fc::decodeUtf8( text, &utf32 );
