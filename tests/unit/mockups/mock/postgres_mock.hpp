@@ -9,6 +9,18 @@
 
 #include <gmock/gmock.h>
 
+// PG17 added execute_once param to ExecutorRun; PG18 removed it.
+// These macros adapt call sites to the correct arity.
+#if PG_VERSION_NUM >= 180000
+  #define EXECUTOR_RUN_EXTRA_ARGS
+  #define EXECUTOR_RUN_EXTRA_PARAMS
+  #define EXECUTOR_RUN_EXTRA_MATCHERS
+#else
+  #define EXECUTOR_RUN_EXTRA_ARGS , false
+  #define EXECUTOR_RUN_EXTRA_PARAMS , bool
+  #define EXECUTOR_RUN_EXTRA_MATCHERS , ::testing::_
+#endif
+
 // mock-ed global variables
 extern ExecutorStart_hook_type ExecutorStart_hook;
 extern ExecutorRun_hook_type ExecutorRun_hook;
@@ -18,7 +30,11 @@ extern volatile sig_atomic_t QueryCancelPending;
 
 // mock-ed hooks
 void executorStartHook(QueryDesc* _queryDesc, int _eflags);
+#if PG_VERSION_NUM >= 180000
 void executorRunHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count);
+#else
+void executorRunHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once);
+#endif
 void executorFinishHook(QueryDesc* _queryDesc);
 void executorEndHook(QueryDesc* _queryDesc);
 
@@ -70,7 +86,11 @@ public:
     virtual void disable_timeout(TimeoutId id, bool keep_indicator) = 0;
     virtual void standard_ExecutorStart(QueryDesc *queryDesc, int eflags) = 0;
     virtual void standard_ExecutorEnd(QueryDesc *queryDesc) = 0;
+#if PG_VERSION_NUM >= 180000
     virtual void standard_ExecutorRun(QueryDesc*, ScanDirection, uint64 ) = 0;
+#else
+    virtual void standard_ExecutorRun(QueryDesc*, ScanDirection, uint64, bool ) = 0;
+#endif
     virtual void standard_ExecutorFinish(QueryDesc*) = 0;
     virtual void enable_timeout_after(TimeoutId, int) = 0;
     virtual void StatementCancelHandler(int) = 0;
@@ -126,7 +146,11 @@ public:
 
     // Executor hooks
     virtual void executorStartHook(QueryDesc *queryDesc, int eflags) = 0;
+#if PG_VERSION_NUM >= 180000
     virtual void executorRunHook(QueryDesc *queryDesc, ScanDirection direction, uint64 count) = 0;
+#else
+    virtual void executorRunHook(QueryDesc *queryDesc, ScanDirection direction, uint64 count, bool execute_once) = 0;
+#endif
     virtual void executorFinishHook(QueryDesc *queryDesc) = 0;
     virtual void executorEndHook(QueryDesc *queryDesc) = 0;
 
@@ -158,7 +182,11 @@ public:
     MOCK_METHOD( void, disable_timeout, (TimeoutId, bool) );
     MOCK_METHOD( void, standard_ExecutorStart, (QueryDesc*, int) );
     MOCK_METHOD( void, standard_ExecutorEnd, (QueryDesc*) );
+#if PG_VERSION_NUM >= 180000
     MOCK_METHOD( void, standard_ExecutorRun, (QueryDesc*, ScanDirection , uint64 ) );
+#else
+    MOCK_METHOD( void, standard_ExecutorRun, (QueryDesc*, ScanDirection , uint64, bool ) );
+#endif
     MOCK_METHOD( void, standard_ExecutorFinish, (QueryDesc*) );
     MOCK_METHOD( void, enable_timeout_after, (TimeoutId, int) );
 
@@ -218,7 +246,11 @@ public:
 
     // Executor hooks
     MOCK_METHOD( void, executorStartHook, (QueryDesc*, int) );
+#if PG_VERSION_NUM >= 180000
     MOCK_METHOD( void, executorRunHook, (QueryDesc*, ScanDirection, uint64) );
+#else
+    MOCK_METHOD( void, executorRunHook, (QueryDesc*, ScanDirection, uint64, bool) );
+#endif
     MOCK_METHOD( void, executorFinishHook, (QueryDesc*) );
     MOCK_METHOD( void, executorEndHook, (QueryDesc*) );
     MOCK_METHOD( void, StatementCancelHandler, (int) );

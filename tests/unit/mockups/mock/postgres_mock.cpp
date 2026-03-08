@@ -51,11 +51,19 @@ void executorStartHook(QueryDesc* _queryDesc, int _eflags) {
   EXECUTE_MOCK( executorStartHook( _queryDesc, _eflags ) );
 }
 
+#if PG_VERSION_NUM >= 180000
 void executorRunHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count) {
   assert(POSTGRES_MOCK.lock() && "No mock created, please execute first PostgresMock::create_and_get");
 
   EXECUTE_MOCK( executorRunHook( _queryDesc, _direction, _count ) );
 }
+#else
+void executorRunHook(QueryDesc* _queryDesc, ScanDirection _direction, uint64 _count, bool _execute_once) {
+  assert(POSTGRES_MOCK.lock() && "No mock created, please execute first PostgresMock::create_and_get");
+
+  EXECUTE_MOCK( executorRunHook( _queryDesc, _direction, _count, _execute_once ) );
+}
+#endif
 
 void executorFinishHook(QueryDesc* _queryDesc) {
   assert(POSTGRES_MOCK.lock() && "No mock created, plese execute first PostgresMock::create_and_get");
@@ -189,9 +197,15 @@ void standard_ExecutorEnd(QueryDesc *queryDesc) {
   EXECUTE_MOCK(standard_ExecutorEnd( queryDesc ));
 }
 
+#if PG_VERSION_NUM >= 180000
 void standard_ExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count) {
   EXECUTE_MOCK(standard_ExecutorRun( queryDesc, direction, count ));
 }
+#else
+void standard_ExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count, bool execute_once) {
+  EXECUTE_MOCK(standard_ExecutorRun( queryDesc, direction, count, execute_once ));
+}
+#endif
 
 void standard_ExecutorFinish(QueryDesc *queryDesc) {
   EXECUTE_MOCK(standard_ExecutorFinish(queryDesc));

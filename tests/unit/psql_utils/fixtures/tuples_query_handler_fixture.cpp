@@ -38,9 +38,9 @@ namespace Fixtures {
     }
 
     if (ExecutorRun_hook) {
-      EXPECT_CALL( *m_postgres_mock, executorRunHook( _, _, _ ) ).Times( AtLeast(1) );
+      EXPECT_CALL( *m_postgres_mock, executorRunHook( _, _, _ EXECUTOR_RUN_EXTRA_MATCHERS ) ).Times( AtLeast(1) );
     } else {
-      EXPECT_CALL( *m_postgres_mock, standard_ExecutorRun( _, _, _ ) ).Times( 1 );
+      EXPECT_CALL( *m_postgres_mock, standard_ExecutorRun( _, _, _ EXECUTOR_RUN_EXTRA_MATCHERS ) ).Times( 1 );
     }
 
     if (ExecutorFinish_hook) {
@@ -54,7 +54,7 @@ namespace Fixtures {
     }
 
     ExecutorStart_hook( m_rootQuery.get(), 0 );
-    ExecutorRun_hook( m_rootQuery.get(), BackwardScanDirection, 0 );
+    ExecutorRun_hook( m_rootQuery.get(), BackwardScanDirection, 0 EXECUTOR_RUN_EXTRA_ARGS );
   }
 
 
