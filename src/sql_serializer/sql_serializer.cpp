@@ -715,7 +715,8 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
   if(!can_collect_blocks())
     return;
 
-  hive::util::supplement_operation(note.op, chain_db);
+  if (note.op.which() == hive::protocol::operation::tag<hive::protocol::effective_comment_vote_operation>::value)
+    hive::util::supplement_operation(note.op, chain_db);
 
   const bool is_virtual = hive::protocol::is_virtual_operation(note.op);
   FC_ASSERT( is_virtual || note.trx_in_block >= 0,  "Non is_producing real operation with trx_in_block = -1" );
