@@ -664,8 +664,11 @@ detect_changes:
           echo "Target image: ${TARGET_IMAGE}"
 
           # Detect PG version from base image (inherited ENV)
+          # Pull + inspect is much faster than docker run (avoids starting a container)
           echo "Detecting PostgreSQL version from base image..."
-          BASE_PG_VERSION=$(docker run --rm "${CACHED_IMAGE_NAME}" printenv POSTGRES_VERSION 2>/dev/null || echo "17")
+          docker pull "${CACHED_IMAGE_NAME}" >/dev/null 2>&1 || true
+          BASE_PG_VERSION=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${CACHED_IMAGE_NAME}" 2>/dev/null | grep '^POSTGRES_VERSION=' | cut -d= -f2)
+          BASE_PG_VERSION="${BASE_PG_VERSION:-17}"
           echo "Base image PostgreSQL version: ${BASE_PG_VERSION}"
 
           # Generate extension SQL files using the local script
