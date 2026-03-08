@@ -34,7 +34,12 @@ variables:
   #    - QUICK_TEST_JOBS=<jobs>       (optional - comma-separated extra jobs)
   #
   # Find available caches: ./scripts/ci-helpers/list-haf-caches.sh --recent
+  #
+  # 3. FORCE_BUILD: Set FORCE_BUILD=true to bypass ALL caching (skip, retag,
+  #    sql_overlay) and force a full build + replay. Useful as a failsafe when
+  #    cached images are broken or incompatible.
   # =============================================================================
+  FORCE_BUILD: "false"
   QUICK_TEST: "false"
   QUICK_TEST_HAF_COMMIT: ""   # Required when QUICK_TEST=true
   QUICK_TEST_HAF_IMAGE: ""    # Optional - defaults to registry.gitlab.syncad.com/hive/haf:develop
@@ -246,9 +251,23 @@ detect_changes:
       CAN_SKIP_REPLAY=false
       CACHE_COMMIT=""
       HAF_IMG=""
+      SQL_ONLY_CHANGE=false
+
+      # FORCE_BUILD bypasses all caching and smart-build logic
+      if [[ "${FORCE_BUILD:-}" == "true" ]]; then
+        echo "=== FORCE_BUILD: Skipping all cache logic ==="
+        echo "AUTO_SKIP_BUILD=false" >> detect_changes.env
+        echo "AUTO_SKIP_REPLAY=false" >> detect_changes.env
+        echo "SQL_ONLY_CHANGE=false" >> detect_changes.env
+        echo "ANY_SQL_CHANGED=true" >> detect_changes.env
+        echo "FORCE_BUILD=true" >> detect_changes.env
+        echo ""
+        echo "=== Summary ==="
+        cat detect_changes.env
+        exit 0
 
       # Handle manual QUICK_TEST mode
-      if [[ "$QUICK_TEST" == "true" ]]; then
+      elif [[ "$QUICK_TEST" == "true" ]]; then
         echo "=== Manual QUICK_TEST Mode ==="
         CAN_SKIP_BUILD=true
         CAN_SKIP_REPLAY=true
@@ -550,6 +569,12 @@ detect_changes:
       /tmp/smart-image-build.sh "${BUILD_ARGS[@]}"
       source smart_build_decision.env
 
+      # FORCE_BUILD overrides smart-build decision to always do full build
+      if [[ "${FORCE_BUILD:-}" == "true" ]]; then
+        BUILD_ACTION="build"
+        echo "FORCE_BUILD: Overriding BUILD_ACTION to 'build'"
+      fi
+
       # Override BUILD_ACTION if SQL-only change detected
       if [[ "$SQL_OVERLAY_BUILD" == "true" && -n "$CACHED_COMMIT" && -n "$CACHED_IMAGE" ]]; then
         BUILD_ACTION="sql_overlay"
@@ -638,24 +663,29 @@ detect_changes:
           fi
           echo "Target image: ${TARGET_IMAGE}"
 
+          # Detect PG version from base image (inherited ENV)
+          echo "Detecting PostgreSQL version from base image..."
+          BASE_PG_VERSION=$(docker run --rm "${CACHED_IMAGE_NAME}" printenv POSTGRES_VERSION 2>/dev/null || echo "17")
+          echo "Base image PostgreSQL version: ${BASE_PG_VERSION}"
+
           # Generate extension SQL files using the local script
           echo "Generating extension SQL files..."
           SCRIPTS_PATH="${CI_PROJECT_DIR}/scripts"
           mkdir -p "${CI_PROJECT_DIR}/extension_sql"
-          "${SCRIPTS_PATH}/generate_extension_sql.sh" "${CI_COMMIT_SHA}" "${CI_PROJECT_DIR}/extension_sql"
+          "${SCRIPTS_PATH}/generate_extension_sql.sh" "${CI_COMMIT_SHA}" "${CI_PROJECT_DIR}/extension_sql" "${BASE_PG_VERSION}"
 
           # Login to registry
           echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
 
           # Build thin overlay using Dockerfile.sql-overlay
           # CACHED_COMMIT contains the base image's commit (needed for .so symlink)
+          # POSTGRES_VERSION is inherited from base image ENV — no build-arg needed
           echo "Building thin overlay Docker image..."
           docker build \
             -f "${CI_PROJECT_DIR}/Dockerfile.sql-overlay" \
             --build-arg BASE_IMAGE="${CACHED_IMAGE_NAME}" \
             --build-arg GIT_SHA="${CI_COMMIT_SHA}" \
             --build-arg BASE_COMMIT="${CACHED_COMMIT}" \
-            --build-arg POSTGRES_VERSION=${POSTGRES_VERSION:-17} \
             -t "${TARGET_IMAGE}" \
             "${CI_PROJECT_DIR}"
 

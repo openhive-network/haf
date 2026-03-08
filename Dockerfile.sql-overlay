@@ -13,6 +13,7 @@
 #   docker build -f Dockerfile.sql-overlay \
 #     --build-arg BASE_IMAGE=registry.gitlab.syncad.com/hive/haf:abc12345 \
 #     --build-arg GIT_SHA=def67890 \
+#     --build-arg BASE_COMMIT=abc12345... \
 #     -t registry.gitlab.syncad.com/hive/haf:def67890 .
 #
 # The resulting image has:
@@ -25,13 +26,15 @@ FROM ${BASE_IMAGE}
 
 ARG GIT_SHA
 ARG BASE_COMMIT
-ARG POSTGRES_VERSION=17
+# POSTGRES_VERSION is inherited from base image's ENV — no ARG needed
 
 USER root
 
-# Copy pre-generated extension SQL files
-# These were created by scripts/generate_extension_sql.sh
-COPY extension_sql/ /usr/share/postgresql/${POSTGRES_VERSION}/extension/
+# Copy pre-generated extension SQL files to temp dir first, then move using
+# ENV-based path (COPY can only resolve ARG, not inherited ENV)
+COPY extension_sql/ /tmp/extension_sql/
+RUN cp -r /tmp/extension_sql/* /usr/share/postgresql/${POSTGRES_VERSION}/extension/ \
+    && rm -rf /tmp/extension_sql
 
 # Create symlink for the shared library (.so file)
 # The base image has libhfm-<BASE_COMMIT>.so, but the new control file references

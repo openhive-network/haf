@@ -10,8 +10,9 @@
 
 set -euo pipefail
 
-GIT_SHA="${1:?Usage: $0 <git_sha> <output_dir>}"
-OUTPUT_DIR="${2:?Usage: $0 <git_sha> <output_dir>}"
+GIT_SHA="${1:?Usage: $0 <git_sha> <output_dir> [postgres_version]}"
+OUTPUT_DIR="${2:?Usage: $0 <git_sha> <output_dir> [postgres_version]}"
+POSTGRES_VERSION="${3:-17}"
 
 # Find the hive_fork_manager source directory relative to this script
 SCRIPT_DIR="$(cd -- "$(dirname "$0")" >/dev/null 2>&1; pwd -P)"
@@ -178,7 +179,7 @@ UPDATE_GEN_OUTPUT="$OUTPUT_DIR/hive_fork_manager_update_script_generator.sh"
 if [[ -f "$UPDATE_GEN_TEMPLATE" ]]; then
     # Substitute all template variables
     # POSTGRES_SHAREDIR is where PostgreSQL extensions are installed
-    POSTGRES_SHAREDIR="/usr/share/postgresql/17"
+    POSTGRES_SHAREDIR="/usr/share/postgresql/${POSTGRES_VERSION}"
     sed -e "s|@HAF_GIT_REVISION_SHA@|${GIT_SHA}|g" \
         -e "s|@POSTGRES_SHAREDIR@|${POSTGRES_SHAREDIR}|g" \
         "$UPDATE_GEN_TEMPLATE" > "$UPDATE_GEN_OUTPUT"
