@@ -22,14 +22,42 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
-        return std::to_string(data.block_number) + "," + escape_raw(data.hash) + "," +
-        escape_raw(data.prev_hash) + ", '" + data.created_at.to_iso_string() + "' ," + std::to_string(data.producer_account_id) + "," +
-        escape_raw(data.transaction_merkle_root) + "," + escape(data.extensions) + "," + escape_raw(data.witness_signature) + ", '" + static_cast<std::string>(data.signing_key) + "'" + "," +
-        std::to_string(data.hbd_interest_rate) + "," +
-        to_string(data.total_vesting_fund_hive) + "," + to_string(data.total_vesting_shares) + "," +
-        to_string(data.total_reward_fund_hive) + "," +
-        to_string(data.virtual_supply) + "," + to_string(data.current_supply) + "," +
-        to_string(data.current_hbd_supply) + "," + to_string(data.dhf_interval_ledger);
+        std::string result;
+        result.reserve(512);
+        result += std::to_string(data.block_number);
+        result += ',';
+        result += escape_raw(data.hash);
+        result += ',';
+        result += escape_raw(data.prev_hash);
+        result += ",'";
+        result += data.created_at.to_iso_string();
+        result += "',";
+        result += std::to_string(data.producer_account_id);
+        result += ',';
+        result += escape_raw(data.transaction_merkle_root);
+        result += ',';
+        result += escape(data.extensions);
+        result += ',';
+        result += escape_raw(data.witness_signature);
+        result += ",'";
+        result += static_cast<std::string>(data.signing_key);
+        result += "',";
+        result += std::to_string(data.hbd_interest_rate);
+        result += ',';
+        result += to_string(data.total_vesting_fund_hive);
+        result += ',';
+        result += to_string(data.total_vesting_shares);
+        result += ',';
+        result += to_string(data.total_reward_fund_hive);
+        result += ',';
+        result += to_string(data.virtual_supply);
+        result += ',';
+        result += to_string(data.current_supply);
+        result += ',';
+        result += to_string(data.current_hbd_supply);
+        result += ',';
+        result += to_string(data.dhf_interval_ledger);
+        return result;
       }
       };
     };
