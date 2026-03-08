@@ -5,6 +5,8 @@ SRC_DIR="$SCRIPT_DIR/.."
 
 set -euo pipefail
 
+POSTGRES_VERSION="${POSTGRES_VERSION:-17}"
+
 # This script installs all packages required to build and run a HAF instance.
 # After changing it, please also update and push to the registry a docker image defined in https://gitlab.syncad.com/hive/haf/-/blob/develop/Dockerfile
 # The updated docker image must also be explicitly referenced on line https://gitlab.syncad.com/hive/haf/-/blob/develop/.gitlab-ci.yml#L7
@@ -38,7 +40,7 @@ install_ai_packages() {
   DEBIAN_FRONTEND=noninteractive apt-get install -y \
     git \
     python3.12 python3.12-venv python3.12-dev python3-pip \
-    postgresql-plpython3-18 \
+    postgresql-plpython3-${POSTGRES_VERSION} \
     curl \
     python3-bs4 python3-lxml
 
@@ -85,16 +87,20 @@ install_all_dev_packages() {
 
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
 
-  sed -i -e 's/Suites: noble-pgdg/Suites: noble-pgdg-snapshot/'  -e 's/Components: main/Components: main 18/' /etc/apt/sources.list.d/pgdg.sources
-  echo 'Package: *' > /etc/apt/preferences.d/pgdg.pref
-  echo 'Pin: origin apt.postgresql.org' >> /etc/apt/preferences.d/pgdg.pref
-  echo 'Pin-Priority: 1001' >> /etc/apt/preferences.d/pgdg.pref
+  if [ "${POSTGRES_VERSION}" -ge 18 ]; then
+    sed -i -e 's/Suites: noble-pgdg/Suites: noble-pgdg-snapshot/' \
+           -e "s/Components: main/Components: main ${POSTGRES_VERSION}/" \
+           /etc/apt/sources.list.d/pgdg.sources
+    echo 'Package: *' > /etc/apt/preferences.d/pgdg.pref
+    echo 'Pin: origin apt.postgresql.org' >> /etc/apt/preferences.d/pgdg.pref
+    echo 'Pin-Priority: 1001' >> /etc/apt/preferences.d/pgdg.pref
+  fi
 
   apt-get update
 
-  DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-18 postgresql-server-dev-18 \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-${POSTGRES_VERSION} postgresql-server-dev-${POSTGRES_VERSION} \
   netcat-openbsd \
-  git python3.12 python3.12-venv python3.12-dev python3-pip postgresql-plpython3-18 curl # for hivesense
+  git python3.12 python3.12-venv python3.12-dev python3-pip postgresql-plpython3-${POSTGRES_VERSION} curl # for hivesense
 
   apt-get clean
   rm -rf /var/lib/apt/lists/*
