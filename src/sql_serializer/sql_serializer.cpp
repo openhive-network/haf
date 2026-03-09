@@ -123,6 +123,31 @@ bool is_database_correct( const std::string& database_url, bool force_open_incon
   return true;
 }
 
+// Query the database schema to determine if lite mode should be forced.
+// hive.is_lite_mode() returns TRUE when the schema is irreversible-only
+// (no reversible tables), and reads from hafd.hive_state.lite_mode in
+// the regular forking schema.
+bool detect_lite_mode( const std::string& database_url, appbase::application& app )
+{
+  bool schema_requires_lite = false;
+  queries_commit_data_processor detector(
+    database_url
+    , "Detect schema lite mode"
+    , "litedetect"
+    , [&schema_requires_lite](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+      pqxx::result data = tx.exec("SELECT hive.is_lite_mode() AS _result;");
+      if ( !data.empty() )
+        schema_requires_lite = data[0]["_result"].as<bool>();
+      return data_processor::data_processing_status();
+      }
+      , nullptr
+      , app
+      );
+  detector.trigger(data_processor::data_chunk_ptr(), 0);
+  detector.join();
+  return schema_requires_lite;
+}
+
 inline std::string get_operation_name(const hive::protocol::operation& op)
 {
   PSQL::name_gathering_visitor v;
@@ -991,6 +1016,17 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
               , "SQL database is in invalid state"
   );
 
+  // Auto-detect lite mode from the database schema. The irreversible-only schema
+  // has hive.is_lite_mode() hardcoded to TRUE (no reversible tables exist), while
+  // the regular schema reads from hafd.hive_state.lite_mode.
+  bool lite_mode = options["psql-lite-mode"].as<bool>();
+  bool schema_lite_mode = detect_lite_mode( options["psql-url"].as<fc::string>(), get_app() );
+  if ( schema_lite_mode && !lite_mode )
+  {
+    ilog( "Database schema requires lite mode (irreversible-only), overriding --psql-lite-mode=false" );
+    lite_mode = true;
+  }
+
   my = std::make_unique<detail::sql_serializer_plugin_impl>(
     options["psql-url"].as<fc::string>()
     , db
@@ -1005,7 +1041,7 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     , options["psql-prune-blocks"].as<uint32_t>()
     , options["psql-enable-filter"].as<bool>()
     , options["psql-wal-queue-depth"].as<uint32_t>()
-    , options["psql-lite-mode"].as<bool>()
+    , lite_mode
   );
 
   // settings
