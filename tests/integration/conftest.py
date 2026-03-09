@@ -17,17 +17,16 @@ from test_tools.__private.user_handles.get_implementation import get_implementat
 from test_tools.__private.node import Node
 import test_tools as tt
 
-import shared_tools.networks_architecture as networks
-from shared_tools.complex_networks import NodesPreparer, run_whole_network, prepare_time_offsets, create_block_log_directory_name
+from test_tools import complex_networks as ttcn
 from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
 
-class SQLNodesPreparer(NodesPreparer):
+class SQLNodesPreparer(ttcn.NodesPreparer):
     def __init__(self, database, start_block=1) -> None:
         self.sessions = []
         self.database = database
         self.start_block = start_block
 
-    def prepare(self, builder: networks.NetworksBuilder):
+    def prepare(self, builder: ttcn.NetworksBuilder):
         for cnt, node in enumerate(builder.prepare_nodes):
             DB_URL = os.getenv("DB_URL")
             self.sessions.append( self.database(f"{DB_URL}-{cnt}") )
@@ -85,29 +84,29 @@ NodeConfig.save = _save_with_lite_mode
 
 class LiteModeSQLNodesPreparer(SQLNodesPreparer):
     """SQLNodesPreparer that enables --psql-lite-mode on the hived node."""
-    def prepare(self, builder: networks.NetworksBuilder):
+    def prepare(self, builder: ttcn.NetworksBuilder):
         super().prepare(builder)
         for node in builder.prepare_nodes:
             _lite_mode_config_ids.add(id(node.config))
 
 
-def prepare_network_with_1_session(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[networks.NetworksBuilder, Any]:
+def prepare_network_with_1_session(database, architecture: ttcn.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[ttcn.NetworksBuilder, Any]:
     preparer = SQLNodesPreparer(database)
-    return run_whole_network(architecture, block_log_directory_name, time_offsets, preparer), preparer.sessions[0]
+    return ttcn.run_whole_network(architecture, block_log_directory_name, time_offsets, preparer), preparer.sessions[0]
 
 
-def prepare_network_with_1_session_lite_mode(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[networks.NetworksBuilder, Any]:
+def prepare_network_with_1_session_lite_mode(database, architecture: ttcn.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[ttcn.NetworksBuilder, Any]:
     preparer = LiteModeSQLNodesPreparer(database)
-    return run_whole_network(architecture, block_log_directory_name, time_offsets, preparer), preparer.sessions[0]
+    return ttcn.run_whole_network(architecture, block_log_directory_name, time_offsets, preparer), preparer.sessions[0]
 
-def prepare_network_with_1_session_from_115(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[networks.NetworksBuilder, Any]:
+def prepare_network_with_1_session_from_115(database, architecture: ttcn.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[ttcn.NetworksBuilder, Any]:
     preparer = SQLNodesPreparer(database, 115)
-    return run_whole_network(architecture, block_log_directory_name, time_offsets, preparer), preparer.sessions[0]
+    return ttcn.run_whole_network(architecture, block_log_directory_name, time_offsets, preparer), preparer.sessions[0]
 
 
-def prepare_network_with_2_sessions(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[networks.NetworksBuilder, Any]:
+def prepare_network_with_2_sessions(database, architecture: ttcn.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[ttcn.NetworksBuilder, Any]:
     preparer = SQLNodesPreparer(database)
-    return run_whole_network(architecture, block_log_directory_name, time_offsets, preparer), preparer.sessions
+    return ttcn.run_whole_network(architecture, block_log_directory_name, time_offsets, preparer), preparer.sessions
 
 
 @pytest.fixture()
@@ -136,7 +135,7 @@ def database():
 
 
 @pytest.fixture()
-def prepared_networks_and_database_12_8(database) -> Tuple[networks.NetworksBuilder, Any]:
+def prepared_networks_and_database_12_8(database) -> Tuple[ttcn.NetworksBuilder, Any]:
     config = {
         "networks": [
                         {
@@ -149,12 +148,12 @@ def prepared_networks_and_database_12_8(database) -> Tuple[networks.NetworksBuil
                         }
                     ]
     }
-    architecture = networks.NetworksArchitecture()
+    architecture = ttcn.NetworksArchitecture()
     architecture.load(config)
-    yield prepare_network_with_1_session(database, architecture, create_block_log_directory_name('block_log_12_8'), None)
+    yield prepare_network_with_1_session(database, architecture, ttcn.create_block_log_directory_name('block_log_12_8'), None)
 
 @pytest.fixture()
-def prepared_networks_and_database_12_8_lite_mode(database) -> Tuple[networks.NetworksBuilder, Any]:
+def prepared_networks_and_database_12_8_lite_mode(database) -> Tuple[ttcn.NetworksBuilder, Any]:
     config = {
         "networks": [
                         {
@@ -167,12 +166,12 @@ def prepared_networks_and_database_12_8_lite_mode(database) -> Tuple[networks.Ne
                         }
                     ]
     }
-    architecture = networks.NetworksArchitecture()
+    architecture = ttcn.NetworksArchitecture()
     architecture.load(config)
-    yield prepare_network_with_1_session_lite_mode(database, architecture, create_block_log_directory_name('block_log_12_8'), None)
+    yield prepare_network_with_1_session_lite_mode(database, architecture, ttcn.create_block_log_directory_name('block_log_12_8'), None)
 
 @pytest.fixture()
-def prepared_networks_and_database_12_8_from_115(database) -> Tuple[networks.NetworksBuilder, Any]:
+def prepared_networks_and_database_12_8_from_115(database) -> Tuple[ttcn.NetworksBuilder, Any]:
     config = {
         "networks": [
             {
@@ -185,12 +184,12 @@ def prepared_networks_and_database_12_8_from_115(database) -> Tuple[networks.Net
             }
         ]
     }
-    architecture = networks.NetworksArchitecture()
+    architecture = ttcn.NetworksArchitecture()
     architecture.load(config)
-    yield prepare_network_with_1_session_from_115(database, architecture, create_block_log_directory_name('block_log_12_8'), None)
+    yield prepare_network_with_1_session_from_115(database, architecture, ttcn.create_block_log_directory_name('block_log_12_8'), None)
 
 @pytest.fixture()
-def prepared_networks_and_database_12_8_with_2_sessions(database) -> Tuple[networks.NetworksBuilder, Any]:
+def prepared_networks_and_database_12_8_with_2_sessions(database) -> Tuple[ttcn.NetworksBuilder, Any]:
     config = {
         "networks": [
                         {
@@ -204,13 +203,13 @@ def prepared_networks_and_database_12_8_with_2_sessions(database) -> Tuple[netwo
                         }
                     ]
     }
-    architecture = networks.NetworksArchitecture()
+    architecture = ttcn.NetworksArchitecture()
     architecture.load(config)
-    yield prepare_network_with_2_sessions(database, architecture, create_block_log_directory_name('block_log_12_8'), None)
+    yield prepare_network_with_2_sessions(database, architecture, ttcn.create_block_log_directory_name('block_log_12_8'), None)
 
 
 @pytest.fixture()
-def prepared_networks_and_database_12_8_without_block_log(database) -> Tuple[networks.NetworksBuilder, Any]:
+def prepared_networks_and_database_12_8_without_block_log(database) -> Tuple[ttcn.NetworksBuilder, Any]:
     config = {
         "networks": [
                         {
@@ -223,13 +222,13 @@ def prepared_networks_and_database_12_8_without_block_log(database) -> Tuple[net
                         }
                     ]
     }
-    architecture = networks.NetworksArchitecture()
+    architecture = ttcn.NetworksArchitecture()
     architecture.load(config)
     yield prepare_network_with_1_session(database, architecture, None, None)
 
 
 @pytest.fixture()
-def prepared_networks_and_database_17_3(database) -> Tuple[networks.NetworksBuilder, Any]:
+def prepared_networks_and_database_17_3(database) -> Tuple[ttcn.NetworksBuilder, Any]:
     config = {
         "networks": [
                         {
@@ -243,13 +242,13 @@ def prepared_networks_and_database_17_3(database) -> Tuple[networks.NetworksBuil
                         }
                     ]
     }
-    architecture = networks.NetworksArchitecture()
+    architecture = ttcn.NetworksArchitecture()
     architecture.load(config)
-    yield prepare_network_with_1_session(database, architecture, create_block_log_directory_name('block_log_17_3'), None)
+    yield prepare_network_with_1_session(database, architecture, ttcn.create_block_log_directory_name('block_log_17_3'), None)
 
 
 @pytest.fixture()
-def prepared_networks_and_database_4_4_4_4_4(database) -> Tuple[networks.NetworksBuilder, Any]:
+def prepared_networks_and_database_4_4_4_4_4(database) -> Tuple[ttcn.NetworksBuilder, Any]:
     config = {
         "networks": [
                         {
@@ -271,11 +270,11 @@ def prepared_networks_and_database_4_4_4_4_4(database) -> Tuple[networks.Network
                         }
                     ]
     }
-    architecture = networks.NetworksArchitecture()
+    architecture = ttcn.NetworksArchitecture()
     architecture.load(config)
-    time_offsets = prepare_time_offsets(architecture.nodes_number)
+    time_offsets = ttcn.prepare_time_offsets(architecture.nodes_number)
 
-    yield prepare_network_with_1_session(database, architecture, create_block_log_directory_name('block_log_4_4_4_4_4'), time_offsets)
+    yield prepare_network_with_1_session(database, architecture, ttcn.create_block_log_directory_name('block_log_4_4_4_4_4'), time_offsets)
 
 
 @pytest.fixture()
@@ -289,10 +288,10 @@ def prepared_networks_and_database_1() -> Tuple[tt.ApiNode, Any, Any]:
                             }
                         ]
         }
-        architecture = networks.NetworksArchitecture()
+        architecture = ttcn.NetworksArchitecture()
         architecture.load(config)
 
-        builder = networks.NetworksBuilder()
+        builder = ttcn.NetworksBuilder()
         builder.build(architecture, True)
 
         preparer = SQLNodesPreparer(database)
@@ -303,7 +302,7 @@ def prepared_networks_and_database_1() -> Tuple[tt.ApiNode, Any, Any]:
     yield make_network
 
 @pytest.fixture()
-def prepared_networks_and_database_12_8_from_60(database) -> Tuple[networks.NetworksBuilder, Any]:
+def prepared_networks_and_database_12_8_from_60(database) -> Tuple[ttcn.NetworksBuilder, Any]:
     config = {
         "networks": [
             {
@@ -316,6 +315,6 @@ def prepared_networks_and_database_12_8_from_60(database) -> Tuple[networks.Netw
             }
         ]
     }
-    architecture = networks.NetworksArchitecture()
+    architecture = ttcn.NetworksArchitecture()
     architecture.load(config)
-    yield prepare_network_with_1_session(database, architecture, create_block_log_directory_name('block_log_12_8'), None)
+    yield prepare_network_with_1_session(database, architecture, ttcn.create_block_log_directory_name('block_log_12_8'), None)

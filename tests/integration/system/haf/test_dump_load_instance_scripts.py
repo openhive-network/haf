@@ -16,7 +16,7 @@ from sqlalchemy.pool import NullPool
 from test_tools.__private import paths_to_executables
 from haf_local_tools import query_all
 
-from shared_tools.complex_networks import create_block_log_directory_name
+from test_tools import complex_networks as ttcn
 
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
@@ -96,7 +96,7 @@ class Test:
         self.dump_instance_script=scripts_path/'dump_instance.sh'
         self.load_instance_script=scripts_path/'load_instance.sh'
 
-        node.run(replay_from=create_block_log_directory_name("block_log"), stop_at_block=stop_at_block, exit_before_synchronization=True)
+        node.run(replay_from=ttcn.create_block_log_directory_name("block_log"), stop_at_block=stop_at_block, exit_before_synchronization=True)
         session.close()
 
 

@@ -8,7 +8,7 @@ import time
 
 import test_tools as tt
 
-import shared_tools.complex_networks_helper_functions as sh
+from test_tools import complex_networks as ttcn
 from haf_local_tools import haf_app, wait_for_irreversible_progress, get_irreversible_block, wait_for_irreversible_in_database
 
 # Exception for handling TAPOS (Transaction as Proof of Stake) validation errors
@@ -49,7 +49,7 @@ def haf_app_processor(before_kill_time_min: int, before_kill_time_max: int, iden
         _app.run()
     return f'[break {identifier}] Creating apps finished...'
 
-def fork_activator(networks: Iterable[tt.Network], logs: Iterable[sh.NodeLog], majority_api_node: tt.ApiNode, _m: Iterable[sh.info], _M: Iterable[sh.info], identifier: int):
+def fork_activator(networks: Iterable[tt.Network], logs: Iterable[ttcn.NodeLog], majority_api_node: tt.ApiNode, _m: Iterable[ttcn.info], _M: Iterable[ttcn.info], identifier: int):
     _cnt = 1
 
     global break_cnt
@@ -57,17 +57,17 @@ def fork_activator(networks: Iterable[tt.Network], logs: Iterable[sh.NodeLog], m
 
     while break_cnt < break_limit:
         tt.logger.info(f'Disconnect sub networks: {_cnt}...')
-        sh.disconnect_sub_networks(networks)
+        ttcn.disconnect_sub_networks(networks)
 
-        sh.wait(5, logs, majority_api_node)
+        ttcn.wait(5, logs, majority_api_node)
 
-        _last_lib_M = sh.get_last_irreversible_block_num(_M)
+        _last_lib_M = ttcn.get_last_irreversible_block_num(_M)
         tt.logger.info(f'last Lib: {_last_lib_M}...')
 
         tt.logger.info(f'Reconnect sub networks: {_cnt}...')
-        sh.connect_sub_networks(networks)
+        ttcn.connect_sub_networks(networks)
 
-        sh.wait_for_final_block(majority_api_node, logs, [_m, _M], True, partial(sh.lib_custom_condition, _M, _last_lib_M), False)
+        ttcn.wait_for_final_block(majority_api_node, logs, [_m, _M], True, partial(ttcn.lib_custom_condition, _M, _last_lib_M), False)
         tt.logger.info(f'Sub networks reconnected: {_cnt}...')
 
         _cnt += 1
@@ -118,8 +118,8 @@ def test_many_forks_many_ops_db(prepared_networks_and_database_17_3):
 
     majority_wallet = tt.Wallet(attach_to = majority_api_node)
     minority_wallet = tt.Wallet(attach_to = minority_api_node)
-    logs.append(sh.NodeLog("M", majority_wallet))
-    logs.append(sh.NodeLog("m", minority_wallet))
+    logs.append(ttcn.NodeLog("M", majority_wallet))
+    logs.append(ttcn.NodeLog("m", minority_wallet))
 
     _M = logs[0].collector
     _m = logs[1].collector
@@ -128,11 +128,11 @@ def test_many_forks_many_ops_db(prepared_networks_and_database_17_3):
 
     tt.logger.info(f'Before disconnecting...')
     cnt = 0
-    while not (cnt > blocks_before_disconnect and sh.get_last_irreversible_block_num(_M) == sh.get_last_irreversible_block_num(_m)):
-        sh.wait(1, logs, majority_api_node)
+    while not (cnt > blocks_before_disconnect and ttcn.get_last_irreversible_block_num(_M) == ttcn.get_last_irreversible_block_num(_m)):
+        ttcn.wait(1, logs, majority_api_node)
         cnt += 1
 
-    break_cnt = sh.get_last_irreversible_block_num(_M)
+    break_cnt = ttcn.get_last_irreversible_block_num(_M)
     tt.logger.info(f'initial break_cnt: {break_cnt}')
 
     _futures                = []

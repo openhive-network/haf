@@ -6,7 +6,7 @@ import time
 
 import test_tools as tt
 
-import shared_tools.complex_networks_helper_functions as sh
+from test_tools import complex_networks as ttcn
 from haf_local_tools import haf_app, wait_for_irreversible_progress, get_irreversible_block, wait_for_irreversible_in_database
 
 # Exception for handling TAPOS (Transaction as Proof of Stake) validation errors
@@ -32,7 +32,7 @@ def generate_break(wallet: tt.Wallet, node: tt.ApiNode, identifier: int):
     global break_limit
 
     while break_cnt < break_limit:
-        sh.info("m4", wallet)
+        ttcn.info("m4", wallet)
         node.wait_number_of_blocks(1)
         break_cnt += 1
     return f'[break {identifier}] Breaking activated...'
@@ -86,7 +86,7 @@ def test_many_forks_node_with_time_offset_db(prepared_networks_and_database_4_4_
     node_under_test = networks_builder.networks[1].node('ApiNode0')
     beta_wallet = tt.Wallet(attach_to = node_under_test)
 
-    _, break_cnt = sh.info('m4', beta_wallet)
+    _, break_cnt = ttcn.info('m4', beta_wallet)
     tt.logger.info(f'initial break_cnt: {break_cnt}')
 
     _futures                = []
