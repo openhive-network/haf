@@ -291,11 +291,11 @@ BEGIN
     END IF;
 
     DELETE FROM hafd.account_operations hao
-    WHERE hafd.operation_id_to_block_num(hao.operation_id) > __consistent_block;
+    WHERE hao.operation_id >= hafd.operation_id(__consistent_block + 1, 0);
 
     DELETE FROM hafd.applied_hardforks WHERE block_num > __consistent_block;
 
-    DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) > __consistent_block;
+    DELETE FROM hafd.operations WHERE id >= hafd.operation_id(__consistent_block + 1, 0);
 
     DELETE FROM hafd.transactions_multisig htm
     USING hafd.transactions ht
