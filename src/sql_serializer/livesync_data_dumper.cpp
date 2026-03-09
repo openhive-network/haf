@@ -140,10 +140,6 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _account_operations_writer->complete_data_processing();
     _applied_hardforks_writer->complete_data_processing();
     _currently_processing_block = 0;
-    if (app.is_interrupt_request())
-    {
-      cancel();
-    }
   }
 
   void livesync_data_dumper::cancel() {
