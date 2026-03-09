@@ -428,6 +428,7 @@ public:
   uint32_t psql_pruning_tail_size = -1;
   bool     psql_dump_account_operations = true;
   bool     _lite_mode = false;
+  uint32_t _max_block_at_startup = 0; // lite mode: skip blocks already in DB
 
   bool replay_blocklog = false;
 
@@ -581,6 +582,25 @@ void sql_serializer_plugin_impl::replay_wal_if_necessary() {
 void sql_serializer_plugin_impl::inform_hfm_about_starting() {
   using namespace std::string_literals;
   ilog( "Inform Hive Fork Manager about starting..." );
+
+  // In lite mode, query the max block already in the DB so we can skip
+  // re-pushing blocks that are already there (avoids expensive DELETEs in
+  // connect() and duplicate key errors from COPY).
+  if ( _lite_mode )
+  {
+    auto query_max_block = [&](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx ){
+      pqxx::result data = tx.exec("SELECT COALESCE(MAX(num), 0) AS max_block FROM hive.blocks_view;");
+      if ( !data.empty() )
+        _max_block_at_startup = data[0]["max_block"].as<uint32_t>();
+      return data_processing_status();
+    };
+    queries_commit_data_processor max_block_query( db_url, "Query max block in DB", "maxblock", query_max_block, nullptr, theApp );
+    max_block_query.trigger( nullptr, 0 );
+    max_block_query.join();
+
+    if ( _max_block_at_startup > 0 )
+      ilog( "Lite mode: database already has blocks up to ${b}, will skip existing blocks", ("b", _max_block_at_startup) );
+  }
 
   // inform the db about starting hived
   auto connect_to_the_db = [&](const data_processor::data_chunk_ptr& dataPtr, transaction_controllers::transaction& tx ){
@@ -740,6 +760,10 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
   if(!can_collect_blocks())
     return;
 
+  // In lite mode, skip operations for blocks already in the database.
+  if ( _lite_mode && note.block <= _max_block_at_startup )
+    return;
+
   if (note.op.which() == hive::protocol::operation::tag<hive::protocol::effective_comment_vote_operation>::value)
     hive::util::supplement_operation(note.op, chain_db);
 
@@ -793,6 +817,14 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
     _consecutive_block_failures = 0;
     if(!can_collect_blocks())
       return;
+
+    // In lite mode, skip blocks already in the database.
+    if ( _lite_mode && note.block_num <= _max_block_at_startup )
+    {
+      op_in_block_number = 0;
+      return;
+    }
+
     op_in_block_number = 0;
 
     handle_transactions(note.full_block->get_full_transactions(), note.block_num);
