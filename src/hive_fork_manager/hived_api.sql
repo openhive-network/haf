@@ -23,13 +23,12 @@ CREATE OR REPLACE FUNCTION hive.back_from_fork( _block_num_before_fork INT )
 AS
 $BODY$
 BEGIN
-    -- Use operation_id() to compute a threshold for PK-indexed deletes on
-    -- account_operations and operations, avoiding full sequential scans.
+    -- Use operation_id_to_block_num() directly on account_operations to avoid
+    -- a JOIN to operations, which causes a sequential scan of the entire table.
     DELETE FROM hafd.account_operations
-        WHERE operation_id >= hafd.operation_id(_block_num_before_fork + 1, 0);
+        WHERE hafd.operation_id_to_block_num(operation_id) > _block_num_before_fork;
     DELETE FROM hafd.applied_hardforks WHERE block_num > _block_num_before_fork;
-    DELETE FROM hafd.operations
-        WHERE id >= hafd.operation_id(_block_num_before_fork + 1, 0);
+    DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) > _block_num_before_fork;
     DELETE FROM hafd.transactions_multisig
         USING hafd.transactions
         WHERE hafd.transactions_multisig.trx_hash = hafd.transactions.trx_hash
@@ -326,15 +325,14 @@ BEGIN
     -- (e.g., after WAL replay restored blocks that hived hasn't processed yet).
     -- Skip when _block_num=0 (--replay-blockchain): preserve existing irreversible
     -- blocks since push_block_lite() will skip duplicates via its idempotency check.
-    -- Use operation_id() to compute a threshold for PK-indexed deletes on
-    -- account_operations and operations, avoiding full sequential scans.
-    IF _block_num > 0 AND __max_block > _block_num THEN
+    -- Skip in lite mode: the sql_serializer detects blocks already in the DB at
+    -- startup and skips them, so no cleanup is needed here.
+    IF _block_num > 0 AND __max_block > _block_num AND NOT _lite_mode THEN
         RAISE LOG 'hive.connect: cleaning up blocks beyond % (max_block=%)', _block_num, __max_block;
         DELETE FROM hafd.account_operations
-            WHERE operation_id >= hafd.operation_id(_block_num + 1, 0);
+            WHERE hafd.operation_id_to_block_num(operation_id) > _block_num;
         DELETE FROM hafd.applied_hardforks WHERE block_num > _block_num;
-        DELETE FROM hafd.operations
-            WHERE id >= hafd.operation_id(_block_num + 1, 0);
+        DELETE FROM hafd.operations WHERE hafd.operation_id_to_block_num(id) > _block_num;
         DELETE FROM hafd.transactions_multisig
             USING hafd.transactions
             WHERE hafd.transactions_multisig.trx_hash = hafd.transactions.trx_hash
