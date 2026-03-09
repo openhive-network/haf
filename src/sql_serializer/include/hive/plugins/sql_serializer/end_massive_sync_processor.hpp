@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <mutex>
 
 namespace appbase
 {
@@ -28,6 +29,7 @@ namespace hive::plugins::sql_serializer {
   private:
     std::unique_ptr< queries_commit_data_processor > _data_processor;
     uint32_t _block_number;
+    std::mutex _trigger_mtx;
   };
 
 } // namespace hive::plugins { namespace sql_serializer {
