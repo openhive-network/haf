@@ -89,8 +89,9 @@ data_processor::data_processor( std::string description, std::string short_descr
         dlog("${d} data processor consumed data - notifying trigger process...", ("d", _description));
         _cv.notify_one();
 
-        if(_cancel.load())
-          break;
+        // NOTE: We do NOT exit early on _cancel here to prevent data loss.
+        // We must process the data and report to rendezvous so execute_push_block() gets called with valid data.
+        // The cancel will be handled after processing completes.
 
         dlog("${d} data processor starts a data processing...", ("d", _description));
 
@@ -124,12 +125,12 @@ data_processor::~data_processor()
 
 void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
 {
-  if ( _cancel.load() ) {
-    wlog( "Trying to trigger data processor: ${d} but its execution is already canceled. The data are ignored.", ("d", _description) );
-    return;
+  const bool is_canceled = _cancel.load();
+  if ( !is_canceled )
+  {
+    /// Set immediately data processing flag only if not canceled
+    _is_processing_data = true;
   }
-  /// Set immediately data processing flag
-  _is_processing_data = true;
 
   {
   dlog("Trying to trigger data processor: ${d}...", ("d", _description));
@@ -148,6 +149,9 @@ void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
   }
 
   dlog("Leaving trigger of data data processor: ${d}...", ("d", _description));
+
+  if ( is_canceled )
+    only_report_batch_finished( last_blocknum );
 }
 
 void
@@ -168,7 +172,7 @@ void data_processor::complete_data_processing()
 
   dlog("Awaiting for data processing finish in the  data processor: ${d}...", ("d", _description));
   std::unique_lock<std::mutex> lk(_data_processing_mtx);
-  _data_processing_finished_cv.wait(lk, [this] { return _is_processing_data == false; });
+  _data_processing_finished_cv.wait(lk, [this] { return _is_processing_data == false || _cancel.load(); });
   dlog("Data processor: ${d} finished processing data...", ("d", _description));
 }
 
