@@ -1789,3 +1789,27 @@ op_body_filter_tests:
   interruptible: true
   tags:
     - public-runner-docker
+
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>| HAF LOCAL TOOLS WHEEL |>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+build_haf_local_tools_wheel:
+  stage: build_and_test_phase_1
+  extends: .build_wheel_template
+  variables:
+    PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
+  tags:
+    - public-runner-docker
+
+deploy_haf_local_tools_wheel:
+  stage: publish
+  extends: .deploy_wheel_to_gitlab_template
+  when: on_success
+  variables:
+    PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
+  needs:
+    - job: build_haf_local_tools_wheel
+      artifacts: true
+  tags:
+    - public-runner-docker
+
+# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<| HAF LOCAL TOOLS WHEEL |<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
