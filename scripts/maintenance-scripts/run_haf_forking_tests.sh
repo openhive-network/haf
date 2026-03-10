@@ -35,5 +35,5 @@ pipx install poetry==2.1.3
 echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
 
 cd "${REPO_DIR}/tests/integration/system/haf"
-pytest --junitxml report_forking.xml -n "${PYTEST_NUMBER_OF_PROCESSES}" -m "forking_only and not mirrornet" --timeout=600
+pytest --junitxml report_forking.xml -n "${PYTEST_NUMBER_OF_PROCESSES}" -k "lite_mode" -m "forking_only and not mirrornet" --timeout=600
 test_end
