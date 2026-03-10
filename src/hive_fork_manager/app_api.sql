@@ -364,6 +364,11 @@ CREATE OR REPLACE FUNCTION hive.app_context_set_non_forking( _contexts hive.cont
 AS
 $BODY$
 BEGIN
+    -- Idempotent: skip if all contexts are already non-forking
+    IF NOT EXISTS (SELECT 1 FROM hafd.contexts WHERE name = ANY(_contexts) AND is_forking) THEN
+        RETURN;
+    END IF;
+
     PERFORM hive.app_check_contexts_synchronized( _contexts );
 
     -- detaching is the best method to remove reversible data and triggers
@@ -413,6 +418,11 @@ $BODY$
 BEGIN
     IF hive.is_lite_mode() THEN
         RAISE EXCEPTION 'Cannot set forking mode in lite mode. Lite mode only supports non-forking contexts.';
+    END IF;
+
+    -- Idempotent: skip if all contexts are already forking
+    IF NOT EXISTS (SELECT 1 FROM hafd.contexts WHERE name = ANY(_contexts) AND NOT is_forking) THEN
+        RETURN;
     END IF;
 
     PERFORM hive.app_check_contexts_synchronized( _contexts );
