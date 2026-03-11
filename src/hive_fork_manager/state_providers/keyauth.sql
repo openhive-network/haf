@@ -339,7 +339,7 @@ BEGIN
         pow_matching_ops as MATERIALIZED
         (
             SELECT
-                    ov.body_binary,
+                    ov.body,
                     ov.id,
                     ov.block_num,
                     ov.trx_in_block,
@@ -351,7 +351,7 @@ BEGIN
         ),
         pow_raw_auth_records AS MATERIALIZED
         (
-            SELECT  (hive.get_keyauths(ov.body_binary)).*,
+            SELECT  (hive.get_keyauths(ov.body::hafd.operation)).*,
                     ov.id as op_serial_id,
                     ov.block_num,
                     ov.timestamp,
@@ -398,7 +398,7 @@ BEGIN
             matching_ops as materialized
             (
                 SELECT
-                        ov.body_binary,
+                        ov.body,
                         ov.id,
                         ov.block_num,
                         ov.trx_in_block,
@@ -411,7 +411,7 @@ BEGIN
             raw_auth_records AS MATERIALIZED
             (
                 SELECT
-                        (hive.get_keyauths(ov.body_binary)).*,
+                        (hive.get_keyauths(ov.body::hafd.operation)).*,
                         ov.id as op_serial_id,
                         ov.block_num,
                         ov.timestamp,

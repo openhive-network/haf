@@ -436,8 +436,8 @@ BEGIN
                     t.op_pos,
                     t.op_type_id,
                     t.timestamp,
-                    t.body_binary as body_binary,
-                    t.body_binary::jsonb AS body,
+                    t.body_value,
+                    jsonb_build_object(''type'', ot.name, ''value'', t.body_value) AS body,
                     t.custom_json_type_id
                   FROM %s.context_data_view c,
                   LATERAL
@@ -448,7 +448,7 @@ BEGIN
                       ho.op_pos,
                       ho.op_type_id,
                       b.created_at timestamp,
-                      ho.body_binary,
+                      ho.body_value,
                       ho.custom_json_type_id
                       FROM hafd.operations ho
                       JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
@@ -460,7 +460,7 @@ BEGIN
                         o.op_pos,
                         o.op_type_id,
                         visible_ops_timestamp.created_at timestamp,
-                        o.body_binary,
+                        o.body_value,
                         o.custom_json_type_id
                       FROM hafd.operations_reversible o
                       -- Reversible operations view must show ops comming from newest fork (specific to app-context)
@@ -478,6 +478,7 @@ BEGIN
                         FROM hafd.blocks_reversible hbr
                       ) visible_ops_timestamp ON visible_ops_timestamp.num = visible_ops.num
                 ) t
+                JOIN hafd.operation_types ot ON ot.id = t.op_type_id
                 ;', __schema, __schema
             );
         ELSE
@@ -490,8 +491,8 @@ BEGIN
                         t.op_pos,
                         t.op_type_id,
                         t.timestamp,
-                        t.body_binary as body_binary,
-                        t.body_binary::jsonb AS body,
+                        t.body_value,
+                        jsonb_build_object(''type'', ot.name, ''value'', t.body_value) AS body,
                         t.custom_json_type_id
                     FROM %s.context_data_view c,
                     LATERAL
@@ -502,12 +503,13 @@ BEGIN
                           ho.op_pos,
                           ho.op_type_id,
                           b.created_at timestamp,
-                          ho.body_binary,
+                          ho.body_value,
                           ho.custom_json_type_id
                         FROM hafd.operations ho
                         JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
                         WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
                     ) t
+                    JOIN hafd.operation_types ot ON ot.id = t.op_type_id
                     ;', __schema, __schema
                     );
         END IF;
@@ -539,8 +541,8 @@ BEGIN
                     t.trx_in_block,
                     t.op_pos,
                     t.op_type_id,
-                    t.body_binary as body_binary,
-                    t.body_binary::jsonb AS body,
+                    t.body_value,
+                    jsonb_build_object(''type'', ot.name, ''value'', t.body_value) AS body,
                     t.custom_json_type_id
                   FROM %s.context_data_view c,
                   LATERAL
@@ -550,7 +552,7 @@ BEGIN
                       ho.trx_in_block,
                       ho.op_pos,
                       ho.op_type_id,
-                      ho.body_binary,
+                      ho.body_value,
                       ho.custom_json_type_id
                       FROM hafd.operations ho
                       WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
@@ -560,7 +562,7 @@ BEGIN
                         o.trx_in_block,
                         o.op_pos,
                         o.op_type_id,
-                        o.body_binary,
+                        o.body_value,
                         o.custom_json_type_id
                       FROM hafd.operations_reversible o
                       -- Reversible operations view must show ops comming from newest fork (specific to app-context)
@@ -573,6 +575,7 @@ BEGIN
                         GROUP by hbr.num
                       ) visible_ops on visible_ops.num = hafd.operation_id_to_block_num(o.id) and visible_ops.max_fork_id = o.fork_id
                 ) t
+                JOIN hafd.operation_types ot ON ot.id = t.op_type_id
                 ;', __schema, __schema
             );
     ELSE
@@ -584,8 +587,8 @@ BEGIN
                     t.trx_in_block,
                     t.op_pos,
                     t.op_type_id,
-                    t.body_binary as body_binary,
-                    t.body_binary::jsonb AS body,
+                    t.body_value,
+                    jsonb_build_object(''type'', ot.name, ''value'', t.body_value) AS body,
                     t.custom_json_type_id
                   FROM %s.context_data_view c,
                   LATERAL
@@ -595,11 +598,12 @@ BEGIN
                       ho.trx_in_block,
                       ho.op_pos,
                       ho.op_type_id,
-                      ho.body_binary,
+                      ho.body_value,
                       ho.custom_json_type_id
                       FROM hafd.operations ho
                       WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
                   ) t
+                  JOIN hafd.operation_types ot ON ot.id = t.op_type_id
                 ;', __schema, __schema
         );
     END IF;
@@ -630,11 +634,12 @@ EXECUTE format(
             ho.op_pos,
             ho.op_type_id,
             b.created_at timestamp,
-            ho.body_binary as body_binary,
-            ho.body_binary::jsonb AS body,
+            ho.body_value,
+            jsonb_build_object(''type'', ot.name, ''value'', ho.body_value) AS body,
             ho.custom_json_type_id
         FROM hafd.operations ho
         JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
+        JOIN hafd.operation_types ot ON ot.id = ho.op_type_id
         ;', __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
@@ -663,10 +668,11 @@ EXECUTE format(
             ho.trx_in_block,
             ho.op_pos,
             ho.op_type_id,
-            ho.body_binary as body_binary,
-            ho.body_binary::jsonb AS body,
+            ho.body_value,
+            jsonb_build_object(''type'', ot.name, ''value'', ho.body_value) AS body,
             ho.custom_json_type_id
         FROM hafd.operations ho
+        JOIN hafd.operation_types ot ON ot.id = ho.op_type_id
         ;', __schema
     );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view');
