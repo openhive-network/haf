@@ -48,7 +48,7 @@ BEGIN
     __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 1, '\x4007', E'[]', '\x2157',
                 'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
     __transaction = ( 101, 0::SMALLINT, '\xDEED', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
-    __operation = ( hafd.operation_id(101, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"TEST"}}' :: jsonb :: hafd.operation, NULL );
+    __operation = ( hafd.operation_id(101, 0), 0, 1, 0, '{"message":"TEST"}'::jsonb, NULL );
     __signatures = ( '\xDEED', '\xFEED' );
     __account = ( 1, 'alice', 101 );
     __account_operation = ( 1, 1, 1, hafd.operation_id(101, 0), 1 );
