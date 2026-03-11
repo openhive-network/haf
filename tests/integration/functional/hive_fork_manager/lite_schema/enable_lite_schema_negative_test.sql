@@ -13,9 +13,10 @@ BEGIN
     PERFORM hive.connect( 'test_full', 0, 0, 0, FALSE, FALSE );
 
     -- Insert block directly into irreversible table (simulating massive sync)
-    INSERT INTO hafd.accounts(id, name, block_num) VALUES (1, 'producer', 1);
+    -- Block first (accounts.block_num references blocks.num)
     INSERT INTO hafd.blocks VALUES
         ( 1, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
+    INSERT INTO hafd.accounts(id, name, block_num) VALUES (1, 'producer', 1);
     PERFORM hive.end_massive_sync( 1 );
     PERFORM hive.set_irreversible( 1 );
 END;
