@@ -63,23 +63,29 @@ class SQLNodesPreparer(NodesPreparer):
         return builder.nodes[idx]
 
 
-class LiteModeSQLNodesPreparer(SQLNodesPreparer):
-    """SQLNodesPreparer that enables --psql-lite-mode on the hived node.
+def _patch_config_for_lite_mode(config):
+    """Patch a NodeConfig instance's save() to append psql-lite-mode = 1.
 
-    Since NodeConfig doesn't have psql_lite_mode as a known attribute,
-    we monkey-patch the config's save method to append it to config.ini
-    after the standard save writes all known fields.
+    Uses object.__setattr__ to bypass pydantic's __setattr__ protection,
+    placing the patched method directly in the instance's __dict__ where
+    it shadows the class method during attribute lookup.
     """
+    original_save = config.save
+    def patched_save(directory):
+        original_save(directory)
+        config_path = Path(directory) / "config.ini"
+        if config_path.exists():
+            with open(config_path, "a") as f:
+                f.write("\npsql-lite-mode = 1\n")
+    object.__setattr__(config, 'save', patched_save)
+
+
+class LiteModeSQLNodesPreparer(SQLNodesPreparer):
+    """SQLNodesPreparer that enables --psql-lite-mode on the hived node."""
     def prepare(self, builder: networks.NetworksBuilder):
         super().prepare(builder)
         for node in builder.prepare_nodes:
-            original_save = node.config.save
-            def patched_save(directory, _orig=original_save):
-                _orig(directory)
-                config_path = Path(directory) / "config.ini"
-                with open(config_path, "a") as f:
-                    f.write("\npsql-lite-mode = 1\n")
-            node.config.save = patched_save
+            _patch_config_for_lite_mode(node.config)
 
 
 def prepare_network_with_1_session(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[networks.NetworksBuilder, Any]:
