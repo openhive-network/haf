@@ -462,7 +462,17 @@ BEGIN
     ALTER EXTENSION hive_fork_manager DROP TABLE hafd.blocks_reversible;
     ALTER EXTENSION hive_fork_manager DROP TABLE hafd.fork;
 
-    -- Now drop the detached tables
+    -- Drop FK from contexts to fork table BEFORE dropping fork,
+    -- otherwise CASCADE propagates and drops the entire contexts table.
+    ALTER TABLE hafd.contexts DROP CONSTRAINT IF EXISTS fk_2_hive_app_context;
+
+    -- Drop forking-related columns from contexts (before dropping tables,
+    -- since fork_id column references hafd.fork)
+    ALTER TABLE hafd.contexts DROP COLUMN IF EXISTS fork_id;
+    ALTER TABLE hafd.contexts DROP COLUMN IF EXISTS is_forking;
+    ALTER TABLE hafd.contexts DROP COLUMN IF EXISTS back_from_fork;
+
+    -- Now drop the detached reversible tables (safe: no remaining FK deps)
     DROP TABLE IF EXISTS hafd.account_operations_reversible CASCADE;
     DROP TABLE IF EXISTS hafd.applied_hardforks_reversible CASCADE;
     DROP TABLE IF EXISTS hafd.operations_reversible CASCADE;
@@ -471,11 +481,6 @@ BEGIN
     DROP TABLE IF EXISTS hafd.accounts_reversible CASCADE;
     DROP TABLE IF EXISTS hafd.blocks_reversible CASCADE;
     DROP TABLE IF EXISTS hafd.fork CASCADE;
-
-    -- Drop forking-related columns from contexts
-    ALTER TABLE hafd.contexts DROP COLUMN IF EXISTS is_forking;
-    ALTER TABLE hafd.contexts DROP COLUMN IF EXISTS back_from_fork;
-    ALTER TABLE hafd.contexts DROP COLUMN IF EXISTS fork_id;
 
     -- Recreate global views to use only irreversible tables
     PERFORM hive.recreate_head_block_views_lite();

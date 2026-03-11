@@ -34,7 +34,8 @@ AS
 $BODY$
 BEGIN
     -- Should fail: cannot enable lite schema on DB with existing blocks
-    PERFORM hive.connect( 'test_lite', 1, 1, 0, TRUE, TRUE );
+    -- Use block_num=0 to avoid FK violation on hive_state.consistent_block
+    PERFORM hive.connect( 'test_lite', 0, 0, 0, TRUE, TRUE );
 END;
 $BODY$
 ;
