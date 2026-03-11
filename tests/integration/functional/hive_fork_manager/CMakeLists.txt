@@ -427,3 +427,7 @@ SET_TESTS_PROPERTIES(
  ADD_SQL_FUNCTIONAL_TEST( lite_schema/push_block_lite_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( lite_schema/global_views_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( lite_schema/context_back_from_fork_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( lite_schema/multiple_blocks_lite_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( lite_schema/multiple_contexts_lite_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( lite_schema/forking_context_rejected_lite_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( lite_schema/end_massive_sync_lite_test.sql )
