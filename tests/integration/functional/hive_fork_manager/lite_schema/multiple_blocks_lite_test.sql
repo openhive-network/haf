@@ -38,7 +38,7 @@ BEGIN
         __signatures = ( ('\xDE' || lpad(i::text, 2, '0'))::bytea, '\xFEED' );
         __account = ( i - 100, 'user' || (i - 100), i );
         __account_operation = ( i - 100, i - 100, 1, hafd.operation_id(i, 0), 1 );
-        __applied_hardforks = (1, i, 1);
+        __applied_hardforks = (1, i, hafd.operation_id(i, 0));
         PERFORM hive.push_block(
               __block
             , ARRAY[ __transaction ]

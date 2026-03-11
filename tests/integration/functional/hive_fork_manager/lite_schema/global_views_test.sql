@@ -25,7 +25,7 @@ BEGIN
     __signatures1 = ( '\xDEED', '\xFEED' );
     __account1 = ( 1, 'alice', 101 );
     __account_operation1 = ( 1, 1, 1, hafd.operation_id(101, 0), 1 );
-    __applied_hardforks1 = (1, 101, 1);
+    __applied_hardforks1 = (1, 101, hafd.operation_id(101, 0));
     PERFORM hive.push_block(
           __block
         , ARRAY[ __transaction1 ]
