@@ -92,7 +92,7 @@ BEGIN
                 SELECT
                        hafd.operation_id_to_block_num(ho.id) as block_num
                      , ho.trx_in_block
-                     , ARRAY_AGG(ho.body_binary ORDER BY op_pos ASC) bodies
+                     , ARRAY_AGG(ho.body::hafd.operation ORDER BY op_pos ASC) bodies
                 FROM hive.operations_view ho
                 WHERE
                     ho.op_type_id <= (SELECT ot.id FROM hafd.operation_types ot WHERE (_include_virtual OR ot.is_virtual = FALSE) ORDER BY ot.id DESC LIMIT 1)

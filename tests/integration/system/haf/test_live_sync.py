@@ -1,6 +1,3 @@
-from sqlalchemy import cast
-from sqlalchemy.dialects.postgresql import JSONB
-
 import test_tools as tt
 
 from haf_local_tools import (
@@ -65,7 +62,7 @@ def test_live_sync(prepared_networks_and_database_12_8):
     assert sorted(block_nums) == [i for i in range(1, expected_dumped_irreversible_block_num+1)]
 
     ops = (session.query(OperationsIrreversibleView)
-           .add_columns(cast(OperationsIrreversibleView.body_binary, JSONB).label('body'), OperationsIrreversibleView.block_num)
+           .add_columns(OperationsIrreversibleView.body_value.label('body'), OperationsIrreversibleView.block_num)
            .filter(OperationsIrreversibleView.block_num == transaction_block_num).all())
     types = [op.body['type'] for op in ops]
 

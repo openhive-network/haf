@@ -28,8 +28,8 @@ def test_application_index_one(haf_node):
     register_index_dependency(haf_node, 'application',
             r"CREATE INDEX IF NOT EXISTS hive_operations_vote_author_permlink ON hafd.operations USING gin"
             r"("
-            r"    jsonb_extract_path_text(body_binary::jsonb, 'value', 'author'),"
-            r"    jsonb_extract_path_text(body_binary::jsonb, 'value', 'permlink')"
+            r"    jsonb_extract_path_text(body_value, 'value', 'author'),"
+            r"    jsonb_extract_path_text(body_value, 'value', 'permlink')"
             r")"
             r"WHERE op_type_id = 0")
     session.commit()

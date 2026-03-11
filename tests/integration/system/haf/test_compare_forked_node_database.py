@@ -46,4 +46,4 @@ def test_compare_forked_node_database(prepared_networks_and_database_12_8_with_2
            .order_by(OperationsIrreversibleView.id).all())
 
     for op, op_ref in zip(ops, ops_ref):
-        assert op.body_binary == op_ref.body_binary
+        assert op.body_value == op_ref.body_value

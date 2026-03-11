@@ -70,7 +70,7 @@ BEGIN
 
     EXECUTE format(
         'INSERT INTO hafd.%s_accounts( name )
-        SELECT hive.get_created_from_account_create_operations( ov.body_binary ) as name
+        SELECT hive.get_created_from_account_create_operations( hafd._operation_from_jsonb(jsonb_build_object(''type'', ot.name, ''value'', ov.body_value)) ) as name
         FROM %s.operations_view ov
         JOIN hafd.operation_types ot ON ov.op_type_id = ot.id
         WHERE

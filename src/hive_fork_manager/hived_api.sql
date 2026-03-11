@@ -89,8 +89,8 @@ BEGIN
     INSERT INTO hafd.blocks_reversible VALUES( _block.*, __fork_id );
     INSERT INTO hafd.transactions_reversible VALUES( ( unnest( _transactions ) ).*, __fork_id );
     INSERT INTO hafd.transactions_multisig_reversible VALUES( ( unnest( _signatures ) ).*, __fork_id );
-    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_type_id, op_pos, body_binary, custom_json_type_id, fork_id)
-      SELECT id, trx_in_block, op_type_id, op_pos, body_binary, custom_json_type_id, __fork_id FROM unnest( _operations );
+    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_type_id, op_pos, body_value, custom_json_type_id, fork_id)
+      SELECT id, trx_in_block, op_type_id, op_pos, body_value, custom_json_type_id, __fork_id FROM unnest( _operations );
     INSERT INTO hafd.accounts_reversible VALUES( ( unnest( _accounts ) ).*, __fork_id );
     INSERT INTO hafd.account_operations_reversible VALUES( ( unnest( _account_operations ) ).*, __fork_id );
     INSERT INTO hafd.applied_hardforks_reversible VALUES( ( unnest( _applied_hardforks ) ).*, __fork_id );
@@ -122,8 +122,8 @@ BEGIN
     INSERT INTO hafd.blocks VALUES( _block.* );
     INSERT INTO hafd.transactions VALUES( ( unnest( _transactions ) ).* );
     INSERT INTO hafd.transactions_multisig VALUES( ( unnest( _signatures ) ).* );
-    INSERT INTO hafd.operations(id, trx_in_block, op_type_id, op_pos, body_binary, custom_json_type_id)
-      SELECT id, trx_in_block, op_type_id, op_pos, body_binary, custom_json_type_id FROM unnest( _operations );
+    INSERT INTO hafd.operations(id, trx_in_block, op_type_id, op_pos, body_value, custom_json_type_id)
+      SELECT id, trx_in_block, op_type_id, op_pos, body_value, custom_json_type_id FROM unnest( _operations );
     INSERT INTO hafd.accounts VALUES( ( unnest( _accounts ) ).* )
       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, block_num = EXCLUDED.block_num;
     INSERT INTO hafd.account_operations VALUES( ( unnest( _account_operations ) ).* );

@@ -67,489 +67,440 @@ BEGIN
         -- posting json metadata exists, json metadata empty
         ( hafd.operation_id(1, 0), 0, 43, 0, '
         {
-            "type": "account_update2_operation",
-            "value": {
-                "account": "test-safari",
-                "json_metadata": "",
-                "posting_json_metadata": "{\"profile\":{\"name\":\"Leonardo Da VinciXX\",\"about\":\"Renaissance man, vegetarian, inventor of the helicopter in 1512 and painter of the Mona Lisa..\",\"website\":\"http://www.davincilife.com/\",\"location\":\"Florence\",\"cover_image\":\"https://ichef.bbci.co.uk/news/912/cpsprodpb/CE63/production/_106653825_be212f00-f8c5-43d2-b4ad-f649e6dc4c1e.jpg\",\"profile_image\":\"https://www.parhlo.com/wp-content/uploads/2016/01/tmp617041537745813506.jpg\"}}",
-                "extensions": []
-            }
-        }            
-        '::jsonb::hafd.operation),
+            "account": "test-safari",
+            "json_metadata": "",
+            "posting_json_metadata": "{\"profile\":{\"name\":\"Leonardo Da VinciXX\",\"about\":\"Renaissance man, vegetarian, inventor of the helicopter in 1512 and painter of the Mona Lisa..\",\"website\":\"http://www.davincilife.com/\",\"location\":\"Florence\",\"cover_image\":\"https://ichef.bbci.co.uk/news/912/cpsprodpb/CE63/production/_106653825_be212f00-f8c5-43d2-b4ad-f649e6dc4c1e.jpg\",\"profile_image\":\"https://www.parhlo.com/wp-content/uploads/2016/01/tmp617041537745813506.jpg\"}}",
+            "extensions": []
+        }
+        '::jsonb),
 
         --empty json and posting metadata
         ( hafd.operation_id(2, 0), 0, 43, 0, '
             {
-                "type": "account_update2_operation",
-                "value": {
-                    "account": "howo",
-                    "json_metadata": "{}",
-                    "posting_json_metadata": "\"\"",
-                    "extensions": []
-                }
-            }'::jsonb::hafd.operation
+                "account": "howo",
+                "json_metadata": "{}",
+                "posting_json_metadata": "\"\"",
+                "extensions": []
+            }'::jsonb
         ),
 
         ( hafd.operation_id(15, 0), 0, 43, 0, '
             {
-                "type": "account_update2_operation",
-                "value": {
-                    "account": "howo",
-                    "json_metadata": "",
-                    "posting_json_metadata": "{}",
-                    "extensions": []
-                }
-            }'::jsonb::hafd.operation
+                "account": "howo",
+                "json_metadata": "",
+                "posting_json_metadata": "{}",
+                "extensions": []
+            }'::jsonb
         ),
 
 
         -- empty posting_metadata, json_metadata exists
         ( hafd.operation_id(3, 0), 0, 43, 0, '
             {
-                "type": "account_update2_operation",
-                "value": {
-                    "account": "bassman077",
-                    "json_metadata": "{\"beneficiaries\":[{\"name\":\"oracle-d\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"},{\"name\":\"spk.beneficiary\",\"label\":\"referrer\",\"weight\":300}]}",
-                    "posting_json_metadata": "",
-                    "extensions": []
-                }
-            }'::jsonb::hafd.operation
+                "account": "bassman077",
+                "json_metadata": "{\"beneficiaries\":[{\"name\":\"oracle-d\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"},{\"name\":\"spk.beneficiary\",\"label\":\"referrer\",\"weight\":300}]}",
+                "posting_json_metadata": "",
+                "extensions": []
+            }'::jsonb
         ),
 
         --posting metadata equal to ""
                 ( hafd.operation_id(4, 0), 0, 43, 0, '
         {
-            "type": "account_update2_operation",
-            "value": {
-                "account": "spscontest",
-                "json_metadata": "",
-                "posting_json_metadata": "\"\"",
-                "extensions": []
-            }
-        }'::jsonb::hafd.operation),
+            "account": "spscontest",
+            "json_metadata": "",
+            "posting_json_metadata": "\"\"",
+            "extensions": []
+        }'::jsonb),
 
         --posting_metadata equal to {}
         ( hafd.operation_id(5, 0), 0, 43, 0, '
-
             {
-                "type": "account_update2_operation",
-                "value": {
-                    "account": "xenomorphosis",
-                    "json_metadata": "",
-                    "posting_json_metadata": "{}",
-                    "extensions": []
-                }
-            }'::jsonb::hafd.operation
+                "account": "xenomorphosis",
+                "json_metadata": "",
+                "posting_json_metadata": "{}",
+                "extensions": []
+            }'::jsonb
         ),
 
     -- account_create operation 
         -- empty json metadata
         ( hafd.operation_id(6, 0), 0, 9, 0, '
             {
-                "type": "account_create_operation",
-                "value": {
-                    "fee": {
-                        "amount": "3000",
-                        "precision": 3,
-                        "nai": "@@000000021"
-                    },
-                    "creator": "slothbuzz",
-                    "new_account_name": "sloth.buzz",
-                    "owner": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM7ASBXDHEqM6mFo5eWWqn3EQUQVozAHo5BykoHzPwjFqnWtErqP",
-                                1
-                            ]
+                "fee": {
+                    "amount": "3000",
+                    "precision": 3,
+                    "nai": "@@000000021"
+                },
+                "creator": "slothbuzz",
+                "new_account_name": "sloth.buzz",
+                "owner": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM7ASBXDHEqM6mFo5eWWqn3EQUQVozAHo5BykoHzPwjFqnWtErqP",
+                            1
                         ]
-                    },
-                    "active": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM6AmN98Z69K4aAAxTeUmddiVK8dTAPtEUULeZMUPZHDMAtz7L46",
-                                1
-                            ]
+                    ]
+                },
+                "active": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM6AmN98Z69K4aAAxTeUmddiVK8dTAPtEUULeZMUPZHDMAtz7L46",
+                            1
                         ]
-                    },
-                    "posting": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM6CiTK6H9PbB97qASd3XRPv27aidddGtaYJ6ygcnArjcty4VAXR",
-                                1
-                            ]
+                    ]
+                },
+                "posting": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM6CiTK6H9PbB97qASd3XRPv27aidddGtaYJ6ygcnArjcty4VAXR",
+                            1
                         ]
-                    },
-                    "memo_key": "STM84bJQnKmM7rMAbsFPXZpQTQi5rBscbpuXkJ6XuVYEundE2Q1yx",
-                    "json_metadata": "{}"
-                }
-            }'::jsonb::hafd.operation),
+                    ]
+                },
+                "memo_key": "STM84bJQnKmM7rMAbsFPXZpQTQi5rBscbpuXkJ6XuVYEundE2Q1yx",
+                "json_metadata": "{}"
+            }'::jsonb),
 
         ( hafd.operation_id(16, 0), 0, 43, 0, '
             {
-                "type": "account_update2_operation",
-                "value": {
-                    "account": "sloth.buzz",
-                    "json_metadata": "",
-                    "posting_json_metadata": "",
-                    "extensions": []
-                }
-            }'::jsonb::hafd.operation
+                "account": "sloth.buzz",
+                "json_metadata": "",
+                "posting_json_metadata": "",
+                "extensions": []
+            }'::jsonb
         ),
 
         -- json metadata equal to  ""
         ( hafd.operation_id(7, 0), 0, 9, 0, '
             {
-                "type": "account_create_operation",
-                "value": {
-                    "fee": {
-                        "amount": "50000",
-                        "precision": 3,
-                        "nai": "@@000000021"
-                    },
-                    "creator": "busy.app",
-                    "new_account_name": "simple-app",
-                    "owner": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM85c4CYb7pzdRZspo8GuRGJoA9fSS5d9Q98u5WmDct5qtjQqnLy",
-                                1
-                            ]
+                "fee": {
+                    "amount": "50000",
+                    "precision": 3,
+                    "nai": "@@000000021"
+                },
+                "creator": "busy.app",
+                "new_account_name": "simple-app",
+                "owner": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM85c4CYb7pzdRZspo8GuRGJoA9fSS5d9Q98u5WmDct5qtjQqnLy",
+                            1
                         ]
-                    },
-                    "active": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM7GizTZAW9ehv1p7CyfNS8JEwVSFZZJWGNY9UZBhNzD3iaWSzAS",
-                                1
-                            ]
+                    ]
+                },
+                "active": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM7GizTZAW9ehv1p7CyfNS8JEwVSFZZJWGNY9UZBhNzD3iaWSzAS",
+                            1
                         ]
-                    },
-                    "posting": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM6d8pyy352Zd5ZFSpajhkL4aUxTDpZXb1XGqA3vJjxLce8UU9w9",
-                                1
-                            ]
+                    ]
+                },
+                "posting": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM6d8pyy352Zd5ZFSpajhkL4aUxTDpZXb1XGqA3vJjxLce8UU9w9",
+                            1
                         ]
-                    },
-                    "memo_key": "STM6NrLK9cwh9aAdouhSL3KhucAXU4ejReXF1vPvCeWXKrisMcoa8",
-                    "json_metadata": "\"\""
-                }
-            }'::jsonb::hafd.operation),
+                    ]
+                },
+                "memo_key": "STM6NrLK9cwh9aAdouhSL3KhucAXU4ejReXF1vPvCeWXKrisMcoa8",
+                "json_metadata": "\"\""
+            }'::jsonb),
 
         --json metadata equal to {}
         ( hafd.operation_id(8, 0), 0, 9, 0, '
             {
-                "type": "account_create_operation",
-                "value": {
-                    "fee": {
-                        "amount": "3000",
-                        "precision": 3,
-                        "nai": "@@000000021"
-                    },
-                    "creator": "dorregonft",
-                    "new_account_name": "dorrebeca2",
-                    "owner": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM5UPaZLPAdRTqhE4ymrRLYsVVxdARwXrjgnsxpgnGYxEZ4jUhwm",
-                                1
-                            ]
+                "fee": {
+                    "amount": "3000",
+                    "precision": 3,
+                    "nai": "@@000000021"
+                },
+                "creator": "dorregonft",
+                "new_account_name": "dorrebeca2",
+                "owner": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM5UPaZLPAdRTqhE4ymrRLYsVVxdARwXrjgnsxpgnGYxEZ4jUhwm",
+                            1
                         ]
-                    },
-                    "active": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM7renP4Af8yCHxmFoHsGzAJRGfdmQ9HKsXuRZQJkJtRxDWCTP5Q",
-                                1
-                            ]
+                    ]
+                },
+                "active": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM7renP4Af8yCHxmFoHsGzAJRGfdmQ9HKsXuRZQJkJtRxDWCTP5Q",
+                            1
                         ]
-                    },
-                    "posting": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM6ockHtuumKLqYRaN4e9PwsML82srpSMTTH6WS3AfsoQEbJFJnn",
-                                1
-                            ]
+                    ]
+                },
+                "posting": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM6ockHtuumKLqYRaN4e9PwsML82srpSMTTH6WS3AfsoQEbJFJnn",
+                            1
                         ]
-                    },
-                    "memo_key": "STM5eK3sJ42oUd6KB5AZU5AHXdxBBK6tcfw69rTx7phnHH3yBmQxk",
-                    "json_metadata": "{}"
-                }
-            }'::jsonb::hafd.operation),
+                    ]
+                },
+                "memo_key": "STM5eK3sJ42oUd6KB5AZU5AHXdxBBK6tcfw69rTx7phnHH3yBmQxk",
+                "json_metadata": "{}"
+            }'::jsonb),
 
         -- json metadata with a non empty value
         ( hafd.operation_id(9, 0), 0, 9, 0, '
             {
-                "type": "account_create_operation",
-                "value": {
-                    "fee": {
-                        "amount": "3000",
-                        "precision": 3,
-                        "nai": "@@000000021"
-                    },
-                    "creator": "wallet.creator",
-                    "new_account_name": "margemnlpz08",
-                    "owner": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM7kstoZ2obmu5PcTYd9oAGeS9At5XcGYTtsL5sWjRM5VYG2bK3M",
-                                1
-                            ]
+                "fee": {
+                    "amount": "3000",
+                    "precision": 3,
+                    "nai": "@@000000021"
+                },
+                "creator": "wallet.creator",
+                "new_account_name": "margemnlpz08",
+                "owner": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM7kstoZ2obmu5PcTYd9oAGeS9At5XcGYTtsL5sWjRM5VYG2bK3M",
+                            1
                         ]
-                    },
-                    "active": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM7xG5iWYDyaKsjj455s4cR32Eud9wGphKr6Tia3SkJvRUqZEyux",
-                                1
-                            ]
+                    ]
+                },
+                "active": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM7xG5iWYDyaKsjj455s4cR32Eud9wGphKr6Tia3SkJvRUqZEyux",
+                            1
                         ]
-                    },
-                    "posting": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM5pLwuFQs9i75tP2oiCDi6GwgRPP2pawq6TAcEVF9ydhNGweNtB",
-                                1
-                            ]
+                    ]
+                },
+                "posting": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM5pLwuFQs9i75tP2oiCDi6GwgRPP2pawq6TAcEVF9ydhNGweNtB",
+                            1
                         ]
-                    },
-                    "memo_key": "STM5Da24pp7ZztCipiUjp32eYxHXiQPDApY43PiMTfs9ivbhBrdgX",
-                    "json_metadata": "{\"profile\":{\"about\":\"This account was instantly created via @hivewallet.app - available for iOS and Android!\",\"website\":\"https://hivewallet.app\"}}"
-                }
-            }'::jsonb::hafd.operation
+                    ]
+                },
+                "memo_key": "STM5Da24pp7ZztCipiUjp32eYxHXiQPDApY43PiMTfs9ivbhBrdgX",
+                "json_metadata": "{\"profile\":{\"about\":\"This account was instantly created via @hivewallet.app - available for iOS and Android!\",\"website\":\"https://hivewallet.app\"}}"
+            }'::jsonb
         ),
 
     -- account_create_with_delegation_operation 
         ( hafd.operation_id(10, 0), 0, 41, 0, '
             {
-                "type": "account_create_with_delegation_operation",
-                "value": {
-                    "fee": {
-                        "amount": "3000",
-                        "precision": 3,
-                        "nai": "@@000000021"
-                    },
-                    "delegation": {
-                        "amount": "0",
-                        "precision": 6,
-                        "nai": "@@000000037"
-                    },
-                    "creator": "genievot",
-                    "new_account_name": "steem.kit",
-                    "owner": {
-                        "weight_threshold": 1,
-                        "account_auths": [
-                            [
-                                "steemconnect",
-                                1
-                            ]
-                        ],
-                        "key_auths": [
-                            [
-                                "STM82hFUKjN2j8KGqQ8rz9YgFAbMrWFuCPkabtrAnUfV2JQshNPLz",
-                                1
-                            ]
+                "fee": {
+                    "amount": "3000",
+                    "precision": 3,
+                    "nai": "@@000000021"
+                },
+                "delegation": {
+                    "amount": "0",
+                    "precision": 6,
+                    "nai": "@@000000037"
+                },
+                "creator": "genievot",
+                "new_account_name": "steem.kit",
+                "owner": {
+                    "weight_threshold": 1,
+                    "account_auths": [
+                        [
+                            "steemconnect",
+                            1
                         ]
-                    },
-                    "active": {
-                        "weight_threshold": 1,
-                        "account_auths": [
-                            [
-                                "steemconnect",
-                                1
-                            ]
-                        ],
-                        "key_auths": [
-                            [
-                                "STM78mV5drS6a5SredobAJXvzZv7tvBo4Cj15rumRcBtMzTWT173a",
-                                1
-                            ]
+                    ],
+                    "key_auths": [
+                        [
+                            "STM82hFUKjN2j8KGqQ8rz9YgFAbMrWFuCPkabtrAnUfV2JQshNPLz",
+                            1
                         ]
-                    },
-                    "posting": {
-                        "weight_threshold": 1,
-                        "account_auths": [
-                            [
-                                "steemconnect",
-                                1
-                            ]
-                        ],
-                        "key_auths": [
-                            [
-                                "STM6ZVzWQvbYSzVpY2PRJHu7QSASVy8aB8xSVcJgx5seYGHPFvJkZ",
-                                1
-                            ]
+                    ]
+                },
+                "active": {
+                    "weight_threshold": 1,
+                    "account_auths": [
+                        [
+                            "steemconnect",
+                            1
                         ]
-                    },
-                    "memo_key": "STM7o1DigBaUEF28n2ap5PeY9Jqhndz3zWmF7xZ3zfRgSqeLaMnyA",
-                    "json_metadata": "{\"owner\":\"genievot\"}",
-                    "extensions": []
-                }
-            }'::jsonb::hafd.operation
+                    ],
+                    "key_auths": [
+                        [
+                            "STM78mV5drS6a5SredobAJXvzZv7tvBo4Cj15rumRcBtMzTWT173a",
+                            1
+                        ]
+                    ]
+                },
+                "posting": {
+                    "weight_threshold": 1,
+                    "account_auths": [
+                        [
+                            "steemconnect",
+                            1
+                        ]
+                    ],
+                    "key_auths": [
+                        [
+                            "STM6ZVzWQvbYSzVpY2PRJHu7QSASVy8aB8xSVcJgx5seYGHPFvJkZ",
+                            1
+                        ]
+                    ]
+                },
+                "memo_key": "STM7o1DigBaUEF28n2ap5PeY9Jqhndz3zWmF7xZ3zfRgSqeLaMnyA",
+                "json_metadata": "{\"owner\":\"genievot\"}",
+                "extensions": []
+            }'::jsonb
         ),
 
     -- account_update2_operation
         ( hafd.operation_id(11, 0), 0, 43, 0, '
             {
-            "type": "account_update2_operation",
-                "value": {
-                    "account": "jte1023",
-                    "json_metadata": "{\"profile\":{\"name\":\"Jeremy\",\"about\":\"               \",\"cover_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg\",\"profile_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg\",\"website\":\" \",\"location\":\"NC, USA\",\"pinned\":\"\",\"version\":2,\"portfolio\":\"enabled\",\"trail\":true,\"collections\":\"enabled\"}}",
-                    "posting_json_metadata": "{\"profile\":{\"name\":\"Jeremy\",\"about\":\"               \",\"cover_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg\",\"profile_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg\",\"website\":\" \",\"location\":\"NC, USA\",\"pinned\":\"\",\"version\":2,\"portfolio\":\"enabled\",\"trail\":true,\"collections\":\"enabled\"}}",
-                    "extensions": []
-                }
-            }'::jsonb::hafd.operation),
+                "account": "jte1023",
+                "json_metadata": "{\"profile\":{\"name\":\"Jeremy\",\"about\":\"               \",\"cover_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg\",\"profile_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg\",\"website\":\" \",\"location\":\"NC, USA\",\"pinned\":\"\",\"version\":2,\"portfolio\":\"enabled\",\"trail\":true,\"collections\":\"enabled\"}}",
+                "posting_json_metadata": "{\"profile\":{\"name\":\"Jeremy\",\"about\":\"               \",\"cover_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/7C47EDD4-517A-414B-8222-4DD365FB301A.jpeg\",\"profile_image\":\"https://files.peakd.com/file/peakd-hive/jte1023/1029B838-2E4B-4892-9E3A-964B9ABB168A.jpeg\",\"website\":\" \",\"location\":\"NC, USA\",\"pinned\":\"\",\"version\":2,\"portfolio\":\"enabled\",\"trail\":true,\"collections\":\"enabled\"}}",
+                "extensions": []
+            }'::jsonb),
 
     -- account_update_operation 
         ( hafd.operation_id(12, 0), 0, 10, 0, '
             {
-                "type": "account_update_operation",
-                "value": {
-                    "account": "adedayoolumide",
-                    "owner": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM6RxYLCcVSFtscWcV9813Ag28bd57fRsGHRB8GRwvo8FoCJ7Rgt",
-                                1
-                            ]
+                "account": "adedayoolumide",
+                "owner": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM6RxYLCcVSFtscWcV9813Ag28bd57fRsGHRB8GRwvo8FoCJ7Rgt",
+                            1
                         ]
-                    },
-                    "active": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM7XDpuiCbACR1s1rX8qdbv3jJ4yA9BksTaCEoAAa4NWM7fjSdCf",
-                                1
-                            ]
+                    ]
+                },
+                "active": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM7XDpuiCbACR1s1rX8qdbv3jJ4yA9BksTaCEoAAa4NWM7fjSdCf",
+                            1
                         ]
-                    },
-                    "posting": {
-                        "weight_threshold": 1,
-                        "account_auths": [
-                            [
-                                "dreply",
-                                1
-                            ],
-                            [
-                                "ecency.app",
-                                1
-                            ],
-                            [
-                                "hive.blog",
-                                1
-                            ],
-                            [
-                                "leofinance",
-                                1
-                            ],
-                            [
-                                "peakd.app",
-                                1
-                            ],
-                            [
-                                "steemauto",
-                                1
-                            ],
-                            [
-                                "threespeak",
-                                1
-                            ]
+                    ]
+                },
+                "posting": {
+                    "weight_threshold": 1,
+                    "account_auths": [
+                        [
+                            "dreply",
+                            1
                         ],
-                        "key_auths": [
-                            [
-                                "STM8BhQrZ8NYG9LXPsDohBtdDhW9ojn2y9Zj8kXcL1EP54Y5jD1BW",
-                                1
-                            ]
+                        [
+                            "ecency.app",
+                            1
+                        ],
+                        [
+                            "hive.blog",
+                            1
+                        ],
+                        [
+                            "leofinance",
+                            1
+                        ],
+                        [
+                            "peakd.app",
+                            1
+                        ],
+                        [
+                            "steemauto",
+                            1
+                        ],
+                        [
+                            "threespeak",
+                            1
                         ]
-                    },
-                    "memo_key": "STM6jwfUrLcnd47hX87JQv6Q78UwUZm7RPAfjqjtQ2K7793Jsjuoy",
-                    "json_metadata": "{\"beneficiaries\":[{\"name\":\"threespeak\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"}]}"
-                }
-            }'::jsonb::hafd.operation),
+                    ],
+                    "key_auths": [
+                        [
+                            "STM8BhQrZ8NYG9LXPsDohBtdDhW9ojn2y9Zj8kXcL1EP54Y5jD1BW",
+                            1
+                        ]
+                    ]
+                },
+                "memo_key": "STM6jwfUrLcnd47hX87JQv6Q78UwUZm7RPAfjqjtQ2K7793Jsjuoy",
+                "json_metadata": "{\"beneficiaries\":[{\"name\":\"threespeak\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"}]}"
+            }'::jsonb),
 
     -- create_claimed_account_operation
         ( hafd.operation_id(13, 0), 0, 23, 0, '
             {
-                "type": "create_claimed_account_operation",
-                "value": {
-                    "creator": "ocdb",
-                    "new_account_name": "eos-polska",
-                    "owner": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM6GnfcJpf1ucXCwGx4DrvxX6n34xTN1T8kcwXe4ypxD3ULMsPCi",
-                                1
-                            ]
+                "creator": "ocdb",
+                "new_account_name": "eos-polska",
+                "owner": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM6GnfcJpf1ucXCwGx4DrvxX6n34xTN1T8kcwXe4ypxD3ULMsPCi",
+                            1
                         ]
-                    },
-                    "active": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM6S2sHwtvgneTwhxcP4r3kWTs5kVzuJzoJ2UbkTPxvQkSfDWnUh",
-                                1
-                            ]
+                    ]
+                },
+                "active": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM6S2sHwtvgneTwhxcP4r3kWTs5kVzuJzoJ2UbkTPxvQkSfDWnUh",
+                            1
                         ]
-                    },
-                    "posting": {
-                        "weight_threshold": 1,
-                        "account_auths": [],
-                        "key_auths": [
-                            [
-                                "STM5C8xrJ8EcCGBNVFz58QMo4SmJGJTE6A74663weGADnC4bXbh6t",
-                                1
-                            ]
+                    ]
+                },
+                "posting": {
+                    "weight_threshold": 1,
+                    "account_auths": [],
+                    "key_auths": [
+                        [
+                            "STM5C8xrJ8EcCGBNVFz58QMo4SmJGJTE6A74663weGADnC4bXbh6t",
+                            1
                         ]
-                    },
-                    "memo_key": "STM7xPdXrHmMe94pbqAeXSYsTYLhRagp3bRLcfu7yY43mu4xZfTT5",
-                    "json_metadata": "{\"beneficiaries\":[{\"name\":\"fractalnode\",\"weight\":300,\"label\":\"referrer\"},{\"name\":\"ocdb\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"}]}",
-                    "extensions": []
-                }
-            }'::jsonb::hafd.operation
+                    ]
+                },
+                "memo_key": "STM7xPdXrHmMe94pbqAeXSYsTYLhRagp3bRLcfu7yY43mu4xZfTT5",
+                "json_metadata": "{\"beneficiaries\":[{\"name\":\"fractalnode\",\"weight\":300,\"label\":\"referrer\"},{\"name\":\"ocdb\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"}]}",
+                "extensions": []
+            }'::jsonb
         ),
 
         -- second update for the same account in the blocks range
         ( hafd.operation_id(14, 0), 0, 43, 0, '
             {
-                "type": "account_update2_operation",
-                "value": {
-                    "account": "bassman077",
-                    "json_metadata": "{\"maleficiaries\":[{\"name\":\"oracle-d\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"},{\"name\":\"spk.beneficiary\",\"label\":\"referrer\",\"weight\":300}]}",
-                    "posting_json_metadata": "",
-                    "extensions": []
-                }
-            }'::jsonb::hafd.operation
+                "account": "bassman077",
+                "json_metadata": "{\"maleficiaries\":[{\"name\":\"oracle-d\",\"weight\":100,\"label\":\"creator\"},{\"name\":\"hiveonboard\",\"weight\":100,\"label\":\"provider\"},{\"name\":\"spk.beneficiary\",\"label\":\"referrer\",\"weight\":300}]}",
+                "posting_json_metadata": "",
+                "extensions": []
+            }'::jsonb
         )
 
 
