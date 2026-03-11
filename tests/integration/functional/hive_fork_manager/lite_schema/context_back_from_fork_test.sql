@@ -34,19 +34,20 @@ $BODY$
 DECLARE
     __block hafd.blocks%ROWTYPE;
 BEGIN
+    -- Insert a producer account first (needed for FK on blocks.producer_account_id in lite mode)
     -- Push two blocks
-    __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
+    __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
     PERFORM hive.push_block(
           __block
         , ARRAY[]::hafd.transactions[]
         , ARRAY[]::hafd.transactions_multisig[]
         , ARRAY[]::hafd.operations[]
-        , ARRAY[]::hafd.accounts[]
+        , ARRAY[ ROW(1, 'producer', 101)::hafd.accounts ]
         , ARRAY[]::hafd.account_operations[]
         , ARRAY[]::hafd.applied_hardforks[]
     );
 
-    __block = ( 102, '\xBADE', '\xBADD', '2016-06-22 19:10:26-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
+    __block = ( 102, '\xBADE', '\xBADD', '2016-06-22 19:10:26-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
     PERFORM hive.push_block(
           __block
         , ARRAY[]::hafd.transactions[]

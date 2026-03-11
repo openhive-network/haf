@@ -31,7 +31,7 @@ BEGIN
     -- Push 3 blocks sequentially to verify accumulation in irreversible tables
     FOR i IN 101..103 LOOP
         __block = ( i, decode('BA' || lpad(to_hex(i), 4, '0'), 'hex'), decode('CA' || lpad(to_hex(i-1), 4, '0'), 'hex'),
-                    ('2016-06-22 19:10:25-07'::timestamp + (i * interval '3 seconds')), 5, '\x4007', E'[]', '\x2157',
+                    ('2016-06-22 19:10:25-07'::timestamp + (i * interval '3 seconds')), i - 100, '\x4007', E'[]', '\x2157',
                     'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
         __transaction = ( i, 0::SMALLINT, decode('DE' || lpad(to_hex(i), 4, '0'), 'hex'), i, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
         __operation = ( hafd.operation_id(i, 0), 0, 1, 0, ('{"type":"system_warning_operation","value":{"message":"BLOCK ' || i || '"}}') :: jsonb :: hafd.operation, NULL );
