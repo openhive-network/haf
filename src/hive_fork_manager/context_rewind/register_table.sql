@@ -218,12 +218,26 @@ BEGIN
         ASSERT __context_id IS NOT NULL, 'There is no context %', _context_name;
         ASSERT __registered_table_id IS NOT NULL;
 
-        -- Set up table inheritance (still needed for context views)
+        -- Set up table inheritance if not already inherited (still needed for context views).
+        -- When CREATE TABLE ... INHERITS(ctx) is used, inheritance is already set up
+        -- by the time the event trigger fires register_table.
         DECLARE
             __context_schema TEXT;
+            __already_inherits BOOLEAN;
         BEGIN
             SELECT hc.schema INTO __context_schema FROM hafd.contexts hc WHERE hc.id = __context_id;
-            EXECUTE format( 'ALTER TABLE %I.%I INHERIT %I.%I', lower(_table_schema), lower(_table_name), __context_schema, _context_name );
+            SELECT EXISTS(
+                SELECT 1 FROM pg_catalog.pg_inherits pgi
+                JOIN pg_class child ON child.oid = pgi.inhrelid
+                JOIN pg_namespace child_ns ON child_ns.oid = child.relnamespace
+                JOIN pg_class parent ON parent.oid = pgi.inhparent
+                JOIN pg_namespace parent_ns ON parent_ns.oid = parent.relnamespace
+                WHERE child_ns.nspname = lower(_table_schema) AND child.relname = lower(_table_name)
+                  AND parent_ns.nspname = __context_schema AND parent.relname = _context_name
+            ) INTO __already_inherits;
+            IF NOT __already_inherits THEN
+                EXECUTE format( 'ALTER TABLE %I.%I INHERIT %I.%I', lower(_table_schema), lower(_table_name), __context_schema, _context_name );
+            END IF;
         END;
 
         RETURN;
