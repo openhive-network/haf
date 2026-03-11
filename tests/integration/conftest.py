@@ -63,21 +63,24 @@ class SQLNodesPreparer(NodesPreparer):
         return builder.nodes[idx]
 
 
-def _patch_config_for_lite_mode(config):
-    """Patch a NodeConfig instance's save() to append psql-lite-mode = 1.
+from test_tools.__private.process.node_config import NodeConfig
 
-    Uses object.__setattr__ to bypass pydantic's __setattr__ protection,
-    placing the patched method directly in the instance's __dict__ where
-    it shadows the class method during attribute lookup.
-    """
-    original_save = config.save
-    def patched_save(directory):
-        original_save(directory)
+# Track which NodeConfig instances need psql-lite-mode appended to config.ini.
+# msgspec.Struct blocks all non-field attribute assignment on instances (even via
+# object.__setattr__), so we patch NodeConfig.save at the CLASS level and use this
+# set of instance ids to selectively append the flag.
+_lite_mode_config_ids: set = set()
+_original_node_config_save = NodeConfig.save
+
+def _save_with_lite_mode(self, directory):
+    _original_node_config_save(self, directory)
+    if id(self) in _lite_mode_config_ids:
         config_path = Path(directory) / "config.ini"
         if config_path.exists():
             with open(config_path, "a") as f:
                 f.write("\npsql-lite-mode = 1\n")
-    object.__setattr__(config, 'save', patched_save)
+
+NodeConfig.save = _save_with_lite_mode
 
 
 class LiteModeSQLNodesPreparer(SQLNodesPreparer):
@@ -85,7 +88,7 @@ class LiteModeSQLNodesPreparer(SQLNodesPreparer):
     def prepare(self, builder: networks.NetworksBuilder):
         super().prepare(builder)
         for node in builder.prepare_nodes:
-            _patch_config_for_lite_mode(node.config)
+            _lite_mode_config_ids.add(id(node.config))
 
 
 def prepare_network_with_1_session(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[networks.NetworksBuilder, Any]:
