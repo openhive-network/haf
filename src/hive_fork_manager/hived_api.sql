@@ -473,6 +473,9 @@ BEGIN
     ALTER EXTENSION hive_fork_manager DROP TABLE hafd.accounts_reversible;
     ALTER EXTENSION hive_fork_manager DROP TABLE hafd.blocks_reversible;
     ALTER EXTENSION hive_fork_manager DROP TABLE hafd.fork;
+    -- Also detach the fork sequence (created by BIGSERIAL) — otherwise dropping
+    -- the table fails because the owned sequence is still extension-managed.
+    ALTER EXTENSION hive_fork_manager DROP SEQUENCE hafd.fork_id_seq;
 
     -- Drop the detached reversible tables. No CASCADE needed: views already
     -- recreated, FK constraints already dropped.
