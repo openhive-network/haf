@@ -12,16 +12,10 @@ BEGIN
     -- Connect in full mode first
     PERFORM hive.connect( 'test_full', 0, 0, 0, FALSE, FALSE );
 
-    -- Push a block to get data in the DB (include a producer account to satisfy FK)
-    PERFORM hive.push_block(
-          ( 1, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )::hafd.blocks
-        , ARRAY[]::hafd.transactions[]
-        , ARRAY[]::hafd.transactions_multisig[]
-        , ARRAY[]::hafd.operations[]
-        , ARRAY[ ROW(1, 'producer', 1)::hafd.accounts ]
-        , ARRAY[]::hafd.account_operations[]
-        , ARRAY[]::hafd.applied_hardforks[]
-    );
+    -- Insert block directly into irreversible table (simulating massive sync)
+    INSERT INTO hafd.accounts(id, name, block_num) VALUES (1, 'producer', 1);
+    INSERT INTO hafd.blocks VALUES
+        ( 1, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 1, '\x4007', E'[]', '\x2157', 'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
     PERFORM hive.end_massive_sync( 1 );
     PERFORM hive.set_irreversible( 1 );
 END;
