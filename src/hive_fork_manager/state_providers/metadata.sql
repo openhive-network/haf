@@ -77,7 +77,7 @@ BEGIN
 
                 WITH select_metadata AS MATERIALIZED (
                 SELECT
-                    ov.body_binary,
+                    ov.body,
                     ov.id,
                     ov.block_num
                 FROM
@@ -96,7 +96,7 @@ BEGIN
                     SELECT
                         (hive.get_metadata
                         (
-                            sm.body_binary,
+                            sm.body::hafd.operation,
                             CASE __state
                                 WHEN  1 THEN TRUE
                                 WHEN  0 THEN COALESCE( ( SELECT block_num < sm.block_num FROM hafd.applied_hardforks WHERE hardfork_num = 21 ), FALSE )

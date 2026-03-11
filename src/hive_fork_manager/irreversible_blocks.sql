@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
     trx_in_block smallint NOT NULL,
     op_type_id smallint NOT NULL,
     op_pos integer NOT NULL,
-    body_binary hafd.operation  DEFAULT NULL,
+    body_value JSONB DEFAULT NULL,
     custom_json_type_id SMALLINT DEFAULT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 );

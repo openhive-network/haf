@@ -35,8 +35,8 @@ BEGIN
 
     INSERT INTO hafd.operations
     VALUES
-           ( hafd.operation_id(1, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"ZERO OPERATION"}}' :: jsonb :: hafd.operation )
-         , ( hafd.operation_id(2, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"ONE OPERATION"}}' :: jsonb :: hafd.operation )
+           ( hafd.operation_id(1, 0), 0, 1, 0, '{"message":"ZERO OPERATION"}'::jsonb )
+         , ( hafd.operation_id(2, 0), 0, 1, 0, '{"message":"ONE OPERATION"}'::jsonb )
     ;
 
     INSERT INTO hafd.accounts
