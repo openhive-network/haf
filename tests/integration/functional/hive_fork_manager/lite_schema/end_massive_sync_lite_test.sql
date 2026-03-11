@@ -29,15 +29,15 @@ DECLARE
 BEGIN
     -- Push 3 blocks, then end_massive_sync and set_irreversible
     FOR i IN 101..103 LOOP
-        __block = ( i, ('\xBA' || lpad(i::text, 2, '0'))::bytea, ('\xCA' || lpad((i-1)::text, 2, '0'))::bytea,
+        __block = ( i, decode('BA' || lpad(to_hex(i), 4, '0'), 'hex'), decode('CA' || lpad(to_hex(i-1), 4, '0'), 'hex'),
                     ('2016-06-22 19:10:25-07'::timestamp + (i * interval '3 seconds')), 5, '\x4007', E'[]', '\x2157',
                     'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
-        __transaction = ( i, 0::SMALLINT, ('\xDE' || lpad(i::text, 2, '0'))::bytea, i, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
+        __transaction = ( i, 0::SMALLINT, decode('DE' || lpad(to_hex(i), 4, '0'), 'hex'), i, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
         __operation = ( hafd.operation_id(i, 0), 0, 1, 0, '{"type":"system_warning_operation","value":{"message":"BLOCK"}}' :: jsonb :: hafd.operation, NULL );
-        __signatures = ( ('\xDE' || lpad(i::text, 2, '0'))::bytea, '\xFEED' );
+        __signatures = ( decode('DE' || lpad(to_hex(i), 4, '0'), 'hex'), '\xFEED' );
         __account = ( i - 100, 'user' || (i - 100), i );
         __account_operation = ( i - 100, i - 100, 1, hafd.operation_id(i, 0), 1 );
-        __applied_hardforks = (1, i, hafd.operation_id(i, 0));
+        __applied_hardforks = (i - 100, i, hafd.operation_id(i, 0));
         PERFORM hive.push_block(
               __block
             , ARRAY[ __transaction ]
