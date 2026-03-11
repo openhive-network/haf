@@ -184,7 +184,7 @@ SELECT t.id,
        t.op_type_id,
        t.timestamp,
        t.body_value,
-       jsonb_build_object('type', ot.name, 'value', t.body_value) AS body,
+       jsonb_build_object('type', replace(ot.name, 'hive::protocol::', ''), 'value', t.body_value) AS body,
        t.custom_json_type_id
 FROM
 (
@@ -234,7 +234,7 @@ SELECT t.id,
        t.op_pos,
        t.op_type_id,
        t.body_value,
-       jsonb_build_object('type', ot.name, 'value', t.body_value) AS body,
+       jsonb_build_object('type', replace(ot.name, 'hive::protocol::', ''), 'value', t.body_value) AS body,
        t.custom_json_type_id
 FROM
 (
@@ -351,7 +351,7 @@ CREATE OR REPLACE VIEW hive.irreversible_operations_view_extended AS
         op.op_type_id,
         b.created_at timestamp,
         op.body_value,
-        jsonb_build_object('type', ot.name, 'value', op.body_value) AS body,
+        jsonb_build_object('type', replace(ot.name, 'hive::protocol::', ''), 'value', op.body_value) AS body,
         op.custom_json_type_id
     FROM hafd.operations op
     JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(op.id)
@@ -365,7 +365,7 @@ CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
         op.op_pos,
         op.op_type_id,
         op.body_value,
-        jsonb_build_object('type', ot.name, 'value', op.body_value) AS body,
+        jsonb_build_object('type', replace(ot.name, 'hive::protocol::', ''), 'value', op.body_value) AS body,
         op.custom_json_type_id
     FROM hafd.operations op
     JOIN hafd.operation_types ot ON ot.id = op.op_type_id;
@@ -401,7 +401,7 @@ BEGIN
                hafd.operation_id_to_block_num( op.id ) as block_num,
                op.trx_in_block, op.op_pos, op.op_type_id,
                op.body_value,
-               jsonb_build_object('type', ot.name, 'value', op.body_value) AS body,
+               jsonb_build_object('type', replace(ot.name, 'hive::protocol::', ''), 'value', op.body_value) AS body,
                op.custom_json_type_id
         FROM hafd.operations op
         JOIN hafd.operation_types ot ON ot.id = op.op_type_id;
@@ -412,7 +412,7 @@ BEGIN
                op.trx_in_block, op.op_pos, op.op_type_id,
                b.created_at timestamp,
                op.body_value,
-               jsonb_build_object('type', ot.name, 'value', op.body_value) AS body,
+               jsonb_build_object('type', replace(ot.name, 'hive::protocol::', ''), 'value', op.body_value) AS body,
                op.custom_json_type_id
         FROM hafd.operations op
         JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(op.id)

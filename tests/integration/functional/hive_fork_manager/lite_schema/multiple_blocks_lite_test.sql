@@ -34,7 +34,7 @@ BEGIN
                     ('2016-06-22 19:10:25-07'::timestamp + (i * interval '3 seconds')), i - 100, '\x4007', E'[]', '\x2157',
                     'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
         __transaction = ( i, 0::SMALLINT, decode('DE' || lpad(to_hex(i), 4, '0'), 'hex'), i, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
-        __operation = ( hafd.operation_id(i, 0), 0, 1, 0, ('{"type":"system_warning_operation","value":{"message":"BLOCK ' || i || '"}}') :: jsonb :: hafd.operation, NULL );
+        __operation = ( hafd.operation_id(i, 0), 0, 1, 0, ('{"message":"BLOCK ' || i || '"}')::jsonb, NULL );
         __signatures = ( decode('DE' || lpad(to_hex(i), 4, '0'), 'hex'), '\xFEED' );
         __account = ( i - 100, 'user' || (i - 100), i );
         __account_operation = ( i - 100, i - 100, 1, hafd.operation_id(i, 0), 1 );
