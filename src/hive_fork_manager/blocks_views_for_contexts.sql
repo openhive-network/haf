@@ -437,7 +437,7 @@ BEGIN
                     t.op_type_id,
                     t.timestamp,
                     t.body_value,
-                    jsonb_build_object(''type'', ot.name, ''value'', t.body_value) AS body,
+                    jsonb_build_object(''type'', replace(ot.name, ''hive::protocol::'', ''''), ''value'', t.body_value) AS body,
                     t.custom_json_type_id
                   FROM %s.context_data_view c,
                   LATERAL
@@ -492,7 +492,7 @@ BEGIN
                         t.op_type_id,
                         t.timestamp,
                         t.body_value,
-                        jsonb_build_object(''type'', ot.name, ''value'', t.body_value) AS body,
+                        jsonb_build_object(''type'', replace(ot.name, ''hive::protocol::'', ''''), ''value'', t.body_value) AS body,
                         t.custom_json_type_id
                     FROM %s.context_data_view c,
                     LATERAL
@@ -542,7 +542,7 @@ BEGIN
                     t.op_pos,
                     t.op_type_id,
                     t.body_value,
-                    jsonb_build_object(''type'', ot.name, ''value'', t.body_value) AS body,
+                    jsonb_build_object(''type'', replace(ot.name, ''hive::protocol::'', ''''), ''value'', t.body_value) AS body,
                     t.custom_json_type_id
                   FROM %s.context_data_view c,
                   LATERAL
@@ -588,7 +588,7 @@ BEGIN
                     t.op_pos,
                     t.op_type_id,
                     t.body_value,
-                    jsonb_build_object(''type'', ot.name, ''value'', t.body_value) AS body,
+                    jsonb_build_object(''type'', replace(ot.name, ''hive::protocol::'', ''''), ''value'', t.body_value) AS body,
                     t.custom_json_type_id
                   FROM %s.context_data_view c,
                   LATERAL
@@ -635,7 +635,7 @@ EXECUTE format(
             ho.op_type_id,
             b.created_at timestamp,
             ho.body_value,
-            jsonb_build_object(''type'', ot.name, ''value'', ho.body_value) AS body,
+            jsonb_build_object(''type'', replace(ot.name, ''hive::protocol::'', ''''), ''value'', ho.body_value) AS body,
             ho.custom_json_type_id
         FROM hafd.operations ho
         JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
@@ -669,7 +669,7 @@ EXECUTE format(
             ho.op_pos,
             ho.op_type_id,
             ho.body_value,
-            jsonb_build_object(''type'', ot.name, ''value'', ho.body_value) AS body,
+            jsonb_build_object(''type'', replace(ot.name, ''hive::protocol::'', ''''), ''value'', ho.body_value) AS body,
             ho.custom_json_type_id
         FROM hafd.operations ho
         JOIN hafd.operation_types ot ON ot.id = ho.op_type_id
