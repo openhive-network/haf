@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS hafd.hive_state (
       state hafd.sync_state NOT NULL DEFAULT 'START',
       pruning integer NOT NULL DEFAULT 0,
       lite_mode boolean NOT NULL DEFAULT FALSE,
+      lite_schema boolean NOT NULL DEFAULT FALSE,
       CONSTRAINT pk_irreversible_data PRIMARY KEY ( id )
 );
 

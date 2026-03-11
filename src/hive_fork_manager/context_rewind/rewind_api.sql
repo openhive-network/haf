@@ -24,35 +24,61 @@ BEGIN
     -- during initialization by hived it is changed to 0
     SELECT MIN(id) INTO __min_events_id FROM hafd.events_queue;
 
-    EXECUTE format( 'CREATE TABLE %I.%I( hive_rowid BIGSERIAL )', _schema, _name );
-    INSERT INTO hafd.contexts(
-          name
-        , current_block_num
-        , irreversible_block
-        , events_id
-        , fork_id
-        , owner
-        , is_forking
-        , last_active_at
-        , schema
-        , baseclass_id
-        , stages
-    )
-    VALUES(
-           _name
-          , 0
-          , _irreversible_block
-          , __min_events_id
-          , _fork_id
-          , current_user
-          , _is_forking
-          , NOW()
-          , _schema
-          , ( _schema || '.' || _name )::regclass
-          , _stages
-    )
-    RETURNING id INTO __new_context_id
-    ;
+    IF hive.is_lite_schema() THEN
+        EXECUTE format( 'CREATE TABLE %I.%I()', _schema, _name );
+        INSERT INTO hafd.contexts(
+              name
+            , current_block_num
+            , irreversible_block
+            , events_id
+            , owner
+            , last_active_at
+            , schema
+            , baseclass_id
+            , stages
+        )
+        VALUES(
+               _name
+              , 0
+              , _irreversible_block
+              , __min_events_id
+              , current_user
+              , NOW()
+              , _schema
+              , ( _schema || '.' || _name )::regclass
+              , _stages
+        )
+        RETURNING id INTO __new_context_id;
+    ELSE
+        EXECUTE format( 'CREATE TABLE %I.%I( hive_rowid BIGSERIAL )', _schema, _name );
+        INSERT INTO hafd.contexts(
+              name
+            , current_block_num
+            , irreversible_block
+            , events_id
+            , fork_id
+            , owner
+            , is_forking
+            , last_active_at
+            , schema
+            , baseclass_id
+            , stages
+        )
+        VALUES(
+               _name
+              , 0
+              , _irreversible_block
+              , __min_events_id
+              , _fork_id
+              , current_user
+              , _is_forking
+              , NOW()
+              , _schema
+              , ( _schema || '.' || _name )::regclass
+              , _stages
+        )
+        RETURNING id INTO __new_context_id;
+    END IF;
 
     INSERT INTO hafd.contexts_attachment( context_id, is_attached, owner )
     VALUES( __new_context_id, _is_attached, current_user );
@@ -127,6 +153,15 @@ DECLARE
     __registerd_table_schema TEXT;
     __registerd_table_name TEXT;
 BEGIN
+    IF hive.is_lite_mode() THEN
+        -- In lite mode, no shadow tables or fork rewind needed.
+        -- Just update the context block number if needed.
+        UPDATE hafd.contexts
+        SET current_block_num = _block_num_before_fork
+        WHERE name = _context AND current_block_num > _block_num_before_fork;
+        RETURN;
+    END IF;
+
     -- we need a flag for back_from_fork to returns from triggers immediatly
     -- we cannot use ALTER TABLE DISABLE TRIGGERS because DDL event trigger cause an error:
     -- Cannot ALTER TABLE "table" because it has pending trigger events, but only when origin tables have contstraints
@@ -178,16 +213,18 @@ BEGIN
 
     PERFORM hive.context_back_from_fork( _context, __current_irreversible_block );
 
-    PERFORM
-    hive.remove_obsolete_operations( hrt.shadow_table_name, __current_block_num )
-            FROM hafd.registered_tables hrt
-            JOIN hafd.contexts hc ON hc.id = hrt.context_id
-            WHERE hc.name = _context
-            ORDER BY hrt.id;
+    IF NOT hive.is_lite_schema() THEN
+        PERFORM
+        hive.remove_obsolete_operations( hrt.shadow_table_name, __current_block_num )
+                FROM hafd.registered_tables hrt
+                JOIN hafd.contexts hc ON hc.id = hrt.context_id
+                WHERE hc.name = _context
+                ORDER BY hrt.id;
 
-    PERFORM hive.detach_table( hrt.origin_table_schema, hrt.origin_table_name )
-    FROM hafd.registered_tables hrt
-    WHERE hrt.context_id = __context_id;
+        PERFORM hive.detach_table( hrt.origin_table_schema, hrt.origin_table_name )
+        FROM hafd.registered_tables hrt
+        WHERE hrt.context_id = __context_id;
+    END IF;
 
     UPDATE hafd.contexts
     SET events_id = hive.unreachable_event_id()
@@ -225,9 +262,11 @@ BEGIN
     END IF;
 
 
-    PERFORM hive.attach_table( hrt.origin_table_schema, hrt.origin_table_name, __context_id )
-    FROM hafd.registered_tables hrt
-    WHERE hrt.context_id = __context_id;
+    IF NOT hive.is_lite_schema() THEN
+        PERFORM hive.attach_table( hrt.origin_table_schema, hrt.origin_table_name, __context_id )
+        FROM hafd.registered_tables hrt
+        WHERE hrt.context_id = __context_id;
+    END IF;
 
     UPDATE hafd.contexts
     SET
@@ -264,12 +303,14 @@ BEGIN
                             , last_active_at = NOW()
     WHERE name = _context;
 
-    PERFORM
-    hive.remove_obsolete_operations( hrt.shadow_table_name, _block_num )
-            FROM hafd.registered_tables hrt
-            JOIN hafd.contexts hc ON hc.id = hrt.context_id
-            WHERE hc.name = _context
-            ORDER BY hrt.id;
+    IF NOT hive.is_lite_schema() THEN
+        PERFORM
+        hive.remove_obsolete_operations( hrt.shadow_table_name, _block_num )
+                FROM hafd.registered_tables hrt
+                JOIN hafd.contexts hc ON hc.id = hrt.context_id
+                WHERE hc.name = _context
+                ORDER BY hrt.id;
+    END IF;
 END;
 $BODY$
 ;

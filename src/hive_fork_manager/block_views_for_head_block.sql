@@ -373,3 +373,64 @@ CREATE OR REPLACE VIEW hive.irreversible_operations_view AS
 
 CREATE OR REPLACE VIEW hive.irreversible_transactions_multisig_view AS SELECT * FROM hafd.transactions_multisig;
 CREATE OR REPLACE VIEW hive.irreversible_applied_hardforks_view AS SELECT * FROM hafd.applied_hardforks;
+
+-- Recreate global head-block views as simple selects from irreversible tables only.
+-- Called by enable_lite_schema() when reversible tables are dropped.
+CREATE OR REPLACE FUNCTION hive.recreate_head_block_views_lite()
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    CREATE OR REPLACE VIEW hive.blocks_view AS
+        SELECT num, hash, prev, created_at, producer_account_id,
+               transaction_merkle_root, extensions, witness_signature, signing_key,
+               hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares,
+               total_reward_fund_hive, virtual_supply, current_supply,
+               current_hbd_supply, dhf_interval_ledger
+        FROM hafd.blocks;
+
+    CREATE OR REPLACE VIEW hive.transactions_view AS
+        SELECT block_num, trx_in_block, trx_hash, ref_block_num,
+               ref_block_prefix, expiration, signature
+        FROM hafd.transactions;
+
+    CREATE OR REPLACE VIEW hive.operations_view AS
+        SELECT op.id,
+               hafd.operation_id_to_block_num( op.id ) as block_num,
+               op.trx_in_block, op.op_pos, op.op_type_id,
+               op.body_binary as body_binary,
+               op.body_binary::jsonb AS body,
+               op.custom_json_type_id
+        FROM hafd.operations op;
+
+    CREATE OR REPLACE VIEW hive.operations_view_extended AS
+        SELECT op.id,
+               hafd.operation_id_to_block_num( op.id ) as block_num,
+               op.trx_in_block, op.op_pos, op.op_type_id,
+               b.created_at timestamp,
+               op.body_binary as body_binary,
+               op.body_binary::jsonb AS body,
+               op.custom_json_type_id
+        FROM hafd.operations op
+        JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(op.id);
+
+    CREATE OR REPLACE VIEW hive.accounts_view AS
+        SELECT id, name FROM hafd.accounts;
+
+    CREATE OR REPLACE VIEW hive.account_operations_view AS
+        SELECT account_id, transacting_account_id, account_op_seq_no,
+               operation_id, op_type_id,
+               hafd.operation_id_to_block_num( operation_id ) as block_num
+        FROM hafd.account_operations;
+
+    CREATE OR REPLACE VIEW hive.transactions_multisig_view AS
+        SELECT trx_hash, signature FROM hafd.transactions_multisig;
+
+    CREATE OR REPLACE VIEW hive.applied_hardforks_view AS
+        SELECT hardfork_num, block_num, hardfork_vop_id
+        FROM hafd.applied_hardforks;
+END;
+$BODY$
+;

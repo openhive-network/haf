@@ -306,6 +306,7 @@ public:
     , bool     _psql_enable_filter
     , uint32_t _psql_wal_queue_depth
     , bool     _psql_lite_mode
+    , bool     _psql_lite_schema
   )
   :   db_url{url},
       chain_db{_chain_db},
@@ -317,6 +318,7 @@ public:
       psql_first_block( _psql_first_block ),
       psql_pruning_tail_size( _pruning_tail_size ),
       _lite_mode( _psql_lite_mode ),
+      _lite_schema( _psql_lite_schema ),
       filter( _psql_enable_filter, op_extractor ),
       _indexation_state( _main_plugin, _chain_db, url, app,
                          _psql_transactions_threads_number,
@@ -403,6 +405,7 @@ public:
   uint32_t psql_pruning_tail_size = -1;
   bool     psql_dump_account_operations = true;
   bool     _lite_mode = false;
+  bool     _lite_schema = false;
 
   bool replay_blocklog = false;
 
@@ -564,7 +567,8 @@ void sql_serializer_plugin_impl::inform_hfm_about_starting() {
                                + "',"s + std::to_string( chain_db.head_block_num() ) + "::INTEGER"
                                + ","s + std::to_string( psql_first_block ) + "::INTEGER"s
                                + ","s + std::to_string( psql_pruning_tail_size ) + "::INTEGER"s
-                               + ","s + (_lite_mode ? "TRUE" : "FALSE") + "::BOOLEAN)"s;
+                               + ","s + (_lite_mode ? "TRUE" : "FALSE") + "::BOOLEAN"s
+                               + ","s + (_lite_schema ? "TRUE" : "FALSE") + "::BOOLEAN)"s;
     tx.exec( CONNECT_QUERY );
     return data_processing_status();
   };
@@ -971,6 +975,7 @@ void sql_serializer_plugin::set_program_options(appbase::options_description &cl
                     ("psql-wal-queue-depth", appbase::bpo::value<uint32_t>()->default_value( 200 ), "maximum WAL commands queued before blocking (default: 200). During live sync there are ~2 commands per block, so 200 ~ 100 blocks ~ 5 minutes")
                     ("psql-prune-blocks", appbase::bpo::value<uint32_t>()->default_value( 0 ), "number of recent blocks to keep; older processed blocks are pruned. 0 disables pruning")
                     ("psql-lite-mode", appbase::bpo::bool_switch()->default_value( false ), "enable lite mode: only irreversible blocks are pushed to the database, no fork handling")
+                    ("psql-lite-schema", appbase::bpo::bool_switch()->default_value( false ), "enable lite schema: permanently strip reversible tables, fork table, and forking columns from the database (implies --psql-lite-mode)")
                     ;
 }
 
@@ -1005,7 +1010,8 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     , options["psql-prune-blocks"].as<uint32_t>()
     , options["psql-enable-filter"].as<bool>()
     , options["psql-wal-queue-depth"].as<uint32_t>()
-    , options["psql-lite-mode"].as<bool>()
+    , options["psql-lite-mode"].as<bool>() || options["psql-lite-schema"].as<bool>()
+    , options["psql-lite-schema"].as<bool>()
   );
 
   // settings

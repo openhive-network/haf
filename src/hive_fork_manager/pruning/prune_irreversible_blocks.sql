@@ -26,6 +26,20 @@ BEGIN
 END;
 $BODY$;
 
+CREATE OR REPLACE FUNCTION hive.is_lite_schema()
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+DECLARE
+    __lite_schema BOOLEAN := FALSE;
+BEGIN
+    SELECT COALESCE( lite_schema, FALSE ) INTO __lite_schema FROM hafd.hive_state;
+    RETURN __lite_schema;
+END;
+$BODY$;
+
 
 CREATE OR REPLACE FUNCTION hive.prune_blocks_data( _tail_size INTEGER  = 1 )
     RETURNS void

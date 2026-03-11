@@ -63,8 +63,21 @@ class SQLNodesPreparer(NodesPreparer):
         return builder.nodes[idx]
 
 
+class LiteModeSQLNodesPreparer(SQLNodesPreparer):
+    """SQLNodesPreparer that enables --psql-lite-mode on the hived node."""
+    def prepare(self, builder: networks.NetworksBuilder):
+        super().prepare(builder)
+        for node in builder.prepare_nodes:
+            node.config.psql_lite_mode = True
+
+
 def prepare_network_with_1_session(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[networks.NetworksBuilder, Any]:
     preparer = SQLNodesPreparer(database)
+    return run_whole_network(architecture, block_log_directory_name, time_offsets, preparer), preparer.sessions[0]
+
+
+def prepare_network_with_1_session_lite_mode(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[networks.NetworksBuilder, Any]:
+    preparer = LiteModeSQLNodesPreparer(database)
     return run_whole_network(architecture, block_log_directory_name, time_offsets, preparer), preparer.sessions[0]
 
 def prepare_network_with_1_session_from_115(database, architecture: networks.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[networks.NetworksBuilder, Any]:
@@ -119,6 +132,24 @@ def prepared_networks_and_database_12_8(database) -> Tuple[networks.NetworksBuil
     architecture = networks.NetworksArchitecture()
     architecture.load(config)
     yield prepare_network_with_1_session(database, architecture, create_block_log_directory_name('block_log_12_8'), None)
+
+@pytest.fixture()
+def prepared_networks_and_database_12_8_lite_mode(database) -> Tuple[networks.NetworksBuilder, Any]:
+    config = {
+        "networks": [
+                        {
+                            "InitNode"     : True,
+                            "WitnessNodes" :[12]
+                        },
+                        {
+                            "ApiNode"      : { "Active": True, "Prepare": True },
+                            "WitnessNodes" :[8]
+                        }
+                    ]
+    }
+    architecture = networks.NetworksArchitecture()
+    architecture.load(config)
+    yield prepare_network_with_1_session_lite_mode(database, architecture, create_block_log_directory_name('block_log_12_8'), None)
 
 @pytest.fixture()
 def prepared_networks_and_database_12_8_from_115(database) -> Tuple[networks.NetworksBuilder, Any]:

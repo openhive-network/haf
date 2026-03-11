@@ -243,12 +243,19 @@ AS
 $BODY$
 DECLARE
     -- up limit
-    __max_fork_id hafd.fork.id%TYPE;
+    __max_fork_id BIGINT;
     -- down limit
-    __min_ctx_fork_id hafd.fork.id%TYPE := hive.max_fork_id();
-    __lowest_irreversible_block hafd.blocks.num%TYPE := hive.max_block_num();
+    __min_ctx_fork_id BIGINT;
+    __lowest_irreversible_block hafd.blocks.num%TYPE;
     __max_block_num hafd.blocks.num%TYPE;
 BEGIN
+    IF hive.is_lite_mode() THEN
+        RETURN;
+    END IF;
+
+    __min_ctx_fork_id := hive.max_fork_id();
+    __lowest_irreversible_block := hive.max_block_num();
+
     SELECT max(hf.id) INTO __max_fork_id
     FROM hafd.fork hf;
 

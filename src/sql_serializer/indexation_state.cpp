@@ -558,11 +558,14 @@ indexation_state::on_irreversible_block( uint32_t block_num ) {
 
 void
 indexation_state::on_switch_fork( cached_data_t& cached_data, uint32_t block_num ) {
-  if ( get_state() != INDEXATION::P2P ) {
+  auto state = get_state();
+  if ( state == INDEXATION::LIVE && _lite_mode ) {
+    ilog( "During LIVE lite sync a fork was raised at block ${b}, removing cached reversible data...", ("b", block_num) );
+  } else if ( state == INDEXATION::P2P ) {
+    ilog( "During P2P syncing a fork was raised, cached reversible data are removing...." );
+  } else {
     return;
   }
-
-  ilog( "During P2P syncing a fork was raised, chached reversible data are removing...." );
   erase_items_greater_than_block( cached_data.blocks, block_num );
   erase_items_greater_than_block( cached_data.transactions, block_num );
   erase_items_greater_than_block( cached_data.transactions_multisig, block_num );

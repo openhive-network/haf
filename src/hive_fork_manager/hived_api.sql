@@ -72,8 +72,13 @@ CREATE OR REPLACE FUNCTION hive.push_block(
 AS
 $BODY$
 DECLARE
-    __fork_id hafd.fork.id%TYPE;
+    __fork_id BIGINT;
 BEGIN
+    IF hive.is_lite_mode() THEN
+        PERFORM hive.push_block_lite( _block, _transactions, _signatures, _operations, _accounts, _account_operations, _applied_hardforks );
+        RETURN;
+    END IF;
+
     SELECT hf.id
     INTO __fork_id
     FROM hafd.fork hf ORDER BY hf.id DESC LIMIT 1;
@@ -360,6 +365,10 @@ CREATE OR REPLACE FUNCTION hive.disable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
+    IF hive.is_lite_mode() THEN
+        RETURN;
+    END IF;
+
     PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'blocks_reversible' );
     PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_reversible' );
     PERFORM hive.save_and_drop_foreign_keys( 'hafd', 'transactions_multisig_reversible' );
@@ -391,6 +400,10 @@ CREATE OR REPLACE FUNCTION hive.enable_indexes_of_reversible()
 AS
 $BODY$
 BEGIN
+    IF hive.is_lite_mode() THEN
+        RETURN;
+    END IF;
+
     PERFORM hive.restore_indexes( 'hafd.blocks_reversible' );
     PERFORM hive.restore_indexes( 'hafd.transactions_reversible' );
     PERFORM hive.restore_indexes( 'hafd.transactions_multisig_reversible' );
@@ -416,7 +429,52 @@ $BODY$
 
 
 
-CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hafd.blocks.num%TYPE, _first_block hafd.blocks.num%TYPE, _pruning integer, _lite_mode boolean DEFAULT FALSE )
+CREATE OR REPLACE FUNCTION hive.enable_lite_schema()
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __max_block INTEGER;
+    __already_lite BOOLEAN;
+BEGIN
+    SELECT COALESCE( lite_schema, FALSE ) INTO __already_lite FROM hafd.hive_state;
+    IF __already_lite THEN
+        RETURN; -- idempotent
+    END IF;
+
+    SELECT COALESCE( MAX(num), 0 ) INTO __max_block FROM hafd.blocks;
+    IF __max_block > 0 THEN
+        RAISE EXCEPTION 'Cannot enable lite schema: database already has % blocks', __max_block;
+    END IF;
+
+    UPDATE hafd.hive_state SET lite_schema = TRUE;
+
+    -- Drop reversible tables
+    DROP TABLE IF EXISTS hafd.account_operations_reversible CASCADE;
+    DROP TABLE IF EXISTS hafd.applied_hardforks_reversible CASCADE;
+    DROP TABLE IF EXISTS hafd.operations_reversible CASCADE;
+    DROP TABLE IF EXISTS hafd.transactions_multisig_reversible CASCADE;
+    DROP TABLE IF EXISTS hafd.transactions_reversible CASCADE;
+    DROP TABLE IF EXISTS hafd.accounts_reversible CASCADE;
+    DROP TABLE IF EXISTS hafd.blocks_reversible CASCADE;
+
+    -- Drop fork table
+    DROP TABLE IF EXISTS hafd.fork CASCADE;
+
+    -- Drop forking-related columns from contexts
+    ALTER TABLE hafd.contexts DROP COLUMN IF EXISTS is_forking;
+    ALTER TABLE hafd.contexts DROP COLUMN IF EXISTS back_from_fork;
+    ALTER TABLE hafd.contexts DROP COLUMN IF EXISTS fork_id;
+
+    -- Recreate global views to use only irreversible tables
+    PERFORM hive.recreate_head_block_views_lite();
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.connect( _git_sha TEXT, _block_num hafd.blocks.num%TYPE, _first_block hafd.blocks.num%TYPE, _pruning integer, _lite_mode boolean DEFAULT FALSE, _lite_schema boolean DEFAULT FALSE )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -426,10 +484,26 @@ DECLARE
     __max_block hafd.blocks.num%TYPE;
     __last_pruning integer;
     __existing_lite_mode boolean;
+    __existing_lite_schema boolean;
 BEGIN
+    -- Handle lite_schema: permanent, set once on fresh DB
+    SELECT COALESCE( lite_schema, FALSE ) INTO __existing_lite_schema FROM hafd.hive_state;
+    SELECT COALESCE( MAX(num), 0 ) INTO __max_block FROM hafd.blocks;
+
+    IF _lite_schema AND NOT __existing_lite_schema AND __max_block = 0 THEN
+        PERFORM hive.enable_lite_schema();
+        __existing_lite_schema := TRUE;
+    ELSIF _lite_schema AND NOT __existing_lite_schema AND __max_block > 0 THEN
+        RAISE EXCEPTION 'Cannot enable lite schema on database with % existing blocks', __max_block;
+    END IF;
+
+    -- Validate: lite-schema DB requires lite-mode runtime
+    IF __existing_lite_schema AND NOT _lite_mode THEN
+        RAISE EXCEPTION 'Cannot run full mode on a lite-schema database (reversible tables do not exist)';
+    END IF;
+
     -- Validate lite_mode consistency: cannot switch modes on an existing DB with data
     SELECT lite_mode INTO __existing_lite_mode FROM hafd.hive_state;
-    SELECT COALESCE( MAX(num), 0 ) INTO __max_block FROM hafd.blocks;
     IF __max_block > 0 THEN
         ASSERT __existing_lite_mode = _lite_mode,
             format('Cannot switch lite mode: database has %s blocks and lite_mode is %s, but requested %s',
@@ -591,26 +665,41 @@ BEGIN
         RETURN;
     END IF;
 
-    INSERT INTO hafd.hive_state VALUES(1, NULL, FALSE, 'START', 0, FALSE) ON CONFLICT DO NOTHING;
+    INSERT INTO hafd.hive_state VALUES(1, NULL, FALSE, 'START', 0, FALSE, FALSE) ON CONFLICT DO NOTHING;
     INSERT INTO hafd.events_queue VALUES( 0, 'NEW_IRREVERSIBLE', 0 ) ON CONFLICT DO NOTHING;
     INSERT INTO hafd.events_queue VALUES( hive.unreachable_event_id(), 'NEW_BLOCK', 2147483647 ) ON CONFLICT DO NOTHING;
     SELECT MAX(eq.id) + 1 FROM hafd.events_queue eq WHERE eq.id != hive.unreachable_event_id() INTO __events_id;
     PERFORM SETVAL( 'hafd.events_queue_id_seq', __events_id, false );
 
-    INSERT INTO hafd.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp ) ON CONFLICT DO NOTHING;
+    IF NOT hive.is_lite_schema() THEN
+        INSERT INTO hafd.fork(block_num, time_of_fork) VALUES( 1, '2016-03-24 16:05:00'::timestamp ) ON CONFLICT DO NOTHING;
 
-    -- if contexts are created before starting hived
-    UPDATE hafd.contexts hc
-    SET fork_id = 1, events_id = 0
-    FROM hafd.contexts_attachment  hac
-    WHERE hac.context_id = hc.id
-    AND hac.is_attached = TRUE;
+        -- if contexts are created before starting hived
+        UPDATE hafd.contexts hc
+        SET fork_id = 1, events_id = 0
+        FROM hafd.contexts_attachment  hac
+        WHERE hac.context_id = hc.id
+        AND hac.is_attached = TRUE;
 
-    UPDATE hafd.contexts hc
-    SET fork_id = 1, events_id = hive.unreachable_event_id()
-    FROM hafd.contexts_attachment  hac
-    WHERE hac.context_id = hc.id
-    AND hac.is_attached = FALSE;
+        UPDATE hafd.contexts hc
+        SET fork_id = 1, events_id = hive.unreachable_event_id()
+        FROM hafd.contexts_attachment  hac
+        WHERE hac.context_id = hc.id
+        AND hac.is_attached = FALSE;
+    ELSE
+        -- In lite schema, just set events_id for existing contexts
+        UPDATE hafd.contexts hc
+        SET events_id = 0
+        FROM hafd.contexts_attachment  hac
+        WHERE hac.context_id = hc.id
+        AND hac.is_attached = TRUE;
+
+        UPDATE hafd.contexts hc
+        SET events_id = hive.unreachable_event_id()
+        FROM hafd.contexts_attachment  hac
+        WHERE hac.context_id = hc.id
+        AND hac.is_attached = FALSE;
+    END IF;
 END;
 $BODY$
 ;
