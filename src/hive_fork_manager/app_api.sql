@@ -151,6 +151,11 @@ DECLARE
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _context_names );
 
+    -- In lite schema mode, forking is never possible (is_forking column doesn't exist)
+    IF hive.is_lite_schema() THEN
+        RETURN FALSE;
+    END IF;
+
     SELECT ARRAY_AGG( hc.name ) INTO __result
     FROM hafd.contexts hc
     WHERE hc.name::TEXT = ANY( _context_names ) AND hc.is_forking = TRUE;
@@ -857,20 +862,36 @@ $BODY$
 DECLARE
     __number_of_rows INTEGER;
 BEGIN
-    SELECT COUNT(
-        DISTINCT(
-                   ctx.current_block_num
-                 , hca.is_attached
-                 , ctx.events_id
-                 , ctx.is_forking
-                 , (ctx.loop).size_of_blocks_batch
-                 , (ctx.loop).current_batch_end
-                 , (ctx.loop).end_block_range
-        )
-    ) INTO __number_of_rows
-    FROM hafd.contexts ctx
-    JOIN hafd.contexts_attachment hca ON hca.context_id = ctx.id
-    WHERE ctx.name =ANY(_contexts);
+    IF hive.is_lite_schema() THEN
+        SELECT COUNT(
+            DISTINCT(
+                       ctx.current_block_num
+                     , hca.is_attached
+                     , ctx.events_id
+                     , (ctx.loop).size_of_blocks_batch
+                     , (ctx.loop).current_batch_end
+                     , (ctx.loop).end_block_range
+            )
+        ) INTO __number_of_rows
+        FROM hafd.contexts ctx
+        JOIN hafd.contexts_attachment hca ON hca.context_id = ctx.id
+        WHERE ctx.name =ANY(_contexts);
+    ELSE
+        SELECT COUNT(
+            DISTINCT(
+                       ctx.current_block_num
+                     , hca.is_attached
+                     , ctx.events_id
+                     , ctx.is_forking
+                     , (ctx.loop).size_of_blocks_batch
+                     , (ctx.loop).current_batch_end
+                     , (ctx.loop).end_block_range
+            )
+        ) INTO __number_of_rows
+        FROM hafd.contexts ctx
+        JOIN hafd.contexts_attachment hca ON hca.context_id = ctx.id
+        WHERE ctx.name =ANY(_contexts);
+    END IF;
 
     IF __number_of_rows != 1 THEN
         RAISE EXCEPTION 'Contexts % are not synchronized', _contexts;
