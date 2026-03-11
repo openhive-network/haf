@@ -451,7 +451,18 @@ BEGIN
 
     UPDATE hafd.hive_state SET lite_schema = TRUE;
 
-    -- Drop reversible tables
+    -- Detach reversible tables from the extension so they can be dropped.
+    -- Extension-owned objects cannot be dropped directly.
+    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.account_operations_reversible;
+    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.applied_hardforks_reversible;
+    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.operations_reversible;
+    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.transactions_multisig_reversible;
+    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.transactions_reversible;
+    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.accounts_reversible;
+    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.blocks_reversible;
+    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.fork;
+
+    -- Now drop the detached tables
     DROP TABLE IF EXISTS hafd.account_operations_reversible CASCADE;
     DROP TABLE IF EXISTS hafd.applied_hardforks_reversible CASCADE;
     DROP TABLE IF EXISTS hafd.operations_reversible CASCADE;
@@ -459,8 +470,6 @@ BEGIN
     DROP TABLE IF EXISTS hafd.transactions_reversible CASCADE;
     DROP TABLE IF EXISTS hafd.accounts_reversible CASCADE;
     DROP TABLE IF EXISTS hafd.blocks_reversible CASCADE;
-
-    -- Drop fork table
     DROP TABLE IF EXISTS hafd.fork CASCADE;
 
     -- Drop forking-related columns from contexts
