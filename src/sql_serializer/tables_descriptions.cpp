@@ -53,6 +53,16 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::TABLE[] = "hafd.operations";
   template<> const char  hive_operations< std::vector<PSQL::processing_objects::process_operation_t> >::COLS[] = "id, trx_in_block, op_type_id, op_pos, body_binary, custom_json_type_id";
 
+  // OPTION A BENCHMARK: C++ changes needed to populate body_jsonb column:
+  // 1. Add body_jsonb to COLS above: "id, trx_in_block, op_type_id, op_pos, body_binary, body_jsonb, custom_json_type_id"
+  // 2. In write_row_to_stream below, add a jsonb text value computed from fc::json::to_string(operation.op)
+  //    or use the existing protobuf-to-json conversion that body_binary::jsonb does, but at C++ level.
+  // 3. In process_operation_t (see include/hive/plugins/sql_serializer/processing_objects.hpp),
+  //    add a std::string body_json field populated during operation collection.
+  // 4. The conversion cost moves from Postgres read-time to C++ write-time (hived process).
+  //    This is acceptable because write happens once per operation, reads happen many times.
+  // 5. For reversible operations (operations_reversible table), same changes apply.
+
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_operation_t& operation)
   {
     stream.write_values(operation.operation_id, operation.trx_in_block, operation.op_type_id, operation.op_in_trx, operation.op, operation.custom_json_type_id);

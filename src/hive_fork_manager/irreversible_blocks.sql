@@ -103,6 +103,10 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
     op_type_id smallint NOT NULL,
     op_pos integer NOT NULL,
     body_binary hafd.operation  DEFAULT NULL,
+    -- Option A: pre-computed jsonb column to avoid body_binary::jsonb decode cost at read time.
+    -- Populated at write time by the sql_serializer (C++ side) or via trigger.
+    -- See src/sql_serializer/ for the C++ changes needed to populate this column.
+    body_jsonb JSONB DEFAULT NULL,
     custom_json_type_id SMALLINT DEFAULT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 );
