@@ -133,6 +133,8 @@ namespace hive::plugins::sql_serializer {
         // Pack the operation to binary for transfer as bytea.
         // The server-side C extension converts binary→JSONB directly,
         // avoiding the expensive JSON text→JSONB parsing path.
+        // The cast chain: bytea → hafd.operation → jsonb extracts the value
+        // portion, producing the same jsonb as body_value in the table.
         fc::datastream<size_t> size_packer;
         fc::raw::pack(size_packer, data.op);
         const size_t packed_size = size_packer.tellp();
@@ -151,9 +153,9 @@ namespace hive::plugins::sql_serializer {
         result += std::to_string(data.op_type_id);
         result += ',';
         result += std::to_string(data.op_in_trx);
-        result += ',';
+        result += ",(";
         result += escape_raw(opBuffer);
-        result += "::bytea,";
+        result += "::hafd.operation::jsonb)->'value',";
         if( data.custom_json_type_id.valid() )
           result += std::to_string( *data.custom_json_type_id );
         else
