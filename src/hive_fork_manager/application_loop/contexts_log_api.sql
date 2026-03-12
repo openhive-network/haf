@@ -17,10 +17,17 @@ DECLARE
     __stage_latency INTERVAL;
     __previous_stage TEXT;
 BEGIN
-    SELECT hc.current_block_num, hc.fork_id
-    INTO __ctx_current_block, __ctx_current_fork
-    FROM hafd.contexts hc
-    WHERE hc.name = _context_name;
+    IF hive.is_lite_schema() THEN
+        SELECT hc.current_block_num, NULL
+        INTO __ctx_current_block, __ctx_current_fork
+        FROM hafd.contexts hc
+        WHERE hc.name = _context_name;
+    ELSE
+        SELECT hc.current_block_num, hc.fork_id
+        INTO __ctx_current_block, __ctx_current_fork
+        FROM hafd.contexts hc
+        WHERE hc.name = _context_name;
+    END IF;
 
     __ctx_stage = hive.get_current_stage_name( _context_name );
 
@@ -28,9 +35,11 @@ BEGIN
     INTO __head_block
     FROM hive.blocks_view;
 
-    SELECT MAX(id)
-    INTO __head_fork
-    FROM hafd.fork;
+    IF hive.is_lite_schema() THEN
+        __head_fork := NULL;
+    ELSE
+        SELECT MAX(id) INTO __head_fork FROM hafd.fork;
+    END IF;
 
     INSERT INTO hafd.contexts_log(
                                    context_name

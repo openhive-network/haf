@@ -40,7 +40,7 @@ BEGIN
     PERFORM hive.context_create(
           _name
         , _schema
-        , ( SELECT MAX( hf.id ) FROM hafd.fork hf ) -- current fork id
+        , ( CASE WHEN hive.is_lite_schema() THEN NULL ELSE ( SELECT MAX( hf.id ) FROM hafd.fork hf ) END ) -- current fork id
         , COALESCE( ( SELECT hid.consistent_block FROM hafd.hive_state hid ), 0 ) -- head of irreversible block
         , _is_forking
         , _is_attached
@@ -74,7 +74,7 @@ BEGIN
     PERFORM hive.context_create(
             _name
         , _schema
-        , ( SELECT MAX( hf.id ) FROM hafd.fork hf ) -- current fork id
+        , ( CASE WHEN hive.is_lite_schema() THEN NULL ELSE ( SELECT MAX( hf.id ) FROM hafd.fork hf ) END ) -- current fork id
         , COALESCE( ( SELECT hid.consistent_block FROM hafd.hive_state hid ), 0 ) -- head of irreversible block
         , _is_forking
         , False
