@@ -63,8 +63,8 @@ BEGIN
     ASSERT ( SELECT COUNT(*) FROM hafd.account_operations WHERE account_id = 1 ) = 1, 'Account operation not in irreversible table';
     ASSERT ( SELECT COUNT(*) FROM hafd.applied_hardforks WHERE hardfork_num = 1 AND block_num = 101 ) = 1, 'Applied hardfork not in irreversible table';
 
-    -- Reversible tables should not exist (they were dropped by enable_lite_schema)
-    ASSERT NOT EXISTS (SELECT FROM information_schema.tables WHERE table_schema='hafd' AND table_name='blocks_reversible'), 'blocks_reversible should not exist';
+    -- Reversible tables should still exist but be empty (kept for compatibility)
+    ASSERT ( SELECT COUNT(*) FROM hafd.blocks_reversible ) = 0, 'blocks_reversible should be empty';
 END;
 $BODY$
 ;
