@@ -451,13 +451,11 @@ BEGIN
 
     UPDATE hafd.hive_state SET lite_schema = TRUE;
 
-    -- Drop FK from contexts to fork table first to avoid cascade issues.
+    -- Drop FK from contexts to fork table (not needed in lite mode).
     ALTER TABLE hafd.contexts DROP CONSTRAINT IF EXISTS fk_2_hive_app_context;
 
-    -- Drop forking-related columns from contexts.
-    ALTER TABLE hafd.contexts DROP COLUMN IF EXISTS fork_id;
-    ALTER TABLE hafd.contexts DROP COLUMN IF EXISTS is_forking;
-    ALTER TABLE hafd.contexts DROP COLUMN IF EXISTS back_from_fork;
+    -- Keep fork_id, is_forking, back_from_fork columns in hafd.contexts —
+    -- other functions reference them and PL/pgSQL validates at plan time.
 
     -- Recreate global views to use only irreversible tables BEFORE dropping
     -- the reversible tables. This removes the view→reversible table dependencies
@@ -472,10 +470,9 @@ BEGIN
     ALTER EXTENSION hive_fork_manager DROP TABLE hafd.transactions_reversible;
     ALTER EXTENSION hive_fork_manager DROP TABLE hafd.accounts_reversible;
     ALTER EXTENSION hive_fork_manager DROP TABLE hafd.blocks_reversible;
-    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.fork;
-    -- Also detach the fork sequence (created by BIGSERIAL) — otherwise dropping
-    -- the table fails because the owned sequence is still extension-managed.
-    ALTER EXTENSION hive_fork_manager DROP SEQUENCE hafd.fork_id_seq;
+    -- Keep hafd.fork table (empty) — other functions reference it and
+    -- PL/pgSQL validates table existence at query plan time even in
+    -- unreachable branches. Leaving it empty is harmless.
 
     -- Drop the detached reversible tables. No CASCADE needed: views already
     -- recreated, FK constraints already dropped.
@@ -486,7 +483,6 @@ BEGIN
     DROP TABLE IF EXISTS hafd.transactions_reversible;
     DROP TABLE IF EXISTS hafd.accounts_reversible;
     DROP TABLE IF EXISTS hafd.blocks_reversible;
-    DROP TABLE IF EXISTS hafd.fork;
 END;
 $BODY$
 ;
