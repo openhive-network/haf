@@ -32,7 +32,8 @@ AS
 $BODY$
 BEGIN
     IF _is_forking AND hive.is_lite_mode() THEN
-        RAISE EXCEPTION 'Cannot create forking context in lite mode. Use _is_forking=FALSE.';
+        RAISE WARNING 'Lite mode active: forcing _is_forking=FALSE for context "%"', _name;
+        _is_forking := FALSE;
     END IF;
 
     -- Any context always starts with block before genesis, the app may detach the context and execute 'massive sync'
@@ -66,7 +67,8 @@ AS
 $BODY$
 BEGIN
     IF _is_forking AND hive.is_lite_mode() THEN
-        RAISE EXCEPTION 'Cannot create forking context in lite mode. Use _is_forking=FALSE.';
+        RAISE WARNING 'Lite mode active: forcing _is_forking=FALSE for context "%"', _name;
+        _is_forking := FALSE;
     END IF;
 
     -- Any context always starts with block before genesis, the app may detach the context and execute 'massive sync'
