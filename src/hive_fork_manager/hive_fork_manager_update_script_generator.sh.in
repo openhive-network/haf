@@ -151,7 +151,7 @@ make_update() {
   echo
   echo "Attempting to update your database..."
 
-  psql_do -d "$DB_NAME" -c "ALTER EXTENSION hive_fork_manager UPDATE"
+  psql_do -d "$DB_NAME" -c "ALTER EXTENSION hive_fork_manager UPDATE TO '$COMMIT_NEW_ID'"
   psql_do -d "$DB_NAME" -c "SELECT hive.state_providers_update_runtime();"
 }
 
