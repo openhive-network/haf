@@ -65,7 +65,7 @@ BEGIN
                     '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
   __signatures = ( '\xDEED', '\xFEED' );
   __account = ( 1, 'bamdecs', 101 );
-  __applied_hardfork = ( 1, 101, 1 );
+  __applied_hardfork = ( 1, 101, hafd.operation_id(101, 0) );
 
   -- Op 1: clean custom_json (no NUL) — baseline
   __operation_clean = ( hafd.operation_id(101, 0), 0, 18, 0,
