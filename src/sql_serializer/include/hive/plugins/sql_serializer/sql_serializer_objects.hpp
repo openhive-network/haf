@@ -173,6 +173,8 @@ namespace hive
               fc::variant v;
               fc::to_variant(_op, v);
               body_value_json = fc::json::to_string(v.get_object()["value"]);
+              body_value_json.shrink_to_fit();
+              op = operation(); // release heavy variant data; only body_value_json is used at write time
             }
           };
 
