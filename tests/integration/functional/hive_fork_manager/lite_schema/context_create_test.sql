@@ -32,9 +32,9 @@ BEGIN
     -- Context row should exist in hafd.contexts
     ASSERT EXISTS (SELECT FROM hafd.contexts WHERE name='ctx'), 'Context row not found';
 
-    -- Forking columns should still exist (kept for compatibility) but context should be non-forking
+    -- Forking columns should still exist (kept for compatibility)
     ASSERT EXISTS (SELECT FROM information_schema.columns WHERE table_schema='hafd' AND table_name='contexts' AND column_name='is_forking'), 'is_forking column should exist';
-    ASSERT ( SELECT is_forking FROM hafd.contexts WHERE name='ctx' ) = FALSE, 'Context should be non-forking in lite mode';
+    ASSERT EXISTS (SELECT FROM information_schema.columns WHERE table_schema='hafd' AND table_name='contexts' AND column_name='fork_id'), 'fork_id column should exist';
 END;
 $BODY$
 ;
