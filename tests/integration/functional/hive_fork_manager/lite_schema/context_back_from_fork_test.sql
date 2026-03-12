@@ -41,7 +41,7 @@ BEGIN
           __block
         , ARRAY[]::hafd.transactions[]
         , ARRAY[]::hafd.transactions_multisig[]
-        , ARRAY[]::hafd.operations[]
+        , ARRAY[]::hafd.operations_input[]
         , ARRAY[ ROW(1, 'producer', 101)::hafd.accounts ]
         , ARRAY[]::hafd.account_operations[]
         , ARRAY[]::hafd.applied_hardforks[]
@@ -52,7 +52,7 @@ BEGIN
           __block
         , ARRAY[]::hafd.transactions[]
         , ARRAY[]::hafd.transactions_multisig[]
-        , ARRAY[]::hafd.operations[]
+        , ARRAY[]::hafd.operations_input[]
         , ARRAY[]::hafd.accounts[]
         , ARRAY[]::hafd.account_operations[]
         , ARRAY[]::hafd.applied_hardforks[]

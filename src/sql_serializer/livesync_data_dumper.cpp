@@ -75,7 +75,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
         sql_command += _transactions_multisig;
         sql_command += "]::hafd.transactions_multisig[],ARRAY[";
         sql_command += operations_str;
-        sql_command += "]::hafd.operations[],ARRAY[";
+        sql_command += "]::hafd.operations_input[],ARRAY[";
         sql_command += _accounts;
         sql_command += "]::hafd.accounts[],ARRAY[";
         sql_command += account_operations_str;

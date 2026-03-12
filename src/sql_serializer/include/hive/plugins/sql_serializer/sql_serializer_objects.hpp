@@ -152,7 +152,6 @@ namespace hive
             int16_t op_type_id = 0;
             int32_t op_in_trx = 0;
             operation op;
-            std::string body_value_json;
             fc::optional<int16_t> custom_json_type_id;
 
             process_operation_t(
@@ -170,9 +169,6 @@ namespace hive
             , op_in_trx{_op_in_trx}, op{_op}
             , custom_json_type_id{_custom_json_type_id}
             {
-              fc::variant v;
-              fc::to_variant(_op, v);
-              body_value_json = fc::json::to_string(v.get_object()["value"]);
             }
           };
 

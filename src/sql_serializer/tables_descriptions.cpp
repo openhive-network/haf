@@ -55,7 +55,12 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_operation_t& operation)
   {
-    stream.write_values(operation.operation_id, operation.trx_in_block, operation.op_type_id, operation.op_in_trx, operation.body_value_json, operation.custom_json_type_id);
+    // Compute JSON text for body_value on the writer thread (not the main processing thread).
+    // This parallelizes the JSON serialization with block processing.
+    fc::variant v;
+    fc::to_variant(operation.op, v);
+    std::string body_value_json = fc::json::to_string(v.get_object()["value"]);
+    stream.write_values(operation.operation_id, operation.trx_in_block, operation.op_type_id, operation.op_in_trx, body_value_json, operation.custom_json_type_id);
   }
 
   template<> const char hive_accounts<std::vector<PSQL::processing_objects::account_data_t>>::TABLE[] = "hafd.accounts";

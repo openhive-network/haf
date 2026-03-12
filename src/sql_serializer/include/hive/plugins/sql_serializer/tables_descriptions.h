@@ -6,6 +6,7 @@
 #include <pqxx/pqxx>
 
 #include <fc/io/json.hpp>
+#include <fc/io/raw.hpp>
 
 namespace hive::plugins::sql_serializer {
 
@@ -129,8 +130,20 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
+        // Pack the operation to binary for transfer as bytea.
+        // The server-side C extension converts binary→JSONB directly,
+        // avoiding the expensive JSON text→JSONB parsing path.
+        fc::datastream<size_t> size_packer;
+        fc::raw::pack(size_packer, data.op);
+        const size_t packed_size = size_packer.tellp();
+
+        thread_local std::vector<char> opBuffer;
+        opBuffer.resize(packed_size);
+        fc::datastream<char*> ds(opBuffer.data(), packed_size);
+        fc::raw::pack(ds, data.op);
+
         std::string result;
-        result.reserve(128 + data.body_value_json.size());
+        result.reserve(128 + packed_size * 2);
         result += std::to_string(data.operation_id);
         result += ',';
         result += std::to_string(data.trx_in_block);
@@ -139,8 +152,8 @@ namespace hive::plugins::sql_serializer {
         result += ',';
         result += std::to_string(data.op_in_trx);
         result += ',';
-        result += escape(data.body_value_json);
-        result += "::jsonb,";
+        result += escape_raw(opBuffer);
+        result += "::bytea,";
         if( data.custom_json_type_id.valid() )
           result += std::to_string( *data.custom_json_type_id );
         else
