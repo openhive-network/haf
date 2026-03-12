@@ -134,7 +134,6 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hive TO hive_applications_group;
 
 GRANT EXECUTE ON FUNCTION
       hive.back_from_fork( INT )
-    , hive.push_block( hafd.blocks, hafd.transactions[], hafd.transactions_multisig[], hafd.operations_input[], hafd.accounts[], hafd.account_operations[], hafd.applied_hardforks[] )
     , hive.push_block( hafd.blocks, hafd.transactions[], hafd.transactions_multisig[], hafd.operations[], hafd.accounts[], hafd.account_operations[], hafd.applied_hardforks[] )
     , hive.set_irreversible( INT )
     , hive.end_massive_sync( INTEGER )
@@ -160,7 +159,6 @@ GRANT EXECUTE ON FUNCTION
     , hive.app_state_providers_update( _first_block hafd.blocks.num%TYPE, _last_block hafd.blocks.num%TYPE, _context hafd.context_name )
     , hive.app_state_provider_import( _state_provider hafd.state_providers, _context hafd.context_name )
     , hive.connect( _git_sha TEXT, _block_num hafd.blocks.num%TYPE, _first_block hafd.blocks.num%TYPE, _pruning integer, _lite_mode boolean, _lite_schema boolean )
-    , hive.push_block_lite( hafd.blocks, hafd.transactions[], hafd.transactions_multisig[], hafd.operations_input[], hafd.accounts[], hafd.account_operations[], hafd.applied_hardforks[] )
     , hive.push_block_lite( hafd.blocks, hafd.transactions[], hafd.transactions_multisig[], hafd.operations[], hafd.accounts[], hafd.account_operations[], hafd.applied_hardforks[] )
     , hive.enable_lite_schema()
     , hive.is_pruning_enabled()
@@ -261,7 +259,6 @@ GRANT SELECT ON hafd.indexes_constraints TO haf_maintainer;
 
 REVOKE EXECUTE ON FUNCTION
       hive.back_from_fork( INT )
-    , hive.push_block( hafd.blocks, hafd.transactions[], hafd.transactions_multisig[], hafd.operations_input[], hafd.accounts[], hafd.account_operations[], hafd.applied_hardforks[] )
     , hive.push_block( hafd.blocks, hafd.transactions[], hafd.transactions_multisig[], hafd.operations[], hafd.accounts[], hafd.account_operations[], hafd.applied_hardforks[] )
     , hive.set_irreversible( INT )
     , hive.end_massive_sync( INTEGER )
