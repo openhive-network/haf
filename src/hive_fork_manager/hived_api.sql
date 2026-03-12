@@ -433,6 +433,8 @@ CREATE OR REPLACE FUNCTION hive.enable_lite_schema()
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
+    SECURITY DEFINER
+    SET search_path = 'hafd', 'hive', 'pg_catalog'
 AS
 $BODY$
 DECLARE
