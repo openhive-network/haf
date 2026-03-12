@@ -34,7 +34,7 @@ def test_operations_after_switchng_fork(prepared_networks_and_database_12_8):
     trx = session.query(Transactions).filter(Transactions.block_num > START_TEST_BLOCK).one()
 
     ops = (session.query(OperationsIrreversibleView)
-           .add_columns(OperationsIrreversibleView.body_value.label('body'), OperationsIrreversibleView.block_num)
+           .add_columns(OperationsIrreversibleView.body, OperationsIrreversibleView.block_num)
            .filter(OperationsIrreversibleView.block_num == trx.block_num).all())
     types = [op.body['type'] for op in ops]
 
