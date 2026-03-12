@@ -110,6 +110,19 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
 
 SELECT pg_catalog.pg_extension_config_dump('hafd.operations', '');
 
+-- Input type for push_block/push_block_lite: carries binary operation data
+-- instead of pre-computed JSONB. The server-side C extension converts
+-- binary → JSONB directly (single pass, no JSON text intermediate),
+-- which is faster than the C++ JSON serialization + PG text→JSONB parsing path.
+CREATE TYPE hafd.operations_input AS (
+    id bigint,
+    trx_in_block smallint,
+    op_type_id smallint,
+    op_pos integer,
+    body_binary bytea,
+    custom_json_type_id smallint
+);
+
 CREATE TABLE IF NOT EXISTS hafd.applied_hardforks (
     hardfork_num smallint NOT NULL,
     block_num integer NOT NULL,
