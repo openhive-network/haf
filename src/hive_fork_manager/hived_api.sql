@@ -454,35 +454,14 @@ BEGIN
     -- Drop FK from contexts to fork table (not needed in lite mode).
     ALTER TABLE hafd.contexts DROP CONSTRAINT IF EXISTS fk_2_hive_app_context;
 
-    -- Keep fork_id, is_forking, back_from_fork columns in hafd.contexts —
-    -- other functions reference them and PL/pgSQL validates at plan time.
+    -- Keep all columns in hafd.contexts and all reversible tables (empty).
+    -- Many functions and view-creation code reference these tables, and
+    -- dropping them causes "relation does not exist" errors even in
+    -- dynamic SQL branches that check is_forking. Keeping them empty
+    -- is harmless and avoids an entire class of reference errors.
 
-    -- Recreate global views to use only irreversible tables BEFORE dropping
-    -- the reversible tables. This removes the view→reversible table dependencies
-    -- so the subsequent DROP TABLE doesn't cascade into the hive schema.
+    -- Recreate global views to use only irreversible tables (simpler/faster).
     PERFORM hive.recreate_head_block_views_lite();
-
-    -- Detach reversible tables from the extension so they can be dropped.
-    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.account_operations_reversible;
-    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.applied_hardforks_reversible;
-    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.operations_reversible;
-    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.transactions_multisig_reversible;
-    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.transactions_reversible;
-    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.accounts_reversible;
-    ALTER EXTENSION hive_fork_manager DROP TABLE hafd.blocks_reversible;
-    -- Keep hafd.fork table (empty) — other functions reference it and
-    -- PL/pgSQL validates table existence at query plan time even in
-    -- unreachable branches. Leaving it empty is harmless.
-
-    -- Drop the detached reversible tables. No CASCADE needed: views already
-    -- recreated, FK constraints already dropped.
-    DROP TABLE IF EXISTS hafd.account_operations_reversible;
-    DROP TABLE IF EXISTS hafd.applied_hardforks_reversible;
-    DROP TABLE IF EXISTS hafd.operations_reversible;
-    DROP TABLE IF EXISTS hafd.transactions_multisig_reversible;
-    DROP TABLE IF EXISTS hafd.transactions_reversible;
-    DROP TABLE IF EXISTS hafd.accounts_reversible;
-    DROP TABLE IF EXISTS hafd.blocks_reversible;
 END;
 $BODY$
 ;
