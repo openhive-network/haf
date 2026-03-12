@@ -17,7 +17,7 @@ AS
 $BODY$
 BEGIN
     ASSERT hive.is_lite_schema(), 'lite_schema flag not set after idempotent call';
-    ASSERT NOT EXISTS (SELECT FROM information_schema.tables WHERE table_schema='hafd' AND table_name='blocks_reversible'), 'blocks_reversible should not exist';
+    ASSERT ( SELECT COUNT(*) FROM hafd.blocks_reversible ) = 0, 'blocks_reversible should be empty';
 END;
 $BODY$
 ;
