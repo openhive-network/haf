@@ -170,9 +170,14 @@ namespace hive
             , op_in_trx{_op_in_trx}, op{_op}
             , custom_json_type_id{_custom_json_type_id}
             {
-              fc::variant v;
+              // Use thread-local variant to reuse allocations across calls,
+              // reducing heap fragmentation from variant churn.
+              thread_local fc::variant v;
+              v.clear();
               fc::to_variant(_op, v);
               body_value_json = fc::json::to_string(v.get_object()["value"]);
+              body_value_json.shrink_to_fit(); // release 10MB fast_stream excess
+              op = operation(); // release deep-copied variant data; only body_value_json is used at write time
             }
           };
 
