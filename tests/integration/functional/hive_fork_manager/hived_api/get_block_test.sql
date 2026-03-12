@@ -50,7 +50,7 @@ BEGIN
         , ( 10, '\xBADD1A', '\xCAFE1A', '2016-06-22 19:10:32-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000, 3 )
     ;
 
-    INSERT INTO hafd.operation_types VALUES (1, 'example_op', FALSE),(2, 'example_vop', TRUE);
+    INSERT INTO hafd.operation_types VALUES (1, 'system_warning_operation', FALSE),(2, 'producer_reward_operation', TRUE);
 
     INSERT INTO hafd.operations
     VALUES

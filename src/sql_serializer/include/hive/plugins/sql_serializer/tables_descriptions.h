@@ -129,19 +129,8 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
-        // Compute packed size first (cheap size-only datastream, no allocation).
-        fc::datastream<size_t> size_packer;
-        fc::raw::pack(size_packer, data.op);
-        const size_t packed_size = size_packer.tellp();
-
-        // Pack into a reusable thread-local buffer (avoids heap allocation per call).
-        thread_local std::vector<char> opBuffer;
-        opBuffer.resize(packed_size);
-        fc::datastream<char*> ds(opBuffer.data(), packed_size);
-        fc::raw::pack(ds, data.op);
-
         std::string result;
-        result.reserve(128);
+        result.reserve(128 + data.body_value_json.size());
         result += std::to_string(data.operation_id);
         result += ',';
         result += std::to_string(data.trx_in_block);
@@ -150,8 +139,8 @@ namespace hive::plugins::sql_serializer {
         result += ',';
         result += std::to_string(data.op_in_trx);
         result += ',';
-        result += escape_raw(opBuffer);
-        result += "::bytea,";
+        result += escape(data.body_value_json);
+        result += "::jsonb,";
         if( data.custom_json_type_id.valid() )
           result += std::to_string( *data.custom_json_type_id );
         else

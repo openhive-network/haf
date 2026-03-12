@@ -159,7 +159,7 @@ BEGIN
             '::jsonb)
 
         -- recover_account_operation
-            , ( hafd.operation_id(3, 0), 0, 1, 0, '
+            , ( hafd.operation_id(3, 0), 0, 3, 0, '
                 {
                     "account_to_recover": "jcalfee",
                     "new_owner_authority": {
@@ -187,7 +187,7 @@ BEGIN
             '::jsonb )
 
             -- request_account_recovery_operation
-            , ( hafd.operation_id(4, 0), 0, 1, 0, '
+            , ( hafd.operation_id(4, 0), 0, 4, 0, '
                 {
                     "recovery_account": "steem",
                     "account_to_recover": "aiko",
@@ -204,7 +204,7 @@ BEGIN
                     "extensions": []
                 }
             '::jsonb )
-            , ( hafd.operation_id(5, 0), 0, 1, 0,
+            , ( hafd.operation_id(5, 0), 0, 2, 0,
             '
                 {
                     "account": "recursive",
@@ -296,7 +296,7 @@ BEGIN
 
 
                         
-            , ( hafd.operation_id(6, 0), 0, 1, 0,
+            , ( hafd.operation_id(6, 0), 0, 2, 0,
             '
                 {
                     "account": "recursive",
