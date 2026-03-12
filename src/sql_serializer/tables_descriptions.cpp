@@ -3,6 +3,39 @@
 
 namespace hive{ namespace plugins{ namespace sql_serializer {
 
+  /// Strip JSON \u0000 null-escape sequences from a string, respecting backslash escaping.
+  /// Same algorithm as hive.strip_json_null_escapes() PG extension.
+  /// PostgreSQL jsonb rejects \u0000 (cannot convert to text).
+  static void strip_json_null_escapes(std::string& s)
+  {
+    // Fast path: no backslash means no \u0000 possible
+    if (s.find('\\') == std::string::npos)
+      return;
+
+    size_t out = 0;
+    const size_t len = s.size();
+    for (size_t i = 0; i < len; )
+    {
+      if (s[i] == '\\' && i + 5 < len
+          && s[i+1] == 'u' && s[i+2] == '0'
+          && s[i+3] == '0' && s[i+4] == '0' && s[i+5] == '0')
+      {
+        // Count consecutive backslashes already written before this position
+        size_t bs = 0;
+        while (bs < out && s[out - 1 - bs] == '\\')
+          ++bs;
+        if (bs % 2 == 0)
+        {
+          // Even preceding backslashes → real \u0000 → skip 6 chars
+          i += 6;
+          continue;
+        }
+      }
+      s[out++] = s[i++];
+    }
+    s.resize(out);
+  }
+
   const char hive_blocks::TABLE[] = "hafd.blocks";
   const char hive_blocks::COLS[] = "num, hash, prev, created_at, producer_account_id, transaction_merkle_root, extensions, witness_signature, signing_key, hbd_interest_rate, total_vesting_fund_hive, total_vesting_shares, total_reward_fund_hive, virtual_supply, current_supply, current_hbd_supply, dhf_interval_ledger ";
 
@@ -61,6 +94,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     v.clear();
     fc::to_variant(operation.op, v);
     std::string body_value_json = fc::json::to_string(v.get_object()["value"]);
+    strip_json_null_escapes(body_value_json);
     body_value_json.shrink_to_fit();
     stream.write_values(operation.operation_id, operation.trx_in_block, operation.op_type_id, operation.op_in_trx, body_value_json, operation.custom_json_type_id);
   }
