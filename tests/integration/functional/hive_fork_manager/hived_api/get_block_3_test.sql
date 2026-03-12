@@ -10,7 +10,7 @@ BEGIN
 
     INSERT INTO hafd.operation_types
     VALUES (0, 'OP 0', FALSE )
-        , ( 1, 'OP 1', FALSE )
+        , ( 1, 'system_warning_operation', FALSE )
         , ( 2, 'OP 2', FALSE )
         , ( 3, 'OP 3', TRUE )
     ;
