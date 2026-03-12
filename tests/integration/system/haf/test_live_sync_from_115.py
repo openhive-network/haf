@@ -77,7 +77,7 @@ def test_live_sync_from_115(prepared_networks_and_database_12_8_from_115):
       , range(transaction_block_num, transaction_block_num + nr_blocks))
 
     ops = (session.query(OperationsIrreversibleView)
-           .add_columns(OperationsIrreversibleView.body_value.label('body'), OperationsIrreversibleView.block_num)
+           .add_columns(OperationsIrreversibleView.body, OperationsIrreversibleView.block_num)
            .filter(OperationsIrreversibleView.block_num == transaction_block_num).all())
     types = [op.body['type'] for op in ops]
 

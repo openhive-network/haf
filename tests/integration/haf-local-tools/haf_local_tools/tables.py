@@ -159,6 +159,7 @@ class OperationsIrreversibleViewExtended(HiveBase):
     op_type_id = Column(SmallInteger)
     timestamp = Column(DateTime)
     body_value = Column(JSONB)
+    body = Column(JSONB)
 
 class OperationsIrreversibleView(HiveBase):
     __tablename__ = "irreversible_operations_view"
@@ -169,6 +170,7 @@ class OperationsIrreversibleView(HiveBase):
     op_pos = Column(Integer)
     op_type_id = Column(SmallInteger)
     body_value = Column(JSONB)
+    body = Column(JSONB)
 
 class Transactions(HiveDataBase):
     __tablename__ = "transactions"
