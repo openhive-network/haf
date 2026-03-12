@@ -164,7 +164,8 @@ namespace hive
             , operation_id{_operation_id }, trx_in_block{_trx_in_block}
             , op_type_id{_op_type_id}
             , op_in_trx{_op_in_trx}, op{_op}
-            , custom_json_type_id{_custom_json_type_id} {
+            , custom_json_type_id{_custom_json_type_id}
+            {
             }
           };
 

@@ -88,8 +88,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
 
   void write_row_to_stream(pqxx::stream_to& stream, const PSQL::processing_objects::process_operation_t& operation)
   {
-    // Serialize to JSON on the writer thread using a reusable thread-local variant
-    // to avoid per-call heap allocation on the main processing thread.
+    // Compute JSON text for body_value on the writer thread (not the main processing thread).
+    // This parallelizes the JSON serialization with block processing.
+    // COPY path still uses JSON text (binary optimization is for the non-COPY insert path).
     thread_local fc::variant v;
     v.clear();
     fc::to_variant(operation.op, v);
