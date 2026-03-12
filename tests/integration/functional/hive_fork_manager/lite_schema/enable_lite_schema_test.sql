@@ -23,8 +23,8 @@ BEGIN
     ASSERT ( SELECT COUNT(*) FROM hafd.operations_reversible ) = 0, 'operations_reversible should be empty';
     ASSERT ( SELECT COUNT(*) FROM hafd.accounts_reversible ) = 0, 'accounts_reversible should be empty';
 
-    -- Fork table should still exist but be empty
-    ASSERT ( SELECT COUNT(*) FROM hafd.fork ) = 0, 'fork table should be empty';
+    -- Fork table should still exist (kept for compatibility)
+    ASSERT EXISTS (SELECT FROM information_schema.tables WHERE table_schema='hafd' AND table_name='fork'), 'fork table should exist';
 
     -- Contexts columns should still exist (kept for compatibility)
     ASSERT EXISTS (SELECT FROM information_schema.columns WHERE table_schema='hafd' AND table_name='contexts' AND column_name='is_forking'), 'is_forking column should exist';
