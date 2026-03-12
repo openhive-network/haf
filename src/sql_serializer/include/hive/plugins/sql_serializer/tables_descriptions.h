@@ -129,8 +129,14 @@ namespace hive::plugins::sql_serializer {
 
       std::string operator()(typename container_t::const_reference data) const
       {
+        // Serialize to JSON on the writer thread using a reusable thread-local variant.
+        thread_local fc::variant v;
+        v.clear();
+        fc::to_variant(data.op, v);
+        std::string body_value_json = fc::json::to_string(v.get_object()["value"]);
+
         std::string result;
-        result.reserve(128 + data.body_value_json.size());
+        result.reserve(128 + body_value_json.size());
         result += std::to_string(data.operation_id);
         result += ',';
         result += std::to_string(data.trx_in_block);
@@ -139,7 +145,7 @@ namespace hive::plugins::sql_serializer {
         result += ',';
         result += std::to_string(data.op_in_trx);
         result += ',';
-        result += escape(data.body_value_json);
+        result += escape(body_value_json);
         result += "::jsonb,";
         if( data.custom_json_type_id.valid() )
           result += std::to_string( *data.custom_json_type_id );
