@@ -55,7 +55,7 @@ AS
 $BODY$
 BEGIN
     IF EXISTS ( SELECT 1 FROM hafd.contexts WHERE name=_context AND registering_state_provider = TRUE )
-       OR hive.app_is_forking( _context ) THEN
+       OR NOT hive.app_is_forking( _context ) THEN
             RETURN;
     END IF;
 
