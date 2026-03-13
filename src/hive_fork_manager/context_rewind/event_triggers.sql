@@ -55,14 +55,14 @@ AS
 $BODY$
 BEGIN
     IF EXISTS ( SELECT 1 FROM hafd.contexts WHERE name=_context AND registering_state_provider = TRUE )
-       OR NOT hive.app_is_forking( _context ) THEN
+       OR hive.app_is_forking( _context ) THEN
             RETURN;
     END IF;
 
     -- register tables
     UPDATE hafd.contexts SET registering_state_provider = TRUE WHERE name =  _context;
 
-    PERFORM hive.app_register_table( 'hive', unnest( hsp.tables ), _context )
+    PERFORM hive.app_register_table( 'hafd', unnest( hsp.tables ), _context )
     FROM hafd.state_providers_registered hsp
     JOIN hafd.contexts hc ON hc.id = hsp.context_id
     WHERE hc.name = _context;
