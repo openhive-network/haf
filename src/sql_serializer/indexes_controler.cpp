@@ -150,9 +150,15 @@ indexes_controler::enable_indexes() {
 }
 
 void
-indexes_controler::disable_constraints() {
+indexes_controler::disable_constraints( uint32_t number_of_blocks_to_insert ) {
   if (theApp.is_interrupt_request())
     return;
+
+  if ( number_of_blocks_to_insert <= _psql_index_threshold )
+  {
+    ilog( "Number of blocks to add is less than threshold for disabling constraints. Constraints won't be dropped. ${n}<=${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
+    return;
+  }
 
   auto processor = start_commit_sql(false, "hive.disable_fk_of_irreversible()", "disable fk-s" );
   processor->join();

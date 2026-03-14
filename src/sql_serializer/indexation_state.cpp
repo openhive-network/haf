@@ -344,8 +344,11 @@ indexation_state::update_state(
 
       set_state(state);
 
-      _indexes_controler.disable_constraints();
-      _indexes_controler.disable_indexes_depends_on_blocks( expected_number_of_blocks_to_sync() );
+      {
+        uint32_t blocks_to_sync = expected_number_of_blocks_to_sync();
+        _indexes_controler.disable_constraints( blocks_to_sync );
+        _indexes_controler.disable_indexes_depends_on_blocks( blocks_to_sync );
+      }
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url
         , theApp
@@ -374,12 +377,14 @@ indexation_state::update_state(
 
       set_state(state);
 
-      _indexes_controler.disable_constraints();
-      _indexes_controler.disable_indexes_depends_on_blocks(
-        ( number_of_blocks_to_add == 0 || number_of_blocks_to_add == UNKNOWN )
-        ? expected_number_of_blocks_to_sync()
-        : number_of_blocks_to_add
-      );
+      {
+        uint32_t blocks_to_sync =
+          ( number_of_blocks_to_add == 0 || number_of_blocks_to_add == UNKNOWN )
+          ? expected_number_of_blocks_to_sync()
+          : number_of_blocks_to_add;
+        _indexes_controler.disable_constraints( blocks_to_sync );
+        _indexes_controler.disable_indexes_depends_on_blocks( blocks_to_sync );
+      }
       _dumper = std::make_shared< reindex_data_dumper >(
           _db_url
         , theApp
