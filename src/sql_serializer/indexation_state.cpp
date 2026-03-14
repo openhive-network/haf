@@ -314,9 +314,15 @@ indexation_state::can_move_to_livesync() const {
 
 uint32_t
 indexation_state::expected_number_of_blocks_to_sync() const {
-  int64_t seconds_behind = ( fc::time_point::now() - _chain_db.head_block_time() ).to_seconds();
+  auto now = fc::time_point::now();
+  auto head_time = _chain_db.head_block_time();
+  int64_t seconds_behind = ( now - head_time ).to_seconds();
   if( seconds_behind <= 0 )
+  {
+    wlog( "head_block_time (${h}) is at or ahead of wall clock (${n}), seconds_behind=${s}",
+          ("h", head_time)("n", now)("s", seconds_behind) );
     return 0;
+  }
   return static_cast< uint32_t >( seconds_behind / 3 );
 }
 
