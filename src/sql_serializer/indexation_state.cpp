@@ -314,7 +314,10 @@ indexation_state::can_move_to_livesync() const {
 
 uint32_t
 indexation_state::expected_number_of_blocks_to_sync() const {
-  return ( fc::time_point::now() - _chain_db.head_block_time() ).to_seconds() / 3;
+  int64_t seconds_behind = ( fc::time_point::now() - _chain_db.head_block_time() ).to_seconds();
+  if( seconds_behind <= 0 )
+    return 0;
+  return static_cast< uint32_t >( seconds_behind / 3 );
 }
 
 void
