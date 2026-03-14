@@ -1483,7 +1483,6 @@ block_api_tests:
       "host    all              all              ::/0         scram-sha-256"
 
     BENCHMARK_DB_URL: "postgresql://hived@haf-instance:5432/haf_block_log"
-    HIVED_UID: $HIVED_UID
     # Local path for filtered replay data (service's copy_datadir.sh handles NFS fallback)
     # Must match DATA_CACHE_DIR in replay_filtered_haf_data_accounts_body_operations
     FILTERED_DATA_LOCAL: "/cache/haf_filtered_${CI_PIPELINE_ID}_filtered"
@@ -1631,7 +1630,6 @@ dead_app_auto_detach:
         LOG_FILE: $CI_JOB_NAME.log
       command: ["--execute-maintenance-script=${HAF_SOURCE_DIR:?}/scripts/maintenance-scripts/sleep_infinity.sh"]
   variables:
-    HIVED_UID: $HIVED_UID
     HAF_COMMIT: $HAF_COMMIT
   before_script:
     # Install psql for database operations
@@ -1664,7 +1662,6 @@ start_haf_as_service:
     - *haf-service
   variables:
     HAF_POSTGRES_URL: postgresql://haf_admin@haf-instance:5432/haf_block_log
-    HIVED_UID: $HIVED_UID
     HAF_COMMIT: $HAF_COMMIT
   # Note: No before_script/fetch_haf_cache needed - service container already extracts to ${HAF_DATA_CACHE_LOCAL}
   script:

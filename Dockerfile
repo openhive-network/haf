@@ -224,9 +224,6 @@ ENV HAF_SOURCE_DIR="/home/haf_admin/source/${HIVE_SUBDIR}"
 # Environment variable which allows to override default postgres access specification in pg_hba.conf
 ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust\nhost    all     pghero    172.0.0.0/8    trust"
 
-# Always define default value of HIVED_UID variable to make possible direct spawn of docker image (without run_hived_img.sh wrapper)
-ENV HIVED_UID=1000
-
 ENV POSTGRES_VERSION=${POSTGRES_VERSION}
 
 ENV PGDATABASE=haf_block_log
