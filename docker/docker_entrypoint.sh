@@ -240,10 +240,14 @@ create_conf_d_directory_if_necessary() {
   fi
 }
 
-# Ensure DATADIR is writable by hived (UID 2001). When data is extracted
-# from CI cache or bind-mounted from the host, it may be owned by a
-# different user. haf_admin has sudo, so fix ownership here.
+# Ensure DATADIR and blockchain subdirectory are writable by hived (UID 2001).
+# When data is extracted from CI cache or bind-mounted from the host, it may
+# be owned by a different user. haf_admin has sudo, so fix ownership here.
+# Note: haf_db_store is owned by postgres, handled separately below.
 sudo -n chown hived:users "$DATADIR" 2>/dev/null || true
+if [[ -d "$DATADIR/blockchain" ]]; then
+  sudo -n chown -R hived:users "$DATADIR/blockchain" 2>/dev/null || true
+fi
 sudo --user=hived -n mkdir -p "$DATADIR/blockchain"
 
 # PostgresQL configuration (postgresql.conf) has data_directory hardcoded as '/home/hived/datadir/haf_db_store/pgdata' and custom configuration path as
