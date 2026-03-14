@@ -376,7 +376,7 @@ indexation_state::update_state(
 
       _indexes_controler.disable_constraints();
       _indexes_controler.disable_indexes_depends_on_blocks(
-        number_of_blocks_to_add == 0 // stop_replay_at_block = 0
+        ( number_of_blocks_to_add == 0 || number_of_blocks_to_add == UNKNOWN )
         ? expected_number_of_blocks_to_sync()
         : number_of_blocks_to_add
       );
