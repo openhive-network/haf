@@ -312,6 +312,7 @@ void indexes_controler::poll_and_create_indexes()
             "SELECT DISTINCT table_name "
             "FROM hafd.indexes_constraints "
             "WHERE status = 'missing' "
+            "AND table_name LIKE 'hafd.%' "
             "AND table_name NOT IN ("
             "  SELECT DISTINCT table_name "
             "  FROM hafd.indexes_constraints "
