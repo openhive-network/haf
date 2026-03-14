@@ -14,7 +14,6 @@ REGISTRY=""
 BRANCH="master"
 
 NETWORK_TYPE_ARG=""
-EXPORT_BINARIES_ARG=""
 BUILD_IMAGE_TAG=""
 
 print_help () {
@@ -24,7 +23,6 @@ cat <<-EOF
   Builds Docker image containing HAF installation built from specified COMMIT
   OPTIONS:
     --network-type=TYPE       Type of blockchain network supported by the built hived binary. Allowed values: mainnet, testnet, mirrornet.
-    --export-binaries=PATH    Path where binaries shall be exported from the built image.
     --image-tag=TAG           Image tag. Defaults to short commit hash
     --help,-h,-?              Displays this help screen and exits
 EOF
@@ -35,10 +33,6 @@ while [ $# -gt 0 ]; do
     --network-type=*)
         type="${1#*=}"
         NETWORK_TYPE_ARG="--network-type=${type}"
-        ;;
-    --export-binaries=*)
-        export_path="${1#*=}"
-        EXPORT_BINARIES_ARG="--export-binaries=${export_path}"
         ;;
     --image-tag=*)
         BUILD_IMAGE_TAG="${1#*=}"
@@ -82,5 +76,5 @@ fi
 
 # Use the build_instance.sh script from the new source root to avoid path resolution issues
 pushd "./haf-${COMMIT}" || exit 1
-"scripts/ci-helpers/build_instance.sh" "${BUILD_IMAGE_TAG}" "$(pwd)" "${REGISTRY}" "${NETWORK_TYPE_ARG}" "${EXPORT_BINARIES_ARG}"
+"scripts/ci-helpers/build_instance.sh" "${BUILD_IMAGE_TAG}" "$(pwd)" "${REGISTRY}" "${NETWORK_TYPE_ARG}"
 popd || exit 1
