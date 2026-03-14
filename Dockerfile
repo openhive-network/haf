@@ -13,7 +13,7 @@ FROM registry.gitlab.syncad.com/hive/hive/minimal-runtime:ubuntu24.04-3 AS minim
 
 ARG POSTGRES_VERSION
 
-ENV PATH="/home/haf_admin/.local/bin:$PATH"
+ENV PATH="/home/hived/.local/bin:$PATH"
 
 SHELL ["/bin/bash", "-c"]
 
@@ -23,8 +23,8 @@ COPY ./hive/scripts/openssl.conf /usr/local/src/hive/scripts/openssl.conf
 COPY ./hive/scripts/setup_ubuntu.sh /usr/local/src/hive/scripts/
 COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 
-# create required accounts
-RUN bash -x ./scripts/setup_ubuntu.sh --haf-admin-account="haf_admin" --hived-account="hived" && rm -rf /var/lib/apt/lists/*
+# create required accounts (single hived user with sudo, UID 1000)
+RUN bash -x ./scripts/setup_ubuntu.sh --hived-account="hived" && rm -rf /var/lib/apt/lists/*
 # install postgres and Python 3.14 from deadsnakes PPA
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg curl ca-certificates software-properties-common && \
@@ -103,8 +103,8 @@ RUN usermod -a -G users -c "PostgreSQL daemon account" postgres
 
 RUN useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service account" -U haf_maintainer
 
-USER haf_admin
-WORKDIR /home/haf_admin
+USER hived
+WORKDIR /home/hived
 
 FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py3.14-7 AS ci-base-image
 
@@ -120,10 +120,11 @@ COPY ./hive/scripts/openssl.conf /usr/local/src/hive/scripts/openssl.conf
 COPY ./hive/scripts/setup_ubuntu.sh /usr/local/src/hive/scripts/
 COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 
-# Install development packages and create required accounts
-RUN ./scripts/setup_ubuntu.sh --dev --haf-admin-account="haf_admin" --hived-account="hived" \
+# Install development packages (haf_admin already exists in ci-base-image)
+RUN ./scripts/setup_ubuntu.sh --dev --hived-account="hived" \
   && rm -rf /var/lib/apt/lists/*
 
+# Build stage uses haf_admin from ci-base-image (external, can't change)
 USER haf_admin
 WORKDIR /home/haf_admin
 
@@ -228,11 +229,12 @@ ENV POSTGRES_VERSION=${POSTGRES_VERSION}
 
 ENV PGDATABASE=haf_block_log
 
+ENV HAF_SOURCE_DIR="/home/hived/source/${HIVE_SUBDIR}"
+
 SHELL ["/bin/bash", "-c"]
 
-USER hived_admin
-RUN mkdir -p /home/hived_admin/hive_base_config/faketime/src/ && \
-    chown -Rc hived_admin:users /home/hived_admin && \
+USER hived
+RUN mkdir -p /home/hived/hive_base_config/faketime/src/ && \
     sudo mkdir -p /usr/local/lib/faketime
 
 USER hived
@@ -255,11 +257,8 @@ COPY --from=build --chown=hived:users \
   /home/hived/bin/op_body_filter \
   /home/hived/bin/
 
-# This should be removed before merge
-# COPY --from=build --chown=haf_admin:users /home/haf_admin/build /home/haf_admin/build/
-
-COPY --from=build --chown=hived_admin:users /home/haf_admin/hive_base_config/faketime/src/libfaketime*.so.1 \
-  /home/hived_admin/hive_base_config/faketime/src/
+COPY --from=build --chown=hived:users /home/haf_admin/hive_base_config/faketime/src/libfaketime*.so.1 \
+  /home/hived/hive_base_config/faketime/src/
 COPY --from=build --chown=root:root /usr/local/lib/faketime/* /usr/local/lib/faketime/
 
 COPY --from=build \
@@ -280,20 +279,21 @@ COPY --from=build \
 # set a variable telling the entrypoint not to try to install the extension from source, we just did it above
 ENV HAF_INSTALL_EXTENSION=no
 
-USER haf_admin
-WORKDIR /home/haf_admin
-
-COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/docker_entrypoint.sh" .
-RUN mkdir -p /home/haf_admin/source/scripts /home/haf_admin/source/hive/scripts /home/haf_admin/source/docker && chown -R haf_admin:users /home/haf_admin/source
-COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/scripts/" /home/haf_admin/source/scripts
-COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/hive/scripts/" /home/haf_admin/source/hive/scripts
-COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/ci_postgresql.conf" /home/haf_admin/source/docker/
+# Note: COPY --from=build source paths reference /home/haf_admin/ because the
+# build stage uses the external ci-base-image which has that user. The
+# destination paths use /home/hived/ since that's the only non-root user
+# in the instance image.
+RUN mkdir -p /home/hived/source/scripts /home/hived/source/hive/scripts /home/hived/source/docker
+COPY --from=build --chown=hived:users "${HAF_SOURCE_DIR}/docker/docker_entrypoint.sh" /home/hived/
+COPY --from=build --chown=hived:users "${HAF_SOURCE_DIR}/scripts/" /home/hived/source/scripts
+COPY --from=build --chown=hived:users "${HAF_SOURCE_DIR}/hive/scripts/" /home/hived/source/hive/scripts
+COPY --from=build --chown=hived:users "${HAF_SOURCE_DIR}/docker/ci_postgresql.conf" /home/hived/source/docker/
 COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/postgresql.conf" /etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf
 # Fix hardcoded PG version paths in postgresql.conf (cluster_name, hba_file, ident_file, pid_file)
 RUN sudo sed -i "s|/18/|/${POSTGRES_VERSION}/|g; s|'18/|'${POSTGRES_VERSION}/|g" /etc/postgresql/${POSTGRES_VERSION}/main/postgresql.conf
 COPY --from=build --chown=postgres:postgres "${HAF_SOURCE_DIR}/docker/pg_hba.conf" /etc/postgresql/$POSTGRES_VERSION/main/pg_hba.conf.default
 
-COPY --from=build --chown=haf_admin:users "${HAF_SOURCE_DIR}/docker/cron_jobs.sql" .
+COPY --from=build --chown=hived:users "${HAF_SOURCE_DIR}/docker/cron_jobs.sql" /home/hived/
 
 # Reset HIVE_SUBDIR after copying files from build stage
 ENV HIVE_SUBDIR=.
@@ -307,7 +307,7 @@ STOPSIGNAL SIGINT
 # Expose PostgreSQL port for GitLab health check (faster than hived webserver)
 EXPOSE 5432
 
-ENTRYPOINT [ "/home/haf_admin/docker_entrypoint.sh" ]
+ENTRYPOINT [ "/home/hived/docker_entrypoint.sh" ]
 
 ARG BUILD_TIME
 ARG GIT_COMMIT_SHA

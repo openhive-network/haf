@@ -19,13 +19,11 @@ print_help () {
     echo "  --dev                     Install packages required to build and run a HAF server."
     echo "  --ai                      Install pgai"
     echo "  --user                    Install packages to a subdirectory of the user's home directory."
-    echo "  --haf-admin-account=NAME  Specify the unix account name to be used for HAF administration (will be associated with the PostgreSQL role)."
-    echo "  --hived-account=NAME      Specify the unix account name to be used for hived (will be associated with the PostgreSQL role)."
+    echo "  --hived-account=NAME      Specify the unix account name to be used for hived (UID 1000, with sudo)."
     echo "  --help                    Display this help screen and exit."
     echo
 }
 
-haf_admin_unix_account="haf_admin"
 hived_unix_account="hived"
 
 assert_is_root() {
@@ -125,20 +123,6 @@ install_user_packages() {
   "$SRC_DIR/hive/scripts/setup_ubuntu.sh" --user
 }
 
-create_haf_admin_account() {
-  echo "Attempting to create $haf_admin_unix_account account..."
-  assert_is_root
-
-  # Unfortunately haf_admin must be able to su as root, because it must be able to write into /usr/share/postgresql/*/extension directory, being owned by root (it could be owned by postgres)
-  if id "$haf_admin_unix_account" &>/dev/null; then
-      echo "Account $haf_admin_unix_account already exists. Creation skipped."
-  else
-      useradd -ms /bin/bash -c "HAF admin account" -u 4000 -U "$haf_admin_unix_account" && echo "$haf_admin_unix_account ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-      usermod -a -G users "$haf_admin_unix_account"
-      chown -Rc "$haf_admin_unix_account":users "/home/$haf_admin_unix_account"
-  fi
-}
-
 create_maintenance_account() {
   echo "Attempting to create haf_maintainer account..."
   useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service account" -U haf_maintainer
@@ -164,8 +148,7 @@ while [ $# -gt 0 ]; do
         install_user_packages
         ;;
     --haf-admin-account=*)
-        haf_admin_unix_account="${1#*=}"
-        create_haf_admin_account
+        echo "Warning: --haf-admin-account is deprecated and ignored. Use --hived-account instead."
         ;;
     --hived-account=*)
         hived_unix_account="${1#*=}"

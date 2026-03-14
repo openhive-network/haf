@@ -4,8 +4,15 @@ set -euo pipefail
 
 echo "Starting the container with user $(whoami) with UID $(id -u)"
 
+# Optional UID override: if HIVED_UID is set, remap the hived user to that UID.
+# This is only needed when bind-mounting volumes owned by a non-1000 UID.
+if [[ -n "${HIVED_UID:-}" ]] && [[ "${HIVED_UID}" =~ ^[0-9]+$ ]] && [[ "${HIVED_UID}" -ne 0 ]] && [[ "${HIVED_UID}" -ne "$(id -u)" ]]; then
+  echo "Remapping hived UID to ${HIVED_UID}"
+  sudo -n usermod -o -u "${HIVED_UID}" hived
+fi
+
 SCRIPTDIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-SCRIPTSDIR="/home/haf_admin/source/${HIVE_SUBDIR}/scripts"
+SCRIPTSDIR="/home/hived/source/${HIVE_SUBDIR}/scripts"
 
 # Copy datadir from cache (CI only - DATA_SOURCE is not set in production)
 if [ -n "${DATA_SOURCE+x}" ]; then
@@ -18,22 +25,21 @@ if [ -n "${DATA_SOURCE+x}" ]; then
 fi
 
 
-if sudo -Enu hived test ! -d "$DATADIR"
+if test ! -d "$DATADIR"
 then
     echo "Data directory (DATADIR) $DATADIR does not exist. Exiting."
     exit 2
 fi
 
-if sudo -Enu hived test ! -d "$SHM_DIR" && test "$SHM_DIR" != "$DATADIR/blockchain"
+if test ! -d "$SHM_DIR" && test "$SHM_DIR" != "$DATADIR/blockchain"
 then
     echo "Shared memory file directory (SHM_DIR) $SHM_DIR does not exist. Exiting."
     exit 3
 fi
 
 LOG_FILE="${DATADIR}/${LOG_FILE:-docker_entrypoint.log}"
-sudo -n touch "$LOG_FILE"
-sudo -n chown -Rc hived:users "$LOG_FILE"
-sudo -n chmod a+rw "$LOG_FILE"
+touch "$LOG_FILE"
+chmod a+rw "$LOG_FILE"
 
 # shellcheck source=../scripts/common.sh
 source "$SCRIPTSDIR/common.sh"
@@ -128,7 +134,8 @@ trap cleanup EXIT
 enable_pg_cron
 
 {
-sudo --user=hived -En LD_PRELOAD="${OVERRIDE_LD_PRELOAD:-}" /bin/bash <<EOF
+export LD_PRELOAD="${OVERRIDE_LD_PRELOAD:-}"
+/bin/bash <<EOF
 echo "Attempting to execute hived using additional command line arguments:" "${HIVED_ARGS[*]}"
 set -euo pipefail
 
@@ -229,7 +236,7 @@ create_conf_d_directory_if_necessary() {
   # In CI mode, install reduced-memory PostgreSQL config to allow multiple concurrent jobs
   # Set HAF_CI_MODE=1 in CI environment to enable this
   if [[ "${HAF_CI_MODE:-0}" == "1" ]]; then
-    local ci_config="/home/haf_admin/source/${HIVE_SUBDIR}/docker/ci_postgresql.conf"
+    local ci_config="/home/hived/source/${HIVE_SUBDIR}/docker/ci_postgresql.conf"
     if [[ -f "$ci_config" ]]; then
       echo "HAF_CI_MODE enabled: Installing CI-specific PostgreSQL configuration (reduced memory)"
       sudo -n cp "$ci_config" "/home/hived/datadir/haf_postgresql_conf.d/00-ci-overrides.conf"
@@ -240,9 +247,9 @@ create_conf_d_directory_if_necessary() {
   fi
 }
 
-# Ensure DATADIR, blockchain, and SHM_DIR are writable by hived (UID 2001).
+# Ensure DATADIR, blockchain, and SHM_DIR are writable by hived.
 # When data is extracted from CI cache or bind-mounted from the host, it may
-# be owned by a different user. haf_admin has sudo, so fix ownership here.
+# be owned by a different user. hived has sudo, so fix ownership here.
 # Note: haf_db_store is owned by postgres, handled separately below.
 sudo -n chown hived:users "$DATADIR" 2>/dev/null || true
 if [[ -d "$DATADIR/blockchain" ]]; then
@@ -251,7 +258,7 @@ fi
 if [[ "$SHM_DIR" != "$DATADIR/blockchain" ]] && [[ -d "$SHM_DIR" ]]; then
   sudo -n chown -R hived:users "$SHM_DIR" 2>/dev/null || true
 fi
-sudo --user=hived -n mkdir -p "$DATADIR/blockchain"
+mkdir -p "$DATADIR/blockchain"
 
 # PostgresQL configuration (postgresql.conf) has data_directory hardcoded as '/home/hived/datadir/haf_db_store/pgdata' and custom configuration path as
 # /home/hived/datadir/haf_postgresql_conf.d/custom_postgres.conf. As such we need to make /home/hived/datadir a symbolinc link to actual data directory if
@@ -299,8 +306,8 @@ create_conf_d_directory_if_necessary
 # cat "/etc/postgresql/${POSTGRES_VERSION}/main/environment"
 
 if sudo --user=postgres -n [ ! -d "$PGDATA" -o ! -f "$PGDATA/PG_VERSION" ]; then
-  sudo --user=hived -n mkdir -p "$PGDATA"
-  sudo --user=hived -n mkdir -p "$HAF_DB_STORE/tablespace"
+  mkdir -p "$PGDATA"
+  mkdir -p "$HAF_DB_STORE/tablespace"
   sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE"
   sudo -n chown -Rc postgres:postgres "$PGDATA"
 
@@ -317,13 +324,13 @@ if sudo --user=postgres -n [ ! -d "$PGDATA" -o ! -f "$PGDATA/PG_VERSION" ]; then
 
   echo "Attempting to setup postgres instance: running setup_postgres.sh..."
 
-  sudo -n "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_postgres.sh" --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="${HAF_DB_STORE}/tablespace" --install-extension="${HAF_INSTALL_EXTENSION:-"yes"},/home/haf_admin/build,/usr/share/postgresql/${POSTGRES_VERSION},/usr/lib/postgresql/${POSTGRES_VERSION}"
+  sudo -n "/home/hived/source/${HIVE_SUBDIR}/scripts/setup_postgres.sh" --haf-admin-account=haf_admin --haf-binaries-dir="/home/hived/build" --haf-database-store="${HAF_DB_STORE}/tablespace" --install-extension="${HAF_INSTALL_EXTENSION:-"yes"},/home/hived/build,/usr/share/postgresql/${POSTGRES_VERSION},/usr/lib/postgresql/${POSTGRES_VERSION}"
 
   echo "Postgres instance setup completed."
 
-  "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_db.sh" --haf-db-admin=haf_admin --haf-db-name=haf_block_log
+  "/home/hived/source/${HIVE_SUBDIR}/scripts/setup_db.sh" --haf-db-admin=haf_admin --haf-db-name=haf_block_log
 
-  sudo -n "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_pghero.sh" --database=haf_block_log
+  sudo -n "/home/hived/source/${HIVE_SUBDIR}/scripts/setup_pghero.sh" --database=haf_block_log
 else
   echo "Attempting to setup postgres instance already containing HAF database..."
 
@@ -336,7 +343,7 @@ else
   sudo -n chmod 700 "$PGDATA" 2>/dev/null || true
 
   # in case when container is restarted over already existing (and potentially filled) data directory, we need to be sure that docker-internal postgres has deployed HFM extension
-  sudo -n "/home/haf_admin/source/${HIVE_SUBDIR}/scripts/setup_postgres.sh" --haf-admin-account=haf_admin --haf-binaries-dir="/home/haf_admin/build" --haf-database-store="${HAF_DB_STORE}/tablespace" --install-extension="${HAF_INSTALL_EXTENSION:-"yes"},/home/haf_admin/build,/usr/share/postgresql/${POSTGRES_VERSION},/usr/lib/postgresql/${POSTGRES_VERSION}"
+  sudo -n "/home/hived/source/${HIVE_SUBDIR}/scripts/setup_postgres.sh" --haf-admin-account=haf_admin --haf-binaries-dir="/home/hived/build" --haf-database-store="${HAF_DB_STORE}/tablespace" --install-extension="${HAF_INSTALL_EXTENSION:-"yes"},/home/hived/build,/usr/share/postgresql/${POSTGRES_VERSION},/usr/lib/postgresql/${POSTGRES_VERSION}"
   sudo -n "/usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh" --haf-admin-account=haf_admin --haf-db-name=haf_block_log
 
   echo "Postgres instance setup completed."
@@ -372,7 +379,7 @@ while [ $# -gt 0 ]; do
       ;;
     --skip-hived)
       DO_MAINTENANCE=1
-      MAINTENANCE_SCRIPT_NAME="/home/haf_admin/source/scripts/maintenance-scripts/sleep_infinity.sh"
+      MAINTENANCE_SCRIPT_NAME="/home/hived/source/scripts/maintenance-scripts/sleep_infinity.sh"
       echo "Not launching hived due to --skip-hived command-line option"
       # allow launching the container with only the database running, but not hived.  This is useful when you want to
       # examine the database, but there's some problem that causes hived to exit at startup, since hived exiting will
