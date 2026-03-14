@@ -240,13 +240,16 @@ create_conf_d_directory_if_necessary() {
   fi
 }
 
-# Ensure DATADIR and blockchain subdirectory are writable by hived (UID 2001).
+# Ensure DATADIR, blockchain, and SHM_DIR are writable by hived (UID 2001).
 # When data is extracted from CI cache or bind-mounted from the host, it may
 # be owned by a different user. haf_admin has sudo, so fix ownership here.
 # Note: haf_db_store is owned by postgres, handled separately below.
 sudo -n chown hived:users "$DATADIR" 2>/dev/null || true
 if [[ -d "$DATADIR/blockchain" ]]; then
   sudo -n chown -R hived:users "$DATADIR/blockchain" 2>/dev/null || true
+fi
+if [[ "$SHM_DIR" != "$DATADIR/blockchain" ]] && [[ -d "$SHM_DIR" ]]; then
+  sudo -n chown -R hived:users "$SHM_DIR" 2>/dev/null || true
 fi
 sudo --user=hived -n mkdir -p "$DATADIR/blockchain"
 
