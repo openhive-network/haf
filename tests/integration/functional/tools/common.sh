@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 on_exit() {
-  psql -p "$postgres_port" -d "$DB_NAME" -v ON_ERROR_STOP=on -f ./tools/cleanup.sql;
+  psql -U haf_admin -p "$postgres_port" -d "$DB_NAME" -v ON_ERROR_STOP=on -f ./tools/cleanup.sql;
   echo "On exit $?"
 }
 
@@ -61,10 +61,10 @@ setup_test_database() {
 
   # ATTENTION: normally the extension does not contain hash functions
   # so the db is little different than production state, but these are functional tests so IMO it is acceptable
-  psql -p "${postgres_port}" -d "${DB_NAME}" -a -v ON_ERROR_STOP=on -f "${extension_path}/update.sql"
+  psql -U haf_admin -p "${postgres_port}" -d "${DB_NAME}" -a -v ON_ERROR_STOP=on -f "${extension_path}/update.sql"
 
   # TODO(mickiewicz@syncad.com): remove when releasing on pg16 where 'public' schema is not accessible by default
-  if ! psql -p "${postgres_port}" -d "${DB_NAME}" -a -v ON_ERROR_STOP=on -c "REVOKE CREATE ON SCHEMA public FROM PUBLIC;";
+  if ! psql -U haf_admin -p "${postgres_port}" -d "${DB_NAME}" -a -v ON_ERROR_STOP=on -c "REVOKE CREATE ON SCHEMA public FROM PUBLIC;";
   then
     echo "FAILED. Cannot revoke CREATE from public schema"
     exit 1;
@@ -74,7 +74,7 @@ setup_test_database() {
 
   if [ -e "${sql_setup_fixture}" ]; then
     echo "psql -p $postgres_port -d $DB_NAME -a -v ON_ERROR_STOP=on -f"
-    if ! psql -p "${postgres_port}" -d "${DB_NAME}" -a -v ON_ERROR_STOP=on -f "${sql_setup_fixture}";
+    if ! psql -U haf_admin -p "${postgres_port}" -d "${DB_NAME}" -a -v ON_ERROR_STOP=on -f "${sql_setup_fixture}";
     then
         echo "FAILED. Cannot run fixture ${sql_setup_fixture}"
         exit 1

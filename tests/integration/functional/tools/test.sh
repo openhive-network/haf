@@ -12,10 +12,10 @@ setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path" "$ex
 
 trap on_exit EXIT;
 
-psql -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
+psql -U haf_admin -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
 evaluate_result $?
 
-psql -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  ./tools/mocks.sql;
+psql -U haf_admin -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  ./tools/mocks.sql;
 evaluate_result $?
 
 users="haf_admin test_hived alice alice_impersonal bob"
@@ -37,14 +37,14 @@ BEGIN
 $body
 END
 \$\$;"
-    psql -p "$postgres_port" -d "$DB_NAME" -v ON_ERROR_STOP=on -c "$query"
+    psql -U haf_admin -p "$postgres_port" -d "$DB_NAME" -v ON_ERROR_STOP=on -c "$query"
     evaluate_result $?
   done
 done
 
 # add test functions:
 # load tests function
-psql -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  "${test_path}"
+psql -U haf_admin -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  "${test_path}"
 evaluate_result $?
 
 # you can use alice_test_given, alice_test_when, alice_test_error, alice_test_then and their bob's and test_hived equivalents
@@ -54,7 +54,7 @@ for testfun in ${tests}; do
     query="CALL ${user}_test_${testfun}();";
 
     if [ "$user" =  "haf_admin" ]; then
-      pg_call="-p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c"
+      pg_call="-U haf_admin -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on -c"
     else
       pg_call="postgresql://${user}:test@localhost:$postgres_port/$DB_NAME --username=${user} -a -v ON_ERROR_STOP=on -c"
     fi
@@ -69,7 +69,7 @@ for testfun in ${tests}; do
   done
 
   if [ -n "${script_to_execute_after_testfun}" ]; then
-    pg_call="-p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on"
+    pg_call="-U haf_admin -p $postgres_port -d $DB_NAME -v ON_ERROR_STOP=on"
     psql ${pg_call} -c "UPDATE pg_extension SET extversion = '1.0' WHERE extname = 'hive_fork_manager';"
     sudo "${script_to_execute_after_testfun}" --haf-db-name="$DB_NAME";
     # for testing hash functions we ned to add them after update which remove them
@@ -78,7 +78,7 @@ for testfun in ${tests}; do
 done
 
 on_exit
-psql -p "$postgres_port" -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
+psql -U haf_admin -p "$postgres_port" -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE \"$DB_NAME\"";
 
 echo "PASSED";
 trap - EXIT;
