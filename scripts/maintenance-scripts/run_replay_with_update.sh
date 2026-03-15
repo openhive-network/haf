@@ -39,7 +39,7 @@ echo -e "\e[0Ksection_end:$(date +%s):replay\r\e[0K"
 
 # run script that makes database update
 "${REPO_DIR}/tests/integration/functional/hive_fork_manager/test_extension_update.sh" \
-    --setup_scripts_path="$SETUP_SCRIPTS_PATH" --haf_binaries_dir="/home/haf_admin/build" --ci_project_dir="$REPO_DIR"
+    --setup_scripts_path="$SETUP_SCRIPTS_PATH" --haf_binaries_dir="/home/hived/build" --ci_project_dir="$REPO_DIR"
 
 # repeat replay from 1 milion blocks
 "$HIVED_PATH" --data-dir "$DATADIR" "${REPLAY_CONTINUATION[@]}" --exit-before-sync --psql-url "postgresql:///$DB_NAME" 2>&1 | tee -i node_logs1.log

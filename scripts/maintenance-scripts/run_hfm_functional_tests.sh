@@ -23,7 +23,7 @@ source "$SCRIPTSDIR/maintenance-scripts/ci_common.sh"
 
 # Use CI_PROJECT_DIR - source is already checked out by GitLab
 HAF_SOURCE_DIR="${CI_PROJECT_DIR}"
-HAF_BUILD_DIR="/home/haf_admin/build"
+HAF_BUILD_DIR="/home/hived/build"
 
 mkdir -p "${HAF_BUILD_DIR}"
 

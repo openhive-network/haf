@@ -13,7 +13,7 @@ export HIVED_PATH=${HIVED_PATH:-"/home/hived/bin/hived"}
 export COMPRESS_BLOCK_LOG_PATH=${COMPRESS_BLOCK_LOG_PATH:-"/home/hived/bin/compress_block_log"}
 export DB_NAME=haf_block_log
 export DB_ADMIN="haf_admin"
-export SETUP_SCRIPTS_PATH="/home/haf_admin/haf/scripts"
+export SETUP_SCRIPTS_PATH="/home/hived/source/scripts"
 
 test_start() {
   pushd "$REPO_DIR"

@@ -36,7 +36,7 @@ $HIVED_PATH --data-dir "$DATADIR" "${REPLAY[@]}" --exit-before-sync --psql-url "
 echo -e "\e[0Ksection_end:$(date +%s):replay\r\e[0K"
 
 "${REPO_DIR}/tests/integration/functional/hive_fork_manager/test_table_schema.sh" \
-    --setup_scripts_path="$SETUP_SCRIPTS_PATH" --haf_binaries_dir="/home/haf_admin/build" --ci_project_dir="$REPO_DIR" \
-    --build_root_dir="/home/haf_admin/build" --pattern_dir="$PATTERNS_PATH" --host="/var/run/postgresql"
+    --setup_scripts_path="$SETUP_SCRIPTS_PATH" --haf_binaries_dir="/home/hived/build" --ci_project_dir="$REPO_DIR" \
+    --build_root_dir="/home/hived/build" --pattern_dir="$PATTERNS_PATH" --host="/var/run/postgresql"
 
 test_end
