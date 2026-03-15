@@ -484,7 +484,9 @@ BEGIN
     SELECT schema INTO __schema
     FROM hafd.contexts hc
     WHERE hc.name = _context;
-    EXECUTE format( 'ALTER TABLE %I.%s ADD COLUMN hive_rowid BIGINT NOT NULL DEFAULT 0', _table_schema, _table_name );
+    IF NOT hive.is_lite_schema() THEN
+        EXECUTE format( 'ALTER TABLE %I.%s ADD COLUMN hive_rowid BIGINT NOT NULL DEFAULT 0', _table_schema, _table_name );
+    END IF;
     EXECUTE format( 'ALTER TABLE %I.%s INHERIT %I.%s', _table_schema, _table_name, __schema, _context );
 END;
 $BODY$
