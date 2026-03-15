@@ -37,6 +37,13 @@ then
     exit 3
 fi
 
+# Fix DATADIR ownership before any writes — cached data may be owned by a
+# different UID (e.g., old hived UID 2001 vs new UID 1000).
+if [[ ! -O "$DATADIR" ]]; then
+  echo "Fixing ownership of DATADIR ($DATADIR)..."
+  sudo -n chown hived:users "$DATADIR" 2>/dev/null || true
+fi
+
 LOG_FILE="${DATADIR}/${LOG_FILE:-docker_entrypoint.log}"
 touch "$LOG_FILE"
 chmod a+rw "$LOG_FILE"
