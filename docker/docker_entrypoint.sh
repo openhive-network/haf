@@ -97,10 +97,10 @@ enable_pg_cron() {
     echo 'enabling pg_cron'
     sudo sed -i'' -E -e "s/^shared_preload_libraries = '([^']+)'/shared_preload_libraries = '\1,pg_cron'/" "/etc/postgresql/$POSTGRES_VERSION/main/postgresql.conf"
     sudo service postgresql restart
-    psql -c 'CREATE EXTENSION IF NOT EXISTS pg_cron' haf_block_log
-    psql -c 'GRANT USAGE ON SCHEMA cron to haf_maintainer' haf_block_log
-    psql -c 'GRANT USAGE ON SCHEMA cron to pghero' haf_block_log
-    psql -f ~/cron_jobs.sql haf_block_log
+    psql -U haf_admin -c 'CREATE EXTENSION IF NOT EXISTS pg_cron' haf_block_log
+    psql -U haf_admin -c 'GRANT USAGE ON SCHEMA cron to haf_maintainer' haf_block_log
+    psql -U haf_admin -c 'GRANT USAGE ON SCHEMA cron to pghero' haf_block_log
+    psql -U haf_admin -f ~/cron_jobs.sql haf_block_log
 }
 
 perform_instance_dump() {
