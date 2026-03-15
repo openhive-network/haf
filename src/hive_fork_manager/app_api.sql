@@ -485,9 +485,20 @@ BEGIN
     FROM hafd.contexts hc
     WHERE hc.name = _context;
     IF NOT hive.is_lite_schema() THEN
-        EXECUTE format( 'ALTER TABLE %I.%s ADD COLUMN hive_rowid BIGINT NOT NULL DEFAULT 0', _table_schema, _table_name );
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = _table_schema AND table_name = _table_name AND column_name = 'hive_rowid'
+        ) THEN
+            EXECUTE format( 'ALTER TABLE %I.%s ADD COLUMN hive_rowid BIGINT NOT NULL DEFAULT 0', _table_schema, _table_name );
+        END IF;
     END IF;
-    EXECUTE format( 'ALTER TABLE %I.%s INHERIT %I.%s', _table_schema, _table_name, __schema, _context );
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_catalog.pg_inherits
+        WHERE inhrelid = format('%I.%I', _table_schema, _table_name)::regclass
+          AND inhparent = format('%I.%I', __schema, _context)::regclass
+    ) THEN
+        EXECUTE format( 'ALTER TABLE %I.%s INHERIT %I.%s', _table_schema, _table_name, __schema, _context );
+    END IF;
 END;
 $BODY$
 ;
