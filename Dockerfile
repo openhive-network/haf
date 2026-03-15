@@ -124,12 +124,13 @@ COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 RUN ./scripts/setup_ubuntu.sh --dev --hived-account="hived" \
   && rm -rf /var/lib/apt/lists/*
 
-# Use hived for build (haf_admin no longer exists after user consolidation)
-USER hived
+# Install user packages (faketime, websocat, poetry) as hived
+# Run as root to avoid sudo issues, then switch to hived for the build stage
 WORKDIR /home/hived
+RUN HOME=/home/hived /usr/local/src/scripts/setup_ubuntu.sh --user && \
+    chown -R hived:users /home/hived
 
-# Install additionally packages located in user directory
-RUN /usr/local/src/scripts/setup_ubuntu.sh --user
+USER hived
 
 FROM ci-base-image AS build
 
