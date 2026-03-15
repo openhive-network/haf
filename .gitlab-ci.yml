@@ -893,7 +893,7 @@ haf_image_build_pg18:
     # Fix workspace permissions - CI fetch strategy may leave directories owned by different users
     # Remove the sql_serializer symlink location to let CMake recreate it with current user permissions
     - rm -rf $CI_PROJECT_DIR/hive/libraries/plugins/sql_serializer 2>/dev/null || true
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
   artifacts:
     paths:
       - "**/*.log"
@@ -970,7 +970,7 @@ haf_system_tests:
     - sudo apt-get update -qq && sudo apt-get install -y -qq git build-essential libffi-dev python3-dev python3.14-dev 2>/dev/null || sudo apt-get install -y -qq git build-essential libffi-dev python3-dev || true
     - !reference [.init_submodules, before_script]
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_haf_system_tests.sh
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_haf_system_tests.sh
   artifacts:
     paths:
     - "haf_system_tests.log"
@@ -1003,7 +1003,7 @@ haf_forking_tests:
     - sudo apt-get update -qq && sudo apt-get install -y -qq git build-essential libffi-dev python3-dev python3.14-dev 2>/dev/null || sudo apt-get install -y -qq git build-essential libffi-dev python3-dev || true
     - !reference [.init_submodules, before_script]
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_haf_forking_tests.sh
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_haf_forking_tests.sh
   artifacts:
     paths:
     - "haf_forking_tests.log"
@@ -1131,7 +1131,7 @@ applications_system_tests:
     - sudo apt-get update -qq && sudo apt-get install -y -qq git build-essential libffi-dev python3-dev python3.14-dev 2>/dev/null || sudo apt-get install -y -qq git build-essential libffi-dev python3-dev || true
     - !reference [.init_submodules, before_script]
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_application_system_tests.sh
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_application_system_tests.sh
   artifacts:
     paths:
     - "applications_system_tests.log"
@@ -1258,7 +1258,7 @@ replay_with_update:
     # This job rebuilds HAF from source, so it needs full submodules (including rocksdb)
     - !reference [.init_submodules_full, before_script]
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_update.sh
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_update.sh
   artifacts:
     paths:
       - "replay_with_update.log"
@@ -1279,7 +1279,7 @@ replay_with_keyauths:
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_keyauth.sh
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_keyauth.sh
   artifacts:
     paths:
       - "replay_with_keyauths.log"
@@ -1300,7 +1300,7 @@ replay_with_json_metadata:
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_json_metadata.sh
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_json_metadata.sh
   artifacts:
     paths:
       - "replay_with_json_metadata.log"
@@ -1321,7 +1321,7 @@ replay_with_app:
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_replay_with_app.sh
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_replay_with_app.sh
   artifacts:
     paths:
       - "replay_with_app.log"
@@ -1342,7 +1342,7 @@ replay_live_pruned_with_app:
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_pruned_replay_with_app.sh
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_pruned_replay_with_app.sh
   artifacts:
     paths:
       - "replay_with_app.log"
@@ -1363,7 +1363,7 @@ replay_block_log_pruned_with_app:
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_reindex_pruned_replay_with_app.sh
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_reindex_pruned_replay_with_app.sh
   artifacts:
     paths:
       - "replay_with_app.log"
@@ -1384,7 +1384,7 @@ replay_restarts_with_app:
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_replay_with_restarts_and_app.sh
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_replay_with_restarts_and_app.sh
   artifacts:
     paths:
       - "node_logs.log"
@@ -1403,7 +1403,7 @@ replay_with_restart:
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_breaks.sh
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_breaks.sh
   artifacts:
     paths:
       - "node_logs.log"
@@ -1422,7 +1422,7 @@ update_with_wrong_table_schema:
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_update_with_wrong_table_schema.sh
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_update_with_wrong_table_schema.sh
   artifacts:
     paths:
       - "update_with_wrong_table_schema.log"
@@ -1772,7 +1772,7 @@ op_body_filter_tests:
   # No submodule initialization needed - this test only uses the op_body_filter binary
   # and pytest with no external dependencies (test_tools dependency removed)
   script:
-    - /home/haf_admin/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_op_body_filter_tests.sh
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_op_body_filter_tests.sh
   artifacts:
     paths:
     - "op_body_filter_tests.log"
