@@ -172,7 +172,7 @@ RUN <<-EOF
   fi
 
   INSTALLATION_DIR="/home/hived/bin"
-  sudo --user=hived mkdir -p "${INSTALLATION_DIR}"
+  mkdir -p "${INSTALLATION_DIR}"
 
   "${HAF_SOURCE_DIR}/scripts/build.sh" --haf-source-dir="${HAF_SOURCE_DIR}" --haf-binaries-dir="./build" \
   --cmake-arg="-DBUILD_HIVE_TESTNET=${BUILD_HIVE_TESTNET}" \
@@ -188,7 +188,7 @@ RUN <<-EOF
     sccache --show-stats || true
   fi
 
-  sudo chown -R hived "${INSTALLATION_DIR}/"*
+  # Files already owned by hived (we're running as hived)
 EOF
 
 FROM minimal-runtime AS instance
