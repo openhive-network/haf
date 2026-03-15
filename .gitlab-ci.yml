@@ -964,9 +964,12 @@ haf_system_tests:
     entrypoint: [""]
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-    # Increase beekeepy HTTP probe timeout (default 5s is too short under CI load
-    # when hived is still initializing sql_serializer after opening HTTP port)
-    HELPY_COMMUNICATION_TIMEOUT_SECS: "15"
+    # Increase beekeepy HTTP probe timeout and retries (defaults are too short
+    # under CI load when hived is still initializing sql_serializer).
+    # Note: env var names in beekeepy are rotated (bug) — MAX_RETRIES controls
+    # timeout, TIMEOUT_SECS controls period, PERIOD controls retries.
+    HELPY_COMMUNICATION_MAX_RETRIES: "15"
+    HELPY_COMMUNICATION_PERIOD_BETWEEN_RETRIES_SECS: "10"
   before_script:
     # Install git, build tools, and Python 3.14 dev headers for submodule init and C extension compilation
     # libffi-dev: for cffi, python3-dev: for Python.h
@@ -1002,7 +1005,8 @@ haf_forking_tests:
     entrypoint: [""]
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-    HELPY_COMMUNICATION_TIMEOUT_SECS: "15"
+    HELPY_COMMUNICATION_MAX_RETRIES: "15"
+    HELPY_COMMUNICATION_PERIOD_BETWEEN_RETRIES_SECS: "10"
   before_script:
     - sudo apt-get update -qq && sudo apt-get install -y -qq git build-essential libffi-dev python3-dev python3.14-dev 2>/dev/null || sudo apt-get install -y -qq git build-essential libffi-dev python3-dev || true
     - !reference [.init_submodules, before_script]
@@ -1078,7 +1082,8 @@ haf_system_tests_mirrornet:
   variables:
     PYTEST_NUMBER_OF_PROCESSES: "10"
     # Increase beekeepy HTTP probe timeout (default 5s is too short under CI load)
-    HELPY_COMMUNICATION_TIMEOUT_SECS: "15"
+    HELPY_COMMUNICATION_MAX_RETRIES: "15"
+    HELPY_COMMUNICATION_PERIOD_BETWEEN_RETRIES_SECS: "10"
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
     HIVED_PATH: "$BINARY_CACHE_PATH/hived"
     COMPRESS_BLOCK_LOG_PATH: "$BINARY_CACHE_PATH/compress_block_log"
@@ -1131,7 +1136,8 @@ applications_system_tests:
     entrypoint: [""]
   variables:
     PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-    HELPY_COMMUNICATION_TIMEOUT_SECS: "15"
+    HELPY_COMMUNICATION_MAX_RETRIES: "15"
+    HELPY_COMMUNICATION_PERIOD_BETWEEN_RETRIES_SECS: "10"
   before_script:
     # Install git, build tools, and Python 3.14 dev headers for submodule init and C extension compilation
     # libffi-dev: for cffi, python3-dev: for Python.h
