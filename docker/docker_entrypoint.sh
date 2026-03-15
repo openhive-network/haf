@@ -39,14 +39,16 @@ fi
 
 # Fix DATADIR ownership before any writes — cached data may be owned by a
 # different UID (e.g., old hived UID 2001 vs new UID 1000).
+# Use sudo for both chown and the initial touch/chmod, since the chown
+# may fail silently in DinD environments without CAP_CHOWN.
 if [[ ! -O "$DATADIR" ]]; then
   echo "Fixing ownership of DATADIR ($DATADIR)..."
   sudo -n chown hived:users "$DATADIR" 2>/dev/null || true
 fi
 
 LOG_FILE="${DATADIR}/${LOG_FILE:-docker_entrypoint.log}"
-touch "$LOG_FILE"
-chmod a+rw "$LOG_FILE"
+sudo -n touch "$LOG_FILE" 2>/dev/null || touch "$LOG_FILE"
+sudo -n chmod a+rw "$LOG_FILE" 2>/dev/null || chmod a+rw "$LOG_FILE"
 
 # shellcheck source=../scripts/common.sh
 source "$SCRIPTSDIR/common.sh"
