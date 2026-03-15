@@ -38,10 +38,10 @@ class SQLNodesPreparer(ttcn.NodesPreparer):
 
             # Increase initialization timeout for nodes with sql_serializer.
             # Under CI load with parallel tests, the default 5-second beekeepy timeout
-            # is insufficient for port detection. This matches HafNode behavior.
+            # is insufficient for port detection.
             node_impl = get_implementation(node, Node)
             with node_impl.update_settings() as settings:
-                settings.initialization_timeout = timedelta(seconds=30)
+                settings.initialization_timeout = timedelta(seconds=60)
 
         for node in builder.nodes:
             apply_block_log_type_to_monolithic_workaround(node)
