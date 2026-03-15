@@ -160,6 +160,8 @@ WORKDIR /home/hived
 SHELL ["/bin/bash", "-c"]
 
 # Get everything from cwd as sources to be built.
+# CACHE_BUST arg invalidates the COPY layer when scripts change without C++ changes
+ARG CACHE_BUST=0
 COPY --chown=hived:users . /home/hived/source
 
 RUN <<-EOF
