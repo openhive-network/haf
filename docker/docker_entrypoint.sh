@@ -248,14 +248,20 @@ create_conf_d_directory_if_necessary() {
 }
 
 # Ensure DATADIR, blockchain, and SHM_DIR are writable by hived.
-# When data is extracted from CI cache or bind-mounted from the host, it may
-# be owned by a different user. hived has sudo, so fix ownership here.
+# This is a failsafe for CI cache extraction or bind mounts where volumes may
+# be owned by a different user. In normal production use, data is already owned
+# by hived and these checks are no-ops.
 # Note: haf_db_store is owned by postgres, handled separately below.
-sudo -n chown hived:users "$DATADIR" 2>/dev/null || true
-if [[ -d "$DATADIR/blockchain" ]]; then
+if [[ ! -O "$DATADIR" ]]; then
+  echo "Fixing ownership of DATADIR ($DATADIR)..."
+  sudo -n chown hived:users "$DATADIR" 2>/dev/null || true
+fi
+if [[ -d "$DATADIR/blockchain" ]] && [[ ! -O "$DATADIR/blockchain" ]]; then
+  echo "Fixing ownership of blockchain directory..."
   sudo -n chown -R hived:users "$DATADIR/blockchain" 2>/dev/null || true
 fi
-if [[ "$SHM_DIR" != "$DATADIR/blockchain" ]] && [[ -d "$SHM_DIR" ]]; then
+if [[ "$SHM_DIR" != "$DATADIR/blockchain" ]] && [[ -d "$SHM_DIR" ]] && [[ ! -O "$SHM_DIR" ]]; then
+  echo "Fixing ownership of SHM_DIR ($SHM_DIR)..."
   sudo -n chown -R hived:users "$SHM_DIR" 2>/dev/null || true
 fi
 mkdir -p "$DATADIR/blockchain"
@@ -328,9 +334,6 @@ if sudo --user=postgres -n [ ! -d "$PGDATA" -o ! -f "$PGDATA/PG_VERSION" ]; then
 
   echo "Postgres instance setup completed."
 
-  # Patch setup_db.sh to remove sudo -Enu (haf_admin unix user no longer exists,
-  # only the PG role remains). This handles cached Docker images with old scripts.
-  sed -i 's/sudo -Enu "\$DB_ADMIN" psql/psql/g' "/home/hived/source/${HIVE_SUBDIR}/scripts/setup_db.sh" 2>/dev/null || true
   "/home/hived/source/${HIVE_SUBDIR}/scripts/setup_db.sh" --haf-db-admin=haf_admin --haf-db-name=haf_block_log
 
   sudo -n "/home/hived/source/${HIVE_SUBDIR}/scripts/setup_pghero.sh" --database=haf_block_log

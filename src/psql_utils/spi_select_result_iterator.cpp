@@ -1,4 +1,3 @@
-// User consolidation: single hived user (UID 1000) with trust auth
 #include "spi_select_result_iterator.hpp"
 
 #include "include/exceptions.hpp"
