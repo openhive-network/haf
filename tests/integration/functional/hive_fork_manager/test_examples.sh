@@ -10,12 +10,12 @@ postgres_port="$4"
 
 setup_test_database "$setup_scripts_dir_path" "$postgres_port" "$test_path"
 
-psql -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
+psql -U haf_admin -p "$postgres_port" -d "$DB_NAME" -a -v ON_ERROR_STOP=on -f  ./tools/test_tools.sql;
 
-psql -p "${postgres_port}" -d "${DB_NAME}" -a -v ON_ERROR_STOP=on -f "./tools/mocks.sql"
+psql -U haf_admin -p "${postgres_port}" -d "${DB_NAME}" -a -v ON_ERROR_STOP=on -f "./tools/mocks.sql"
 evaluate_result $?;
 
-psql -p "${postgres_port}" -d "${DB_NAME}" -a -v ON_ERROR_STOP=on -f ./hive_fork_manager/examples/prepare_data.sql
+psql -U haf_admin -p "${postgres_port}" -d "${DB_NAME}" -a -v ON_ERROR_STOP=on -f ./hive_fork_manager/examples/prepare_data.sql
 evaluate_result $?;
 
 test_name=$(test_name_from_path "$test_path")
@@ -38,6 +38,6 @@ python3 -mpip install \
 
 evaluate_result $?;
 
-psql -p "$postgres_port" -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE $DB_NAME";
+psql -U haf_admin -p "$postgres_port" -d postgres -v ON_ERROR_STOP=on -c "DROP DATABASE $DB_NAME";
 
 exit 0
