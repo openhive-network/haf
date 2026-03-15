@@ -17,7 +17,7 @@ namespace hive::plugins::sql_serializer {
     indexes_controler( std::string db_url, uint32_t psql_index_threshold, appbase::application& app );
     void disable_indexes_depends_on_blocks( uint32_t number_of_blocks_to_insert );
     void enable_indexes();
-    void disable_constraints( uint32_t number_of_blocks_to_insert );
+    bool disable_constraints( uint32_t number_of_blocks_to_insert );
     void enable_constrains();
     void poll_and_create_indexes();
 

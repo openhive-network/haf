@@ -23,6 +23,7 @@ namespace hive::plugins::sql_serializer {
       , uint32_t transactions_threads
       , uint32_t account_operation_threads
       , uint32_t pruning_tail_size
+      , bool synchronous_mode = false
     );
 
     ~reindex_data_dumper();
@@ -35,6 +36,7 @@ namespace hive::plugins::sql_serializer {
   private:
     void join();
     void mark_irreversible_data_as_dirty( bool is_dirty );
+    void trigger_synchronous_flush( cached_data_t& cached_data, int last_block_num );
 
     using block_data_container_t_writer = table_data_writer<hive_blocks>;
     using transaction_data_container_t_writer = chunks_for_sql_writers_splitter<
@@ -85,8 +87,10 @@ namespace hive::plugins::sql_serializer {
 
     std::unique_ptr< end_massive_sync_processor > _end_massive_sync_processor;
     std::shared_ptr< transaction_controllers::transaction_controller > _transactions_controller;
+    std::shared_ptr< block_num_rendezvous_trigger > _api_trigger;
 
     std::string _db_url;
+    bool _synchronous_mode;
   };
 
 } // namespace hive::plugins::sql_serializer

@@ -346,17 +346,21 @@ indexation_state::update_state(
 
       {
         uint32_t blocks_to_sync = expected_number_of_blocks_to_sync();
-        _indexes_controler.disable_constraints( blocks_to_sync );
+        bool constraints_dropped = _indexes_controler.disable_constraints( blocks_to_sync );
         _indexes_controler.disable_indexes_depends_on_blocks( blocks_to_sync );
+        bool use_synchronous_mode = !constraints_dropped;
+        if ( use_synchronous_mode )
+          ilog( "FK constraints kept — using synchronous single-transaction writer mode" );
+        _dumper = std::make_shared< reindex_data_dumper >(
+            _db_url
+          , theApp
+          , _psql_operations_threads_number
+          , _psql_transactions_threads_number
+          , _psql_account_operations_threads_number
+          , _psql_pruning_tail_size
+          , use_synchronous_mode
+        );
       }
-      _dumper = std::make_shared< reindex_data_dumper >(
-          _db_url
-        , theApp
-        , _psql_operations_threads_number
-        , _psql_transactions_threads_number
-        , _psql_account_operations_threads_number
-        , _psql_pruning_tail_size
-      );
       _irreversible_block_num = NO_IRREVERSIBLE_BLOCK;
       _trigger = std::make_unique< p2p_flush_trigger >(
           _main_plugin
@@ -382,17 +386,21 @@ indexation_state::update_state(
           ( number_of_blocks_to_add == 0 || number_of_blocks_to_add == UNKNOWN )
           ? expected_number_of_blocks_to_sync()
           : number_of_blocks_to_add;
-        _indexes_controler.disable_constraints( blocks_to_sync );
+        bool constraints_dropped = _indexes_controler.disable_constraints( blocks_to_sync );
         _indexes_controler.disable_indexes_depends_on_blocks( blocks_to_sync );
+        bool use_synchronous_mode = !constraints_dropped;
+        if ( use_synchronous_mode )
+          ilog( "FK constraints kept — using synchronous single-transaction writer mode" );
+        _dumper = std::make_shared< reindex_data_dumper >(
+            _db_url
+          , theApp
+          , _psql_operations_threads_number
+          , _psql_transactions_threads_number
+          , _psql_account_operations_threads_number
+          , _psql_pruning_tail_size
+          , use_synchronous_mode
+        );
       }
-      _dumper = std::make_shared< reindex_data_dumper >(
-          _db_url
-        , theApp
-        , _psql_operations_threads_number
-        , _psql_transactions_threads_number
-        , _psql_account_operations_threads_number
-        , _psql_pruning_tail_size
-      );
       _trigger = std::make_unique< reindex_flush_trigger >(
         [this]( cached_data_t& cached_data, int last_block_num ) {
           force_trigger_flush_with_all_data( cached_data, last_block_num );

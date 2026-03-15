@@ -10,9 +10,11 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     , uint32_t operations_threads
     , uint32_t transactions_threads
     , uint32_t account_operation_threads
-    , uint32_t pruning_tail_size) : app(app) {
+    , uint32_t pruning_tail_size
+    , bool synchronous_mode) : app(app), _db_url(db_url), _synchronous_mode(synchronous_mode) {
     using namespace std::string_literals;
-    ilog( "Starting reindexing dump to database with ${o} operations and ${t} transactions threads", ("o", operations_threads )("t", transactions_threads) );
+    ilog( "Starting reindexing dump to database with ${o} operations and ${t} transactions threads, synchronous_mode=${s}",
+          ("o", operations_threads )("t", transactions_threads)("s", synchronous_mode) );
     _transactions_controller = transaction_controllers::build_own_transaction_controller( db_url, "reindex dumper", app );
     _end_massive_sync_processor = std::make_unique< end_massive_sync_processor >( db_url, app );
     constexpr auto ONE_THREAD_WRITERS_NUMBER = 4; // a thread for dumping blocks + a thread dumping multisignatures + a thread for accounts
@@ -24,6 +26,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     };
 
     auto api_trigger = std::make_shared< block_num_rendezvous_trigger >( NUMBER_OF_PROCESSORS_THREADS, execute_end_massive_sync_callback );
+    _api_trigger = api_trigger;
 
     _block_writer = std::make_unique<block_data_container_t_writer>(db_url, "Block data writer", "block", api_trigger, app);
 
@@ -48,6 +51,11 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   }
 
   void reindex_data_dumper::trigger_data_flush( cached_data_t& cached_data, int last_block_num ) {
+    if ( _synchronous_mode ) {
+      trigger_synchronous_flush( cached_data, last_block_num );
+      return;
+    }
+
     _block_writer->trigger( std::move( cached_data.blocks ), last_block_num );
     _transaction_writer->trigger( std::move( cached_data.transactions ), last_block_num);
     _operation_writer->trigger( std::move( cached_data.operations ), last_block_num );
@@ -55,6 +63,63 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     _account_writer->trigger( std::move( cached_data.accounts ), last_block_num );
     _account_operations_writer->trigger( std::move( cached_data.account_operations ), last_block_num );
     _applied_hardforks_writer->trigger( std::move( cached_data.applied_hardforks ), last_block_num );
+  }
+
+  void reindex_data_dumper::trigger_synchronous_flush( cached_data_t& cached_data, int last_block_num ) {
+    // When FK constraints are NOT dropped (below threshold), parallel writers would
+    // cause FK violations due to circular dependencies between tables (e.g.,
+    // blocks.producer_account_id -> accounts.id and accounts.block_num -> blocks.num).
+    // Instead, write all data in a single transaction so all rows are visible atomically
+    // at commit time, satisfying all FK constraints (including DEFERRED ones).
+    auto transaction = _transactions_controller->openTx();
+
+    auto copy_to_table = [&transaction](const auto& data, const char* table, const char* cols) {
+      if ( data.empty() )
+        return;
+      transaction->run_in_transaction([&](pqxx::work& work) {
+        pqxx::stream_to stream = pqxx::stream_to::raw_table(work, table, cols);
+        for ( auto it = data.cbegin(); it != data.cend(); ++it )
+          write_row_to_stream(stream, *it);
+        stream.complete();
+      });
+    };
+
+    // Order matters for IMMEDIATE FK constraints within the transaction:
+    // 1. blocks first (no IMMEDIATE FKs to other tables; producer_account_id FK is DEFERRED)
+    // 2. accounts (block_num -> blocks.num)
+    // 3. transactions (block_num -> blocks.num)
+    // 4. operations (no FKs)
+    // 5. transactions_multisig (trx_hash -> transactions.trx_hash)
+    // 6. applied_hardforks (block_num -> blocks.num, hardfork_vop_id -> operations.id)
+    // 7. account_operations (account_id -> accounts.id, operation_id -> operations.id)
+    copy_to_table(cached_data.blocks, hive_blocks::TABLE, hive_blocks::COLS);
+    copy_to_table(cached_data.accounts, hive_accounts<std::vector<PSQL::processing_objects::account_data_t>>::TABLE,
+                  hive_accounts<std::vector<PSQL::processing_objects::account_data_t>>::COLS);
+    copy_to_table(cached_data.transactions, hive_transactions<std::vector<PSQL::processing_objects::process_transaction_t>>::TABLE,
+                  hive_transactions<std::vector<PSQL::processing_objects::process_transaction_t>>::COLS);
+    copy_to_table(cached_data.operations, hive_operations<std::vector<PSQL::processing_objects::process_operation_t>>::TABLE,
+                  hive_operations<std::vector<PSQL::processing_objects::process_operation_t>>::COLS);
+    copy_to_table(cached_data.transactions_multisig, hive_transactions_multisig::TABLE, hive_transactions_multisig::COLS);
+    copy_to_table(cached_data.applied_hardforks, hive_applied_hardforks::TABLE, hive_applied_hardforks::COLS);
+    copy_to_table(cached_data.account_operations, hive_account_operations<std::vector<PSQL::processing_objects::account_operation_data_t>>::TABLE,
+                  hive_account_operations<std::vector<PSQL::processing_objects::account_operation_data_t>>::COLS);
+
+    transaction->commit();
+
+    // Clear the data to match the behavior of the parallel path (data is moved out).
+    cached_data.blocks.clear();
+    cached_data.transactions.clear();
+    cached_data.operations.clear();
+    cached_data.transactions_multisig.clear();
+    cached_data.accounts.clear();
+    cached_data.account_operations.clear();
+    cached_data.applied_hardforks.clear();
+
+    // Fire the end_massive_sync_processor directly, bypassing the rendezvous trigger
+    // which expects reports from each parallel writer thread.
+    if ( last_block_num > 0 ) {
+      _end_massive_sync_processor->trigger_block_number( static_cast<uint32_t>(last_block_num) );
+    }
   }
 
   void reindex_data_dumper::join() {
