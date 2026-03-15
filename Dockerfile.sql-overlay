@@ -60,9 +60,9 @@ RUN chmod 644 /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_mana
               /usr/share/postgresql/${POSTGRES_VERSION}/extension/update.sql 2>/dev/null || true && \
     chmod 755 /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh 2>/dev/null || true
 
-# Switch back to haf_admin (default user in HAF images)
-USER haf_admin
-WORKDIR /home/haf_admin
+# Switch back to hived (default user in HAF images)
+USER hived
+WORKDIR /home/hived
 
 # Update labels and environment to reflect the new commit
 LABEL io.hive.image.revision="${GIT_SHA}"

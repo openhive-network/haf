@@ -13,7 +13,7 @@ services:
     stdin_open: true
     init: true
     entrypoint:
-      - /home/haf_admin/docker_entrypoint.sh
+      - /home/hived/docker_entrypoint.sh
       - ${ARGUMENTS}
     volumes:
       - haf_datadir:/home/hived/datadir
