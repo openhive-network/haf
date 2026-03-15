@@ -110,7 +110,7 @@ FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubunt
 
 ARG POSTGRES_VERSION
 ENV POSTGRES_VERSION=${POSTGRES_VERSION}
-ENV PATH="/home/haf_admin/.local/bin:$PATH"
+ENV PATH="/home/hived/.local/bin:$PATH"
 
 SHELL ["/bin/bash", "-c"]
 
@@ -124,9 +124,9 @@ COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
 RUN ./scripts/setup_ubuntu.sh --dev --hived-account="hived" \
   && rm -rf /var/lib/apt/lists/*
 
-# Build stage uses haf_admin from ci-base-image (external, can't change)
-USER haf_admin
-WORKDIR /home/haf_admin
+# Use hived for build (haf_admin no longer exists after user consolidation)
+USER hived
+WORKDIR /home/hived
 
 # Install additionally packages located in user directory
 RUN /usr/local/src/scripts/setup_ubuntu.sh --user
@@ -151,15 +151,15 @@ ENV HIVE_SUBDIR=${HIVE_SUBDIR}
 ARG SCCACHE_REDIS=""
 ENV SCCACHE_REDIS=${SCCACHE_REDIS}
 
-ENV HAF_SOURCE_DIR="/home/haf_admin/source/${HIVE_SUBDIR}"
+ENV HAF_SOURCE_DIR="/home/hived/source/${HIVE_SUBDIR}"
 
-USER haf_admin
-WORKDIR /home/haf_admin
+USER hived
+WORKDIR /home/hived
 
 SHELL ["/bin/bash", "-c"]
 
 # Get everything from cwd as sources to be built.
-COPY --chown=haf_admin:users . /home/haf_admin/source
+COPY --chown=hived:users . /home/hived/source
 
 RUN <<-EOF
   set -e
@@ -220,7 +220,7 @@ ENV HTTP_PORT=${HTTP_PORT}
 ARG HIVE_SUBDIR=.
 ENV HIVE_SUBDIR=${HIVE_SUBDIR}
 
-ENV HAF_SOURCE_DIR="/home/haf_admin/source/${HIVE_SUBDIR}"
+ENV HAF_SOURCE_DIR="/home/hived/source/${HIVE_SUBDIR}"
 
 # Environment variable which allows to override default postgres access specification in pg_hba.conf
 ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust\nhost    all     pghero    172.0.0.0/8    trust"
@@ -257,7 +257,7 @@ COPY --from=build --chown=hived:users \
   /home/hived/bin/op_body_filter \
   /home/hived/bin/
 
-COPY --from=build --chown=hived:users /home/haf_admin/hive_base_config/faketime/src/libfaketime*.so.1 \
+COPY --from=build --chown=hived:users /home/hived/hive_base_config/faketime/src/libfaketime*.so.1 \
   /home/hived/hive_base_config/faketime/src/
 COPY --from=build --chown=root:root /usr/local/lib/faketime/* /usr/local/lib/faketime/
 
@@ -266,23 +266,20 @@ COPY --from=build \
   /usr/share/postgresql/${POSTGRES_VERSION}/extension
 
 COPY --from=build \
-  /home/haf_admin/build/extensions/hive_fork_manager/* \
+  /home/hived/build/extensions/hive_fork_manager/* \
   /usr/share/postgresql/${POSTGRES_VERSION}/extension
 
 COPY --from=build \
-  /home/haf_admin/build/lib/libquery_supervisor.so \
+  /home/hived/build/lib/libquery_supervisor.so \
   /usr/lib/postgresql/${POSTGRES_VERSION}/lib
 COPY --from=build \
-  /home/haf_admin/build/lib/libhfm-* \
+  /home/hived/build/lib/libhfm-* \
   /usr/lib/postgresql/${POSTGRES_VERSION}/lib
 
 # set a variable telling the entrypoint not to try to install the extension from source, we just did it above
 ENV HAF_INSTALL_EXTENSION=no
 
-# Note: COPY --from=build source paths reference /home/haf_admin/ because the
-# build stage uses the external ci-base-image which has that user. The
-# destination paths use /home/hived/ since that's the only non-root user
-# in the instance image.
+# Copy scripts, entrypoint, and config files from build stage into instance
 RUN mkdir -p /home/hived/source/scripts /home/hived/source/hive/scripts /home/hived/source/docker
 COPY --from=build --chown=hived:users "${HAF_SOURCE_DIR}/docker/docker_entrypoint.sh" /home/hived/
 COPY --from=build --chown=hived:users "${HAF_SOURCE_DIR}/scripts/" /home/hived/source/scripts
