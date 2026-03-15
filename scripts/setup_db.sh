@@ -100,7 +100,7 @@ DB_USERS+=("${DEFAULT_DB_USERS[@]}")
 
 # Seems that -v does not work correctly together with -c. Although it works fine when -f is used (variable substitution works then).
 
-sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
+psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
   DROP DATABASE IF EXISTS "$DB_NAME";
   CREATE DATABASE "$DB_NAME" WITH OWNER $DB_ADMIN TABLESPACE ${HAF_TABLESPACE_NAME} encoding UTF8 LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0;
 EOF
@@ -111,15 +111,15 @@ if [ ${NO_CREATE_SCHEMA} = true ]; then
 fi
 
 
-#sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE SCHEMA hive;CREATE SCHEMA hafd;'
-sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "CREATE EXTENSION hive_fork_manager $VERSION CASCADE;"
+#psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c 'CREATE SCHEMA hive;CREATE SCHEMA hafd;'
+psql -aw $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "CREATE EXTENSION hive_fork_manager $VERSION CASCADE;"
 
-sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
+psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
   GRANT CREATE ON DATABASE "$DB_NAME" to hive_applications_owner_group;
 EOF
 
 for u in "${DB_USERS[@]}"; do
-  sudo -Enu "$DB_ADMIN" psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
+  psql -aw $POSTGRES_ACCESS -d postgres -v ON_ERROR_STOP=on -U "$DB_ADMIN" -f - << EOF
     GRANT CREATE ON DATABASE "$DB_NAME" TO $u;
 EOF
 
