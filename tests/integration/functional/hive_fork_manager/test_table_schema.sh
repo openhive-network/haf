@@ -94,12 +94,12 @@ test_extension_update() {
     echo
     echo "Making a change in table schema by adding column in accounts table"
 
-    sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER TABLE hafd.accounts ADD COLUMN phone_number VARCHAR;"
+    psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER TABLE hafd.accounts ADD COLUMN phone_number VARCHAR;"
     # run generator script
     POSTGRES_VERSION="${POSTGRES_VERSION:-17}"
     sudo /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh 2>&1 | tee -i update.txt || true
     # back to old format of db
-    sudo -Enu "$DB_ADMIN" psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER TABLE hafd.accounts DROP COLUMN phone_number;"
+    psql -w $POSTGRES_ACCESS -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "ALTER TABLE hafd.accounts DROP COLUMN phone_number;"
     # test
     if grep -q "Table schema is inconsistent" update.txt; then
         echo "Update test succeed (changed account table)"

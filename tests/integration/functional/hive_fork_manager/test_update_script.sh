@@ -55,7 +55,7 @@ failswith() {(
 )}
 
 exec_sql() {
-    sudo -Enu "$PGUSER" psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -c "$1"
+    psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -c "$1"
 }
 
 check_relation_structure() {(

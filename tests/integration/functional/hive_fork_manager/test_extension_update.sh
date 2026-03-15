@@ -75,7 +75,7 @@ test_extension_update() {
 
     POSTGRES_VERSION="${POSTGRES_VERSION:-17}"
     echo "Add function testfun to schema hive"
-    sudo -Enu "$DB_ADMIN" psql -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "CREATE FUNCTION hive.testfun() RETURNS VOID AS \$\$ BEGIN END; \$\$ LANGUAGE plpgsql;"
+    psql -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "CREATE FUNCTION hive.testfun() RETURNS VOID AS \$\$ BEGIN END; \$\$ LANGUAGE plpgsql;"
 
 
     # old libhfm has to be removed so in case of an corrupted setup of haf the old libhfm won't be used
@@ -95,7 +95,7 @@ test_extension_update() {
     sudo /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager_update_script_generator.sh
 
     # check if function test was removed (because entire hive schema was removed)
-    sudo -Enu "$DB_ADMIN" psql -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "
+    psql -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "
     DO \$\$
     BEGIN
         ASSERT NOT EXISTS (
@@ -109,7 +109,7 @@ test_extension_update() {
     \$\$ LANGUAGE plpgsql;"
 
     # check if function test added in new hfm version exists
-    sudo -Enu "$DB_ADMIN" psql -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "
+    psql -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "
     DO \$\$
     BEGIN
         ASSERT EXISTS (
