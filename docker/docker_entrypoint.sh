@@ -328,6 +328,9 @@ if sudo --user=postgres -n [ ! -d "$PGDATA" -o ! -f "$PGDATA/PG_VERSION" ]; then
 
   echo "Postgres instance setup completed."
 
+  # Patch setup_db.sh to remove sudo -Enu (haf_admin unix user no longer exists,
+  # only the PG role remains). This handles cached Docker images with old scripts.
+  sed -i 's/sudo -Enu "\$DB_ADMIN" psql/psql/g' "/home/hived/source/${HIVE_SUBDIR}/scripts/setup_db.sh" 2>/dev/null || true
   "/home/hived/source/${HIVE_SUBDIR}/scripts/setup_db.sh" --haf-db-admin=haf_admin --haf-db-name=haf_block_log
 
   sudo -n "/home/hived/source/${HIVE_SUBDIR}/scripts/setup_pghero.sh" --database=haf_block_log
