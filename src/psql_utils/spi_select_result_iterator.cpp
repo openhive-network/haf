@@ -1,3 +1,4 @@
+// User consolidation: haf_admin → hived (UID 1000)
 #include "spi_select_result_iterator.hpp"
 
 #include "include/exceptions.hpp"
