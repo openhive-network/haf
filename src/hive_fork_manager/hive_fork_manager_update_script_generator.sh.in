@@ -31,7 +31,7 @@ print_help () {
 }
 
 psql_do() {
-     sudo -Enu "$DB_ADMIN" psql -w "${POSTGRES_ACCESS[@]}" -v ON_ERROR_STOP=on -U "$DB_ADMIN" "$@"
+     psql -w "${POSTGRES_ACCESS[@]}" -v ON_ERROR_STOP=on -U "$DB_ADMIN" "$@"
 }
 
 DB_NAME="haf_block_log"
