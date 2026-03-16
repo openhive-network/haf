@@ -563,6 +563,42 @@ END;
 $BODY$
 ;
 
+-- Compress hypertable chunks that are safely behind the irreversible block.
+-- _lag_blocks: how many blocks behind irreversible to start compressing (default 2M).
+-- This ensures we never compress data that might be needed for fork handling.
+CREATE OR REPLACE FUNCTION hive.compress_old_operations( _lag_blocks INTEGER DEFAULT 2000000 )
+    RETURNS INTEGER
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __consistent_block INTEGER;
+    __cutoff_id BIGINT;
+    __compressed_count INTEGER := 0;
+    __chunk REGCLASS;
+BEGIN
+    SELECT consistent_block INTO __consistent_block FROM hafd.hive_state;
+    IF __consistent_block IS NULL OR __consistent_block <= _lag_blocks THEN
+        RETURN 0;
+    END IF;
+
+    -- Compute the operation id threshold: all chunks fully below this are safe to compress
+    __cutoff_id := hafd.operation_id( __consistent_block - _lag_blocks, 0 );
+
+    -- Compress all uncompressed chunks older than the cutoff
+    FOR __chunk IN
+        SELECT show_chunks('hafd.operations', older_than => __cutoff_id)
+    LOOP
+        PERFORM compress_chunk(__chunk, if_not_compressed => true);
+        __compressed_count := __compressed_count + 1;
+    END LOOP;
+
+    RETURN __compressed_count;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.all_indexes_have_status(_status hafd.index_status)
     RETURNS BOOLEAN
     LANGUAGE plpgsql

@@ -41,7 +41,11 @@ RUN apt-get update && \
     echo "deb https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu noble main" > /etc/apt/sources.list.d/deadsnakes-ppa.list && \
     curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF23C5A6CF475977595C89F51BA6932366A755776" | gpg --batch --dearmor -o /etc/apt/trusted.gpg.d/deadsnakes-ppa.gpg && \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.14 python3.14-venv python3-pip postgresql-${POSTGRES_VERSION} postgresql-${POSTGRES_VERSION}-pgvector postgresql-plpython3-${POSTGRES_VERSION} libpq5 \
+    # Add TimescaleDB repository
+    echo "deb https://packagecloud.io/timescale/timescaledb/ubuntu/ noble main" > /etc/apt/sources.list.d/timescaledb.list && \
+    curl -fsSL https://packagecloud.io/timescale/timescaledb/gpgkey | gpg --batch --dearmor -o /etc/apt/trusted.gpg.d/timescaledb.gpg && \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.14 python3.14-venv python3-pip postgresql-${POSTGRES_VERSION} postgresql-${POSTGRES_VERSION}-pgvector postgresql-plpython3-${POSTGRES_VERSION} timescaledb-2-postgresql-${POSTGRES_VERSION} libpq5 \
                                                                               libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
     # Make Python 3.14 the default python3
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.14 1 && \
