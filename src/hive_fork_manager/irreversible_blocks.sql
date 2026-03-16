@@ -110,6 +110,27 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
 
 SELECT pg_catalog.pg_extension_config_dump('hafd.operations', '');
 
+-- Convert operations to a TimescaleDB hypertable for columnar compression.
+-- Partition by id (which encodes block_num in upper 32 bits).
+-- chunk_interval = 1,000,000 blocks * 2^32 ids/block ≈ 4.3 quadrillion.
+-- This keeps the existing PRIMARY KEY(id) intact since id is the partition column.
+SELECT create_hypertable(
+    'hafd.operations',
+    by_range('id', 4294967296000000::bigint),
+    migrate_data => true
+);
+
+-- Enable columnar compression grouped by operation type.
+-- Within each chunk (~1M blocks), operations are physically grouped by op_type_id.
+-- This means queries filtering by op_type_id (which every HAF app does) only
+-- decompress the relevant type segments. The body_value JSONB column compresses
+-- extremely well per-type because all rows share the same key structure.
+ALTER TABLE hafd.operations SET (
+    timescaledb.compress,
+    timescaledb.compress_segmentby = 'op_type_id',
+    timescaledb.compress_orderby = 'id'
+);
+
 CREATE TABLE IF NOT EXISTS hafd.applied_hardforks (
     hardfork_num smallint NOT NULL,
     block_num integer NOT NULL,
