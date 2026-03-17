@@ -16,6 +16,11 @@ DECLARE
     __new_context_id INTEGER;
     __min_events_id INTEGER;
 BEGIN
+    -- Serialize concurrent context creation and table registration to prevent
+    -- "tuple concurrently updated" errors when multiple apps start simultaneously.
+    -- Uses a fixed advisory lock key derived from 'hive_catalog' hash.
+    PERFORM pg_advisory_xact_lock( hashtext('hive_catalog_modification') );
+
     IF NOT _name SIMILAR TO '[a-zA-Z0-9_]+' THEN
         RAISE EXCEPTION 'Incorrect context name %, only characters a-z A-Z 0-9 _ are allowed', _name;
     END IF;
@@ -96,6 +101,8 @@ DECLARE
     __context_id hafd.contexts.id%TYPE := NULL;
     __context_schema TEXT;
 BEGIN
+    PERFORM pg_advisory_xact_lock( hashtext('hive_catalog_modification') );
+
     SELECT hc.id, hc.schema INTO __context_id, __context_schema FROM hafd.contexts hc WHERE hc.name = _name;
 
     IF __context_id IS NULL THEN

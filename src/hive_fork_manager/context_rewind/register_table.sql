@@ -199,6 +199,10 @@ DECLARE
     __is_forking BOOLEAN := TRUE;
     __is_lite_schema BOOLEAN := hive.is_lite_schema();
 BEGIN
+    -- Serialize concurrent table registrations to prevent
+    -- "tuple concurrently updated" errors on hafd.registered_tables and hafd.contexts.
+    PERFORM pg_advisory_xact_lock( hashtext('hive_catalog_modification') );
+
     PERFORM hive.chceck_constrains(_table_schema, _table_name);
 
     SELECT array_agg( iss.column_name::TEXT ) FROM information_schema.columns iss WHERE iss.table_schema=_table_schema AND iss.table_name=_table_name INTO __columns_names;
@@ -459,6 +463,8 @@ DECLARE
     __registered_table_id INTEGER := NULL;
     __is_lite_schema BOOLEAN := hive.is_lite_schema();
 BEGIN
+    PERFORM pg_advisory_xact_lock( hashtext('hive_catalog_modification') );
+
     SELECT hc.name, hrt.id, hc.schema INTO __context_name, __registered_table_id, __context_schema
     FROM hafd.contexts hc
     JOIN hafd.registered_tables hrt ON hrt.context_id = hc.id
