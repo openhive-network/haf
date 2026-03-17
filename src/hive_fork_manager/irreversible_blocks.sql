@@ -111,30 +111,49 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
 SELECT pg_catalog.pg_extension_config_dump('hafd.operations', '');
 
 -- Convert operations to a TimescaleDB hypertable for columnar compression
--- (only if timescaledb extension is available).
+-- (only if timescaledb extension is available AND we're not in restore mode).
+-- During pg_restore, timescaledb.restoring='on' — the dump already contains
+-- the hypertable metadata and chunk tables, so we must not recreate them.
 DO $$
+DECLARE
+    _restoring text;
 BEGIN
-    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') THEN
-        -- Partition by id (which encodes block_num in upper 32 bits).
-        -- chunk_interval = 1,000,000 blocks * 2^32 ids/block ≈ 4.3 quadrillion.
-        -- Keeps existing PRIMARY KEY(id) since id is the partition column.
-        PERFORM create_hypertable(
-            'hafd.operations',
-            by_range('id', 4294967296000000::bigint),
-            migrate_data => true
-        );
-
-        -- Enable columnar compression grouped by operation type.
-        -- Within each chunk (~1M blocks), operations are physically grouped by op_type_id.
-        -- Queries filtering by op_type_id only decompress relevant type segments.
-        -- The body_value JSONB column compresses extremely well per-type because
-        -- all rows in a segment share the same key structure.
-        ALTER TABLE hafd.operations SET (
-            timescaledb.compress,
-            timescaledb.compress_segmentby = 'op_type_id',
-            timescaledb.compress_orderby = 'id'
-        );
+    IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') THEN
+        RETURN;
     END IF;
+
+    -- Check if TimescaleDB is in restore mode (set by timescaledb_pre_restore()).
+    -- During restore, the hypertable structure comes from the dump itself.
+    BEGIN
+        _restoring := current_setting('timescaledb.restoring', true);
+    EXCEPTION WHEN OTHERS THEN
+        _restoring := 'off';
+    END;
+
+    IF _restoring = 'on' THEN
+        RAISE NOTICE 'TimescaleDB restoring mode active — skipping hypertable creation for hafd.operations';
+        RETURN;
+    END IF;
+
+    -- Partition by id (which encodes block_num in upper 32 bits).
+    -- chunk_interval = 1,000,000 blocks * 2^32 ids/block ≈ 4.3 quadrillion.
+    -- Keeps existing PRIMARY KEY(id) since id is the partition column.
+    PERFORM create_hypertable(
+        'hafd.operations',
+        by_range('id', 4294967296000000::bigint),
+        migrate_data => true
+    );
+
+    -- Enable columnar compression grouped by operation type.
+    -- Within each chunk (~1M blocks), operations are physically grouped by op_type_id.
+    -- Queries filtering by op_type_id only decompress relevant type segments.
+    -- The body_value JSONB column compresses extremely well per-type because
+    -- all rows in a segment share the same key structure.
+    ALTER TABLE hafd.operations SET (
+        timescaledb.compress,
+        timescaledb.compress_segmentby = 'op_type_id',
+        timescaledb.compress_orderby = 'id'
+    );
 END$$;
 
 CREATE TABLE IF NOT EXISTS hafd.applied_hardforks (
