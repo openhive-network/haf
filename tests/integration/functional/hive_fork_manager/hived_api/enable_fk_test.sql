@@ -84,15 +84,18 @@ $BODY$
 BEGIN
     ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions') ), 'FK for hafd.transactions not exists';
     ASSERT ( SELECT is_any_fk_for_hive_table( 'transactions_multisig') ), 'FK for hafd.transactions_multisig not exists';
-    ASSERT ( SELECT is_any_fk_for_hive_table( 'applied_hardforks') ), 'FK for hafd.applied_hardforks not exists';
-
+    -- fk_2 on applied_hardforks (references blocks) always exists
+    ASSERT ( SELECT is_constraint_exists( 'fk_2_hive_applied_hardforks', 'FOREIGN KEY' ) ), 'FK fk_2_hive_applied_hardforks not exists';
+    -- fk_1 on applied_hardforks (references operations) is skipped when operations is a TimescaleDB hypertable
+    IF NOT EXISTS (SELECT 1 FROM _timescaledb_catalog.hypertable WHERE schema_name = 'hafd' AND table_name = 'operations') THEN
+        ASSERT ( SELECT is_any_fk_for_hive_table( 'applied_hardforks') ), 'FK for hafd.applied_hardforks not exists';
+        ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_applied_hardforks', 'FOREIGN KEY' ) ), 'FK fk_1_hive_applied_hardforks not exists';
+    END IF;
 
     ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_transactions', 'FOREIGN KEY' ) ), 'FK fk_1_hive_transactions not exists';
     ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_transactions_multisig', 'FOREIGN KEY' ) ), 'FK fk_1_hive_transactions_multisig not exists';
 
-
     ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_irreversible_data', 'FOREIGN KEY' ) ), 'FK fk_1_hive_irreversible_data not exists';
-    ASSERT ( SELECT is_constraint_exists( 'fk_1_hive_applied_hardforks', 'FOREIGN KEY' ) ), 'FK fk_1_hive_applied_hardforks not exists';
 
 
 
