@@ -54,14 +54,22 @@ load_database(){
   # that contain hypertable chunk tables in _timescaledb_internal schema
   psql "${db_parameters[@]}" -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;" 2>/dev/null || true
 
-  # TimescaleDB pre/post restore wrappers handle internal state (compression, background workers)
+  # Restore schema first (pre-data creates extensions, tables, types).
+  # TimescaleDB must be fully operational here because hive_fork_manager's
+  # extension SQL sets compression parameters during CREATE EXTENSION.
+  pg_restore            --section=pre-data  --disable-triggers                     "${db_parameters[@]}" ${POSTGRES_BACKUP_DIR}
+
+  # Enter pre-restore mode AFTER schema creation but BEFORE data loading.
+  # This disables background workers and chunk constraint restoration that
+  # would interfere with bulk data loading into hypertables.
   psql "${db_parameters[@]}" -c "SELECT timescaledb_pre_restore();" 2>/dev/null || true
 
-  pg_restore            --section=pre-data  --disable-triggers                     "${db_parameters[@]}" ${POSTGRES_BACKUP_DIR}
   pg_restore -j ${JOBS} --section=data      --disable-triggers                     "${db_parameters[@]}" ${POSTGRES_BACKUP_DIR}
-  pg_restore            --section=post-data --disable-triggers --clean --if-exists "${db_parameters[@]}" ${POSTGRES_BACKUP_DIR}
 
+  # Exit pre-restore mode before post-data so indexes/constraints restore normally
   psql "${db_parameters[@]}" -c "SELECT timescaledb_post_restore();" 2>/dev/null || true
+
+  pg_restore            --section=post-data --disable-triggers --clean --if-exists "${db_parameters[@]}" ${POSTGRES_BACKUP_DIR}
 
 }
 
