@@ -380,23 +380,24 @@ void indexes_controler::poll_and_create_indexes()
                 std::regex create_index_regex(R"((CREATE\s+UNIQUE\s+INDEX|CREATE\s+INDEX))", std::regex::icase);
                 command = std::regex_replace(original_command, create_index_regex, "$& CONCURRENTLY");
               }
-              std::string update_table =
-                "UPDATE hafd.indexes_constraints SET status = 'creating' WHERE index_constraint_name ='" + index_constraint_name + "';";
-              ilog("SQL: ${update_table}",(update_table));
-              tx.exec(update_table);
+              tx.exec("UPDATE hafd.indexes_constraints SET status = 'creating' WHERE index_constraint_name ='" + index_constraint_name + "';");
               ilog("Creating index: ${command}", (command));
-              if (is_hypertable)
-              {
-                // Set a lock timeout for hypertable indexes so we don't block forever
-                // waiting for concurrent writes to finish. If we can't get the lock,
-                // the exception handler resets status to 'missing' for retry.
-                tx.exec("SET lock_timeout = '30s'");
-              }
               auto start_time = fc::time_point::now();
-              tx.exec(command);
               if (is_hypertable)
               {
-                tx.exec("SET lock_timeout = '0'"); // reset
+                // Hypertable indexes need a proper transaction (TimescaleDB's DDL
+                // intercept requires it). Use a separate connection to avoid
+                // conflicting with the nontransaction on the main connection.
+                // lock_timeout prevents blocking forever on concurrent writes.
+                pqxx::connection hyper_conn(db_url_with_hived_app_as_haf_maintainer(_db_url));
+                pqxx::work w(hyper_conn);
+                w.exec("SET LOCAL lock_timeout = '30s'");
+                w.exec(command);
+                w.commit();
+              }
+              else
+              {
+                tx.exec(command);
               }
               auto end_time = fc::time_point::now();
               fc::microseconds index_creation_duration = end_time - start_time;
