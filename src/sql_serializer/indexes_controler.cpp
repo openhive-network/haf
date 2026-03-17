@@ -345,9 +345,9 @@ void indexes_controler::poll_and_create_indexes()
           pqxx::result data = tx.exec("SELECT index_constraint_name, command FROM hafd.indexes_constraints WHERE status = 'missing' AND table_name = '" + table_name + "';");
           for (const auto& index : data) //iterate over missing indexes and create them concurrently
           {
-            try 
-            { 
-              std::string index_constraint_name = index["index_constraint_name"].as<std::string>();
+            std::string index_constraint_name = index["index_constraint_name"].as<std::string>();
+            try
+            {
               std::string original_command = index["command"].as<std::string>();
               // Check if the target table is a hypertable (partitioned table).
               // CREATE INDEX CONCURRENTLY is not supported on TimescaleDB hypertables.
