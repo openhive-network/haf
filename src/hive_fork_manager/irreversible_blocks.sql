@@ -144,14 +144,16 @@ BEGIN
         migrate_data => true
     );
 
-    -- Enable columnar compression grouped by operation type.
-    -- Within each chunk (~1M blocks), operations are physically grouped by op_type_id.
-    -- Queries filtering by op_type_id only decompress relevant type segments.
-    -- The body_value JSONB column compresses extremely well per-type because
-    -- all rows in a segment share the same key structure.
+    -- Enable columnar compression ordered by operation id.
+    -- Without segmentby, all rows in a chunk are in a single segment ordered by id.
+    -- Point lookups (WHERE id = X) binary-search one segment's batch metadata and
+    -- decompress exactly one batch (~1000 rows). With segmentby = op_type_id,
+    -- every op type creates a separate segment with overlapping id ranges, forcing
+    -- decompression of one batch per op type (~150 batches) for each point lookup.
+    -- Removing segmentby trades slightly worse compression ratio for dramatically
+    -- better random-access performance (HAfAH account_history queries).
     ALTER TABLE hafd.operations SET (
         timescaledb.compress,
-        timescaledb.compress_segmentby = 'op_type_id',
         timescaledb.compress_orderby = 'id'
     );
 END$$;
