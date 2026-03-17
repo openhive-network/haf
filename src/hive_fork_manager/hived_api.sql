@@ -228,6 +228,9 @@ BEGIN
 
 
     UPDATE hafd.hive_state SET consistent_block = _block_num;
+
+    -- Compress old hypertable chunks now that massive sync is complete
+    PERFORM hive.compress_old_operations();
 END;
 $BODY$
 ;
