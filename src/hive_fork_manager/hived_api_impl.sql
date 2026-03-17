@@ -437,6 +437,7 @@ BEGIN
     JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
     JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
     WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name
+      AND pgc.conislocal = true  -- skip inherited constraints (e.g. from partitioned/hypertable references)
     ON CONFLICT (index_constraint_name, table_name) DO UPDATE
     SET status = 'missing';
 
@@ -448,7 +449,12 @@ BEGIN
     LOOP
         FETCH __cursor INTO __command;
             EXIT WHEN NOT FOUND;
-            EXECUTE __command;
+            BEGIN
+                EXECUTE __command;
+            EXCEPTION WHEN OTHERS THEN
+                -- Skip constraints that can't be dropped (e.g. inherited from partitioned tables)
+                RAISE NOTICE 'Skipping undropable constraint: %', __command;
+            END;
     END LOOP;
 
     CLOSE __cursor;
