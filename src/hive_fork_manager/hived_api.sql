@@ -573,6 +573,7 @@ CREATE OR REPLACE FUNCTION hive.compress_old_operations( _lag_blocks INTEGER DEF
     RETURNS INTEGER
     LANGUAGE plpgsql
     VOLATILE
+    SECURITY DEFINER
 AS
 $BODY$
 DECLARE

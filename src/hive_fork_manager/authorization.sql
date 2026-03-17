@@ -224,6 +224,7 @@ GRANT EXECUTE ON FUNCTION
     , hafd.operation_id_to_pos( _id hafd.operations.id%TYPE )
     , hafd.operation_id_to_block_num( _id hafd.operations.id%TYPE )
     , hive.reanalyze_indexes_with_expressions()
+    , hive.compress_old_operations( INTEGER )
 TO hived_group;
 
 --- Required permissions to execute all callees of app_check_contexts_synchronized
