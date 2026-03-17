@@ -44,6 +44,20 @@ def test_application_index_one(haf_node):
     )).scalar()
     tt.logger.info(f"hafd.operations relkind: {ops_relkind} (p=partitioned/hypertable, r=regular)")
 
+    # Diagnostic: try creating the index directly to test if it's even possible
+    try:
+        session.execute(text(
+            "CREATE INDEX IF NOT EXISTS _diag_test_idx ON hafd.operations USING gin"
+            "(jsonb_extract_path_text(body_value, 'value', 'author')) WHERE op_type_id = 0"
+        ))
+        session.commit()
+        tt.logger.info("DIAGNOSTIC: Direct GIN index creation SUCCEEDED")
+        session.execute(text("DROP INDEX IF EXISTS hafd._diag_test_idx"))
+        session.commit()
+    except Exception as e:
+        tt.logger.info(f"DIAGNOSTIC: Direct GIN index creation FAILED: {e}")
+        session.rollback()
+
     # THEN
     poll_count = 0
     while True:
@@ -52,14 +66,15 @@ def test_application_index_one(haf_node):
             break
         poll_count += 1
 
-        # Log index status every iteration
+        # Log index status every iteration (include last_error for debugging)
         idx_rows = session.execute(text(
-            "SELECT index_constraint_name, status, command "
+            "SELECT index_constraint_name, status, last_error, command "
             "FROM hafd.indexes_constraints "
             "WHERE table_name = 'hafd.operations'"
         )).fetchall()
         for row in idx_rows:
-            tt.logger.info(f"  indexes_constraints: name={row[0]}, status={row[1]}, cmd={row[2][:80]}...")
+            error_info = f", last_error={row[2]}" if row[2] else ""
+            tt.logger.info(f"  indexes_constraints: name={row[0]}, status={row[1]}{error_info}, cmd={row[3][:80]}...")
 
         # Log what the hived_index connection is doing
         activity = session.execute(text(
