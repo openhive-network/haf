@@ -373,24 +373,38 @@ void indexes_controler::poll_and_create_indexes()
                   is_hypertable = !r.empty();
                 }
               }
+              // Always use CONCURRENTLY for non-hypertable indexes.
+              // For hypertable indexes, use plain CREATE INDEX with a lock_timeout
+              // to avoid blocking forever when hived is concurrently writing.
               std::string command;
               if (is_hypertable)
               {
                 command = original_command; // plain CREATE INDEX for hypertables
-                ilog("Skipping CONCURRENTLY for hypertable index: ${cmd}", ("cmd", command));
+                ilog("Using plain CREATE INDEX for hypertable: ${cmd}", ("cmd", command));
               }
               else
               {
                 std::regex create_index_regex(R"((CREATE\s+UNIQUE\s+INDEX|CREATE\s+INDEX))", std::regex::icase);
                 command = std::regex_replace(original_command, create_index_regex, "$& CONCURRENTLY");
               }
-              std::string update_table = 
+              std::string update_table =
                 "UPDATE hafd.indexes_constraints SET status = 'creating' WHERE index_constraint_name ='" + index_constraint_name + "';";
               ilog("SQL: ${update_table}",(update_table));
               tx.exec(update_table);
               ilog("Creating index: ${command}", (command));
+              if (is_hypertable)
+              {
+                // Set a lock timeout for hypertable indexes so we don't block forever
+                // waiting for concurrent writes to finish. If we can't get the lock,
+                // the exception handler resets status to 'missing' for retry.
+                tx.exec("SET lock_timeout = '30s'");
+              }
               auto start_time = fc::time_point::now();
               tx.exec(command);
+              if (is_hypertable)
+              {
+                tx.exec("SET lock_timeout = '0'"); // reset
+              }
               auto end_time = fc::time_point::now();
               fc::microseconds index_creation_duration = end_time - start_time;
               ilog("Finished creating index for table: ${table_name} in ${duration} seconds", (table_name)("duration", index_creation_duration.to_seconds()));
