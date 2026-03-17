@@ -34,7 +34,7 @@ FOR _row in
     '(write_ahead_log_state,3c18769a-7950-ff27-266a-9be458ad73d0,965e0911-8d91-bef3-8a23-c92726e98508,5b8e1f09-4d13-91f1-53fa-dcdb4986e28d,3ff4519c-6dc0-2a9f-1e19-249f92ace076)',
     '(state_providers_registered,b41e740b-372c-cbf5-c89e-121fc30ae222,e5256de7-28e9-0079-dd6d-c410fb648f41,47f62787-773b-c098-9df3-4a9bae4b65c0,3b033100-aacc-10b4-16f9-1dcf27656',
     '(triggers,68b875fc-1585-3fbd-9356-621f6fcb6f2d,407c0130-fb27-1258-6e00-b5356a4e37e9,d07c39bb-6037-3ad3-981e-d8307199a726,39645c85-ddd1-fddd-3679-f8e8d91c55d3)',
-    '(indexes_constraints,6a2dcd7d-8ed7-ffa5-377d-3346b6348b0c,a5b015d4-3334-da4f-e336-6f77738e9fba,50e7a3da-5999-2fb3-865b-61d701d67bc1,7ff09584-f530-c98d-1e12-bffd6f4c907b)',
+    '(indexes_constraints,629d07da-daea-0de9-c37c-cbdb27459d4e,fd9ff5b1-0aa4-50b2-b76d-ccfa6dd07c18,50e7a3da-5999-2fb3-865b-61d701d67bc1,7ff09584-f530-c98d-1e12-bffd6f4c907b)',
     '(hived_connections,20fd6a8a-592b-e76d-eb93-15b4c57de3c2,5439bb50-0630-305a-034f-87c9326a6ded,f07addc5-dce8-5bb5-1b79-9ec821cc279b,09c1aed4-677c-d4eb-a405-35e973f89188)',
     '(deps_saved_ddl,ea91c6c0-eb6a-b473-eb1c-e426eadb1d09,549ba4bd-64d6-c554-11f4-d27e4b37b6e6,d3176a21-5841-14c3-0d52-6566cf12299e,cc8a1233-564b-27fd-3ffd-ce376cd366f7)',
     '(registered_tables,01d11432-b7d9-fb8e-a345-2e412e782cfd,ff824909-7631-1102-16f9-5b6ba2f88b74,07ad4206-ab16-75cc-4aaa-18ed4006d4f6,fe6f193c-4d9c-266a-3f43-0a67d8a6dcfb)',
