@@ -583,6 +583,11 @@ BEGIN
         RETURN 0;
     END IF;
 
+    -- Only compress if operations is a TimescaleDB hypertable
+    IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') THEN
+        RETURN 0;
+    END IF;
+
     -- Compute the operation id threshold: all chunks fully below this are safe to compress
     __cutoff_id := hafd.operation_id( __consistent_block - _lag_blocks, 0 );
 
