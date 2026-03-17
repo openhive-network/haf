@@ -437,12 +437,20 @@ void indexes_controler::poll_and_create_indexes()
             {
                elog("Error while creating index ${idx}: ${e}", ("idx", index_constraint_name)("e", e.what()));
                // The existing nontransaction tx may be in bad state after error.
-               // We need a fresh connection to reset the status.
+               // We need a fresh connection to reset the status and store the error.
                try {
                  pqxx::connection reset_conn(db_url_with_hived_app_as_haf_maintainer(_db_url));
                  pqxx::nontransaction reset_tx(reset_conn);
-                 reset_tx.exec("UPDATE hafd.indexes_constraints SET status = 'missing' WHERE index_constraint_name ='" + index_constraint_name + "';");
-                 ilog("Reset index ${idx} status back to 'missing' for retry", ("idx", index_constraint_name));
+                 std::string error_msg = e.what();
+                 // Escape single quotes for SQL
+                 std::string escaped_error;
+                 for (char c : error_msg)
+                 {
+                   if (c == '\'') escaped_error += "''";
+                   else escaped_error += c;
+                 }
+                 reset_tx.exec("UPDATE hafd.indexes_constraints SET status = 'missing', last_error = '" + escaped_error + "' WHERE index_constraint_name ='" + index_constraint_name + "';");
+                 ilog("Reset index ${idx} status back to 'missing' for retry, error stored", ("idx", index_constraint_name));
                } catch (const std::exception& reset_e) {
                  elog("Failed to reset index status: ${e}", ("e", reset_e.what()));
                }

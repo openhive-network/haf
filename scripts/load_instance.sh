@@ -50,6 +50,10 @@ load_database(){
 
   "${SCRIPTPATH}"/setup_db.sh --no-create-schema "${script_db_parameters[@]}"
 
+  # Create timescaledb extension if available — required before restoring dumps
+  # that contain hypertable chunk tables in _timescaledb_internal schema
+  psql "${db_parameters[@]}" -c "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;" 2>/dev/null || true
+
   pg_restore            --section=pre-data  --disable-triggers                     "${db_parameters[@]}" ${POSTGRES_BACKUP_DIR}
   pg_restore -j ${JOBS} --section=data      --disable-triggers                     "${db_parameters[@]}" ${POSTGRES_BACKUP_DIR}
   pg_restore            --section=post-data --disable-triggers --clean --if-exists "${db_parameters[@]}" ${POSTGRES_BACKUP_DIR}
