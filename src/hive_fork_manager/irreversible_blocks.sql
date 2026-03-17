@@ -110,26 +110,32 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
 
 SELECT pg_catalog.pg_extension_config_dump('hafd.operations', '');
 
--- Convert operations to a TimescaleDB hypertable for columnar compression.
--- Partition by id (which encodes block_num in upper 32 bits).
--- chunk_interval = 1,000,000 blocks * 2^32 ids/block ≈ 4.3 quadrillion.
--- This keeps the existing PRIMARY KEY(id) intact since id is the partition column.
-SELECT create_hypertable(
-    'hafd.operations',
-    by_range('id', 4294967296000000::bigint),
-    migrate_data => true
-);
+-- Convert operations to a TimescaleDB hypertable for columnar compression
+-- (only if timescaledb extension is available).
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') THEN
+        -- Partition by id (which encodes block_num in upper 32 bits).
+        -- chunk_interval = 1,000,000 blocks * 2^32 ids/block ≈ 4.3 quadrillion.
+        -- Keeps existing PRIMARY KEY(id) since id is the partition column.
+        PERFORM create_hypertable(
+            'hafd.operations',
+            by_range('id', 4294967296000000::bigint),
+            migrate_data => true
+        );
 
--- Enable columnar compression grouped by operation type.
--- Within each chunk (~1M blocks), operations are physically grouped by op_type_id.
--- This means queries filtering by op_type_id (which every HAF app does) only
--- decompress the relevant type segments. The body_value JSONB column compresses
--- extremely well per-type because all rows share the same key structure.
-ALTER TABLE hafd.operations SET (
-    timescaledb.compress,
-    timescaledb.compress_segmentby = 'op_type_id',
-    timescaledb.compress_orderby = 'id'
-);
+        -- Enable columnar compression grouped by operation type.
+        -- Within each chunk (~1M blocks), operations are physically grouped by op_type_id.
+        -- Queries filtering by op_type_id only decompress relevant type segments.
+        -- The body_value JSONB column compresses extremely well per-type because
+        -- all rows in a segment share the same key structure.
+        ALTER TABLE hafd.operations SET (
+            timescaledb.compress,
+            timescaledb.compress_segmentby = 'op_type_id',
+            timescaledb.compress_orderby = 'id'
+        );
+    END IF;
+END$$;
 
 CREATE TABLE IF NOT EXISTS hafd.applied_hardforks (
     hardfork_num smallint NOT NULL,
@@ -137,7 +143,17 @@ CREATE TABLE IF NOT EXISTS hafd.applied_hardforks (
     hardfork_vop_id bigint NOT NULL,
     CONSTRAINT pk_hive_applied_hardforks PRIMARY KEY (hardfork_num)
 );
-ALTER TABLE hafd.applied_hardforks ADD CONSTRAINT fk_1_hive_applied_hardforks FOREIGN KEY (hardfork_vop_id) REFERENCES hafd.operations(id) NOT VALID;
+-- Skip FK to operations when it's a hypertable — inherited constraints from partitioned
+-- tables can't be dropped by HAF's index management. The FK is NOT VALID anyway.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'timescaledb')
+       OR NOT EXISTS (SELECT 1 FROM timescaledb_information.hypertables
+                      WHERE hypertable_schema = 'hafd' AND hypertable_name = 'operations') THEN
+        ALTER TABLE hafd.applied_hardforks ADD CONSTRAINT fk_1_hive_applied_hardforks
+            FOREIGN KEY (hardfork_vop_id) REFERENCES hafd.operations(id) NOT VALID;
+    END IF;
+END$$;
 ALTER TABLE hafd.applied_hardforks ADD CONSTRAINT fk_2_hive_applied_hardforks FOREIGN KEY (block_num) REFERENCES hafd.blocks(num) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.applied_hardforks', '');
 
@@ -168,7 +184,16 @@ CREATE TABLE IF NOT EXISTS hafd.account_operations
     --, CONSTRAINT hive_account_operations_uq2 UNIQUE ( account,operation_id )
 );
 ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_1 FOREIGN KEY (account_id) REFERENCES hafd.accounts(id) NOT VALID;
-ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_2 FOREIGN KEY (operation_id) REFERENCES hafd.operations(id) NOT VALID;
+-- Skip FK to operations when it's a hypertable (see applied_hardforks comment above).
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'timescaledb')
+       OR NOT EXISTS (SELECT 1 FROM timescaledb_information.hypertables
+                      WHERE hypertable_schema = 'hafd' AND hypertable_name = 'operations') THEN
+        ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_2
+            FOREIGN KEY (operation_id) REFERENCES hafd.operations(id) NOT VALID;
+    END IF;
+END$$;
 ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_3 FOREIGN KEY (transacting_account_id) REFERENCES hafd.accounts(id) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.account_operations', '');
 
