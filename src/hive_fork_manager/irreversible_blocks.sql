@@ -143,12 +143,27 @@ CREATE TABLE IF NOT EXISTS hafd.applied_hardforks (
     hardfork_vop_id bigint NOT NULL,
     CONSTRAINT pk_hive_applied_hardforks PRIMARY KEY (hardfork_num)
 );
--- Skip FK to operations when it's a hypertable (relkind='p') — inherited constraints
--- from partitioned tables can't be dropped by HAF's index management. The FK is NOT VALID anyway.
+-- Skip FK to operations when it's a hypertable — inherited constraints
+-- from hypertables can't be dropped by HAF's index management. The FK is NOT VALID anyway.
+-- Check TimescaleDB catalog first (relkind may still be 'r' for hypertables), fall back to pg_class.
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-                   WHERE n.nspname = 'hafd' AND c.relname = 'operations' AND c.relkind = 'p') THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM _timescaledb_catalog.hypertable
+        WHERE schema_name = 'hafd' AND table_name = 'operations'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'hafd' AND c.relname = 'operations' AND c.relkind = 'p'
+    ) THEN
+        ALTER TABLE hafd.applied_hardforks ADD CONSTRAINT fk_1_hive_applied_hardforks
+            FOREIGN KEY (hardfork_vop_id) REFERENCES hafd.operations(id) NOT VALID;
+    END IF;
+EXCEPTION WHEN undefined_table THEN
+    -- TimescaleDB not installed — catalog table doesn't exist, check pg_class only
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'hafd' AND c.relname = 'operations' AND c.relkind = 'p'
+    ) THEN
         ALTER TABLE hafd.applied_hardforks ADD CONSTRAINT fk_1_hive_applied_hardforks
             FOREIGN KEY (hardfork_vop_id) REFERENCES hafd.operations(id) NOT VALID;
     END IF;
@@ -186,8 +201,21 @@ ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_1 
 -- Skip FK to operations when it's a hypertable (see applied_hardforks comment above).
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-                   WHERE n.nspname = 'hafd' AND c.relname = 'operations' AND c.relkind = 'p') THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM _timescaledb_catalog.hypertable
+        WHERE schema_name = 'hafd' AND table_name = 'operations'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'hafd' AND c.relname = 'operations' AND c.relkind = 'p'
+    ) THEN
+        ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_2
+            FOREIGN KEY (operation_id) REFERENCES hafd.operations(id) NOT VALID;
+    END IF;
+EXCEPTION WHEN undefined_table THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'hafd' AND c.relname = 'operations' AND c.relkind = 'p'
+    ) THEN
         ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_2
             FOREIGN KEY (operation_id) REFERENCES hafd.operations(id) NOT VALID;
     END IF;
