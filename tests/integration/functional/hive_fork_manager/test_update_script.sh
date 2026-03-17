@@ -123,6 +123,12 @@ if [ "$HAF_DIR" = "" ]; then
     exit 1
 fi
 
+echo "=== DEBUG: Extension directory contents ==="
+ls -la /usr/share/postgresql/"$POSTGRES_VERSION"/extension/hive_fork_manager* 2>&1 || echo "No hive_fork_manager files found"
+echo "=== DEBUG: Build extension dir contents ==="
+ls -la "$HAF_DIR"/extensions/hive_fork_manager/ 2>&1 || echo "No build extension dir found"
+echo "=== END DEBUG ==="
+
 printf "\nTEST: Trying to upgrade from current database. It should pass, as nothing needs to be done.\n"
 prepare_database
 update_database
