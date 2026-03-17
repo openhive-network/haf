@@ -356,8 +356,34 @@ void indexes_controler::poll_and_create_indexes()
             { 
               std::string index_constraint_name = index["index_constraint_name"].as<std::string>();
               std::string original_command = index["command"].as<std::string>();
-              std::regex create_index_regex(R"((CREATE\s+UNIQUE\s+INDEX|CREATE\s+INDEX))", std::regex::icase);
-              std::string command = std::regex_replace(original_command, create_index_regex, "$& CONCURRENTLY");
+              // Check if the target table is a hypertable (partitioned table).
+              // CREATE INDEX CONCURRENTLY is not supported on TimescaleDB hypertables.
+              bool is_hypertable = false;
+              {
+                // Extract schema.table from "CREATE INDEX ... ON schema.table ..."
+                std::regex on_table_regex(R"(ON\s+(?:ONLY\s+)?(\w+)\.(\w+))", std::regex::icase);
+                std::smatch on_match;
+                if (std::regex_search(original_command, on_match, on_table_regex))
+                {
+                  std::string schema = on_match[1].str();
+                  std::string tbl = on_match[2].str();
+                  pqxx::result r = tx.exec(
+                    "SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+                    "WHERE n.nspname = '" + schema + "' AND c.relname = '" + tbl + "' AND c.relkind = 'p'");
+                  is_hypertable = !r.empty();
+                }
+              }
+              std::string command;
+              if (is_hypertable)
+              {
+                command = original_command; // plain CREATE INDEX for hypertables
+                ilog("Skipping CONCURRENTLY for hypertable index: ${cmd}", ("cmd", command));
+              }
+              else
+              {
+                std::regex create_index_regex(R"((CREATE\s+UNIQUE\s+INDEX|CREATE\s+INDEX))", std::regex::icase);
+                command = std::regex_replace(original_command, create_index_regex, "$& CONCURRENTLY");
+              }
               std::string update_table = 
                 "UPDATE hafd.indexes_constraints SET status = 'creating' WHERE index_constraint_name ='" + index_constraint_name + "';";
               ilog("SQL: ${update_table}",(update_table));
@@ -373,6 +399,11 @@ void indexes_controler::poll_and_create_indexes()
             catch (const std::exception& e)
             {
                elog("Error while creating index: ${e}", ("e", e.what()));
+               try {
+                 // Reset status so the index can be retried on next poll
+                 pqxx::nontransaction reset_tx(conn);
+                 reset_tx.exec("UPDATE hafd.indexes_constraints SET status = 'missing' WHERE index_constraint_name ='" + index_constraint_name + "';");
+               } catch (...) {}
             }
           }
           ilog("Finished creating all indexes for table: ${table_name}", (table_name));
