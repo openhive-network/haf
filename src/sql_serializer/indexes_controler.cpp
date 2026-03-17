@@ -358,8 +358,10 @@ void indexes_controler::poll_and_create_indexes()
               std::string original_command = index["command"].as<std::string>();
               ilog("Processing index ${idx} for table ${tbl}: original_command=${cmd}",
                    ("idx", index_constraint_name)("tbl", table_name)("cmd", original_command));
-              // Check if the target table is a hypertable (partitioned table).
-              // CREATE INDEX CONCURRENTLY is not supported on TimescaleDB hypertables.
+              // Check if the target table is a TimescaleDB hypertable.
+              // CREATE INDEX CONCURRENTLY is not supported on hypertables.
+              // We check TimescaleDB's own catalog first (most reliable), then
+              // fall back to pg_class.relkind='p' if the catalog doesn't exist.
               bool is_hypertable = false;
               {
                 // Extract schema.table from "CREATE INDEX ... ON schema.table ..."
@@ -369,19 +371,31 @@ void indexes_controler::poll_and_create_indexes()
                 {
                   std::string schema = on_match[1].str();
                   std::string tbl = on_match[2].str();
-                  ilog("Checking if ${schema}.${tbl} is a hypertable (relkind='p')...", ("schema", schema)("tbl", tbl));
-                  pqxx::result r = tx.exec(
-                    "SELECT c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
-                    "WHERE n.nspname = '" + schema + "' AND c.relname = '" + tbl + "'");
-                  if (!r.empty())
+                  ilog("Checking if ${schema}.${tbl} is a hypertable...", ("schema", schema)("tbl", tbl));
+                  try
                   {
-                    std::string relkind = r[0][0].as<std::string>();
-                    ilog("${schema}.${tbl} relkind='${rk}'", ("schema", schema)("tbl", tbl)("rk", relkind));
-                    is_hypertable = (relkind == "p");
+                    // Check TimescaleDB's own catalog — this is the authoritative source.
+                    // pg_class.relkind may still be 'r' even for hypertables in some cases.
+                    pqxx::result r = tx.exec(
+                      "SELECT 1 FROM _timescaledb_catalog.hypertable "
+                      "WHERE schema_name = '" + schema + "' AND table_name = '" + tbl + "'");
+                    is_hypertable = !r.empty();
+                    ilog("TimescaleDB catalog check: ${schema}.${tbl} is_hypertable=${ht}",
+                         ("schema", schema)("tbl", tbl)("ht", is_hypertable));
                   }
-                  else
+                  catch (const std::exception&)
                   {
-                    elog("Table ${schema}.${tbl} not found in pg_class!", ("schema", schema)("tbl", tbl));
+                    // TimescaleDB not installed — fall back to pg_class.relkind
+                    pqxx::result r = tx.exec(
+                      "SELECT c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+                      "WHERE n.nspname = '" + schema + "' AND c.relname = '" + tbl + "'");
+                    if (!r.empty())
+                    {
+                      std::string relkind = r[0][0].as<std::string>();
+                      is_hypertable = (relkind == "p");
+                      ilog("pg_class fallback: ${schema}.${tbl} relkind='${rk}', is_hypertable=${ht}",
+                           ("schema", schema)("tbl", tbl)("rk", relkind)("ht", is_hypertable));
+                    }
                   }
                 }
                 else
