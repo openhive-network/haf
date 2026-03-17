@@ -356,6 +356,8 @@ void indexes_controler::poll_and_create_indexes()
             try
             {
               std::string original_command = index["command"].as<std::string>();
+              ilog("Processing index ${idx} for table ${tbl}: original_command=${cmd}",
+                   ("idx", index_constraint_name)("tbl", table_name)("cmd", original_command));
               // Check if the target table is a hypertable (partitioned table).
               // CREATE INDEX CONCURRENTLY is not supported on TimescaleDB hypertables.
               bool is_hypertable = false;
@@ -367,10 +369,24 @@ void indexes_controler::poll_and_create_indexes()
                 {
                   std::string schema = on_match[1].str();
                   std::string tbl = on_match[2].str();
+                  ilog("Checking if ${schema}.${tbl} is a hypertable (relkind='p')...", ("schema", schema)("tbl", tbl));
                   pqxx::result r = tx.exec(
-                    "SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
-                    "WHERE n.nspname = '" + schema + "' AND c.relname = '" + tbl + "' AND c.relkind = 'p'");
-                  is_hypertable = !r.empty();
+                    "SELECT c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+                    "WHERE n.nspname = '" + schema + "' AND c.relname = '" + tbl + "'");
+                  if (!r.empty())
+                  {
+                    std::string relkind = r[0][0].as<std::string>();
+                    ilog("${schema}.${tbl} relkind='${rk}'", ("schema", schema)("tbl", tbl)("rk", relkind));
+                    is_hypertable = (relkind == "p");
+                  }
+                  else
+                  {
+                    elog("Table ${schema}.${tbl} not found in pg_class!", ("schema", schema)("tbl", tbl));
+                  }
+                }
+                else
+                {
+                  elog("Could not parse table name from command: ${cmd}", ("cmd", original_command));
                 }
               }
               // For regular tables, use CONCURRENTLY to avoid blocking writes.
@@ -380,12 +396,27 @@ void indexes_controler::poll_and_create_indexes()
               std::string command;
               if (is_hypertable)
               {
-                // Append WITH (timescaledb.transaction_per_chunk) for hypertable indexes
+                // Insert WITH (timescaledb.transaction_per_chunk) for hypertable indexes.
+                // Per SQL syntax, WITH must come BEFORE WHERE in CREATE INDEX.
                 std::string cmd = original_command;
                 // Strip trailing semicolons/whitespace
                 while (!cmd.empty() && (cmd.back() == ';' || cmd.back() == ' '))
                   cmd.pop_back();
-                command = cmd + " WITH (timescaledb.transaction_per_chunk)";
+                // Find WHERE clause (case-insensitive) to insert WITH before it
+                std::regex where_regex(R"(\bWHERE\b)", std::regex::icase);
+                std::smatch where_match;
+                if (std::regex_search(cmd, where_match, where_regex))
+                {
+                  // Insert WITH clause before WHERE
+                  command = cmd.substr(0, where_match.position())
+                          + "WITH (timescaledb.transaction_per_chunk) "
+                          + cmd.substr(where_match.position());
+                }
+                else
+                {
+                  // No WHERE clause, just append
+                  command = cmd + " WITH (timescaledb.transaction_per_chunk)";
+                }
                 ilog("Using transaction_per_chunk for hypertable index: ${cmd}", ("cmd", command));
               }
               else
@@ -404,12 +435,17 @@ void indexes_controler::poll_and_create_indexes()
             }
             catch (const std::exception& e)
             {
-               elog("Error while creating index: ${e}", ("e", e.what()));
+               elog("Error while creating index ${idx}: ${e}", ("idx", index_constraint_name)("e", e.what()));
+               // The existing nontransaction tx may be in bad state after error.
+               // We need a fresh connection to reset the status.
                try {
-                 // Reset status so the index can be retried on next poll
-                 pqxx::nontransaction reset_tx(conn);
+                 pqxx::connection reset_conn(db_url_with_hived_app_as_haf_maintainer(_db_url));
+                 pqxx::nontransaction reset_tx(reset_conn);
                  reset_tx.exec("UPDATE hafd.indexes_constraints SET status = 'missing' WHERE index_constraint_name ='" + index_constraint_name + "';");
-               } catch (...) {}
+                 ilog("Reset index ${idx} status back to 'missing' for retry", ("idx", index_constraint_name));
+               } catch (const std::exception& reset_e) {
+                 elog("Failed to reset index status: ${e}", ("e", reset_e.what()));
+               }
             }
           }
           ilog("Finished creating all indexes for table: ${table_name}", (table_name));
