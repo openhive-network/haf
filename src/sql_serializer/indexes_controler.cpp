@@ -366,14 +366,20 @@ void indexes_controler::poll_and_create_indexes()
                   is_hypertable = !r.empty();
                 }
               }
-              // Always use CONCURRENTLY for non-hypertable indexes.
-              // For hypertable indexes, use plain CREATE INDEX with a lock_timeout
-              // to avoid blocking forever when hived is concurrently writing.
+              // For regular tables, use CONCURRENTLY to avoid blocking writes.
+              // For hypertables, CONCURRENTLY is not supported — use TimescaleDB's
+              // transaction_per_chunk which creates per-chunk indexes allowing
+              // concurrent writes on other chunks.
               std::string command;
               if (is_hypertable)
               {
-                command = original_command; // plain CREATE INDEX for hypertables
-                ilog("Using plain CREATE INDEX for hypertable: ${cmd}", ("cmd", command));
+                // Append WITH (timescaledb.transaction_per_chunk) for hypertable indexes
+                std::string cmd = original_command;
+                // Strip trailing semicolons/whitespace
+                while (!cmd.empty() && (cmd.back() == ';' || cmd.back() == ' '))
+                  cmd.pop_back();
+                command = cmd + " WITH (timescaledb.transaction_per_chunk)";
+                ilog("Using transaction_per_chunk for hypertable index: ${cmd}", ("cmd", command));
               }
               else
               {
@@ -383,22 +389,7 @@ void indexes_controler::poll_and_create_indexes()
               tx.exec("UPDATE hafd.indexes_constraints SET status = 'creating' WHERE index_constraint_name ='" + index_constraint_name + "';");
               ilog("Creating index: ${command}", (command));
               auto start_time = fc::time_point::now();
-              if (is_hypertable)
-              {
-                // Hypertable indexes need a proper transaction (TimescaleDB's DDL
-                // intercept requires it). Use a separate connection to avoid
-                // conflicting with the nontransaction on the main connection.
-                // lock_timeout prevents blocking forever on concurrent writes.
-                pqxx::connection hyper_conn(db_url_with_hived_app_as_haf_maintainer(_db_url));
-                pqxx::work w(hyper_conn);
-                w.exec("SET LOCAL lock_timeout = '30s'");
-                w.exec(command);
-                w.commit();
-              }
-              else
-              {
-                tx.exec(command);
-              }
+              tx.exec(command);
               auto end_time = fc::time_point::now();
               fc::microseconds index_creation_duration = end_time - start_time;
               ilog("Finished creating index for table: ${table_name} in ${duration} seconds", (table_name)("duration", index_creation_duration.to_seconds()));
