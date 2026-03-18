@@ -7,7 +7,7 @@
 # in the conf.d files instead).
 
 sed -i -e '/^#include_if_exists/i                                                            # can add configuration options' \
-       -e '/^#include_if_exists/i include_dir = '\''/etc/postgresql/haf_api_node_conf.d'\''  # additional directory where haf_api_node users' \
+       -e '/^#include_if_exists/i include_dir = '\''/etc/postgresql/custom.conf.d'\''        # user-overridable configuration' \
        -e '/^#include_if_exists/i                                                            # the docker image' \
        -e '/^#include_if_exists/i include_dir = '\''/etc/postgresql/conf.d'\''               # default customization options built into' \
        "$PGDATA/postgresql.conf"

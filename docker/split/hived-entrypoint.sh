@@ -7,9 +7,6 @@ POSTGRES_HOST="${POSTGRES_HOST:-postgres}"
 POSTGRES_DB="${POSTGRES_DB:-haf_block_log}"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
 
-cd "${DATADIR}"
-exec 1> >(tee -ia docker-entrypoint.log) 2>&1
-
 echo "Starting hived container (PID $$)"
 echo "  POSTGRES_HOST=${POSTGRES_HOST}"
 echo "  POSTGRES_DB=${POSTGRES_DB}"

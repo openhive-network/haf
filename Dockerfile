@@ -409,8 +409,8 @@ RUN cd /docker-entrypoint-always-initdb.d && \
 # Copy PostgreSQL configuration
 COPY docker/split/postgresql-conf.d/ /etc/postgresql/conf.d/
 
-# Create directory for user-overridable config
-RUN mkdir -p /etc/postgresql/haf_api_node_conf.d
+# Create directory for user-overridable config (mounted from host db/conf.d/)
+RUN mkdir -p /etc/postgresql/custom.conf.d
 
 # Create default data directories
 RUN mkdir -p /var/lib/postgresql/tablespace && \

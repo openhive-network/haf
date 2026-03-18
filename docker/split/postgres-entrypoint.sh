@@ -73,7 +73,7 @@ chown postgres:postgres "$TABLESPACE_DIR"
 
 # Ensure config directories exist
 mkdir -p /etc/postgresql/conf.d
-mkdir -p /etc/postgresql/haf_api_node_conf.d
+mkdir -p /etc/postgresql/custom.conf.d
 
 # Switch to postgres user for all database operations
 if [ "$(id -u)" = '0' ]; then
