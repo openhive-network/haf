@@ -136,14 +136,11 @@ BEGIN
     END IF;
 
     -- Partition by id (which encodes block_num in upper 32 bits).
-    -- chunk_interval = 100,000 blocks * 2^32 ids/block.
-    -- Smaller chunks (100K vs 1M blocks) reduce decompression cost per query:
-    -- each compressed chunk has ~10x fewer rows, so even full-chunk scans
-    -- (when chunk exclusion can't fully eliminate a chunk) are 10x faster.
+    -- chunk_interval = 1,000,000 blocks * 2^32 ids/block ≈ 4.3 quadrillion.
     -- Keeps existing PRIMARY KEY(id) since id is the partition column.
     PERFORM create_hypertable(
         'hafd.operations',
-        by_range('id', 429496729600000::bigint),
+        by_range('id', 4294967296000000::bigint),
         migrate_data => true
     );
 
