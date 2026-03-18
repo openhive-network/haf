@@ -18,17 +18,13 @@
 #   docker compose -f docker/split/docker-compose.yml down -v
 
 services:
-  postgres:
+  db:
     image: ${HAF_POSTGRES_IMAGE:-haf-postgres:latest}
     environment:
       POSTGRES_VERSION: "${POSTGRES_VERSION:-18}"
-      # Default: allow all connections with trust auth (suitable for local dev)
-      # For production, restrict to specific roles/networks
       PG_ACCESS: "${PG_ACCESS:-host    all     all    0.0.0.0/0    trust}"
     volumes:
       - haf-pgdata:/var/lib/postgresql
-      # Optional: mount custom PostgreSQL configuration
-      # - ./custom_postgresql.conf:/etc/postgresql/haf_api_node_conf.d/custom.conf:ro
     ports:
       - "${PG_PORT:-5432}:5432"
     healthcheck:
@@ -38,21 +34,19 @@ services:
       retries: 30
       start_period: 30s
     restart: unless-stopped
-    # PostgreSQL needs sufficient shared memory
     shm_size: 1g
 
   hived:
     image: ${HAF_HIVED_IMAGE:-haf-hived:latest}
     environment:
-      POSTGRES_HOST: postgres
+      POSTGRES_HOST: db
       POSTGRES_DB: haf_block_log
-      POSTGRES_PORT: "5432"
     volumes:
-      - hived-data:/home/hived/datadir
-      # Optional: mount custom config.ini
-      # - ./config.ini:/home/hived/datadir/config.ini:ro
+      - hived-config:/home/hived/config
+      - hived-blockchain:/home/hived/datadir/blockchain
+      - hived-shm:/home/hived/shm_dir
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
     ports:
       - "${P2P_PORT:-2001}:2001"
@@ -62,4 +56,6 @@ services:
 
 volumes:
   haf-pgdata:
-  hived-data:
+  hived-config:
+  hived-blockchain:
+  hived-shm:
