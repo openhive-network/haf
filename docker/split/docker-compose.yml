@@ -1,0 +1,65 @@
+# Reference Docker Compose file for running HAF with separate PostgreSQL and hived containers.
+#
+# Usage:
+#   # Build images (from repo root):
+#   docker buildx build --target=haf-postgres --tag haf-postgres:latest -f Dockerfile .
+#   docker buildx build --target=haf-hived --tag haf-hived:latest -f Dockerfile .
+#
+#   # Start:
+#   docker compose -f docker/split/docker-compose.yml up -d
+#
+#   # View logs:
+#   docker compose -f docker/split/docker-compose.yml logs -f
+#
+#   # Stop:
+#   docker compose -f docker/split/docker-compose.yml down
+#
+#   # Stop and remove data:
+#   docker compose -f docker/split/docker-compose.yml down -v
+
+services:
+  postgres:
+    image: ${HAF_POSTGRES_IMAGE:-haf-postgres:latest}
+    environment:
+      POSTGRES_VERSION: "${POSTGRES_VERSION:-18}"
+      # Default: allow all connections with trust auth (suitable for local dev)
+      # For production, restrict to specific roles/networks
+      PG_ACCESS: "${PG_ACCESS:-host    all     all    0.0.0.0/0    trust}"
+    volumes:
+      - haf-pgdata:/var/lib/postgresql
+      # Optional: mount custom PostgreSQL configuration
+      # - ./custom_postgresql.conf:/etc/postgresql/haf_api_node_conf.d/custom.conf:ro
+    ports:
+      - "${PG_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U haf_admin -d haf_block_log"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+    # PostgreSQL needs sufficient shared memory
+    shm_size: 1g
+
+  hived:
+    image: ${HAF_HIVED_IMAGE:-haf-hived:latest}
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: haf_block_log
+      POSTGRES_PORT: "5432"
+    volumes:
+      - hived-data:/home/hived/datadir
+      # Optional: mount custom config.ini
+      # - ./config.ini:/home/hived/datadir/config.ini:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${P2P_PORT:-2001}:2001"
+      - "${WS_PORT:-8090}:8090"
+      - "${HTTP_PORT:-8091}:8091"
+    restart: unless-stopped
+
+volumes:
+  haf-pgdata:
+  hived-data:

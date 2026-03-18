@@ -328,3 +328,166 @@ LABEL io.hive.image.commit.log_message="$GIT_LAST_LOG_MESSAGE"
 LABEL io.hive.image.commit.author="$GIT_LAST_COMMITTER"
 LABEL io.hive.image.commit.date="$GIT_LAST_COMMIT_DATE"
 ENV HAF_COMMIT=${GIT_COMMIT_SHA}
+
+
+###############################################################################
+# Split container targets
+#
+# These targets produce two separate images for running PostgreSQL and hived
+# in separate containers instead of the combined "instance" image above.
+#
+# Build:
+#   docker buildx build --target=haf-postgres --tag haf-postgres:latest -f Dockerfile .
+#   docker buildx build --target=haf-hived --tag haf-hived:latest -f Dockerfile .
+###############################################################################
+
+# --- haf-postgres: PostgreSQL with hive_fork_manager extension ---
+FROM minimal-runtime AS haf-postgres
+
+ARG POSTGRES_VERSION
+ENV POSTGRES_VERSION=${POSTGRES_VERSION}
+
+ARG HIVE_SUBDIR=.
+ENV HIVE_SUBDIR=${HIVE_SUBDIR}
+ENV HAF_SOURCE_DIR="/home/haf_admin/source/${HIVE_SUBDIR}"
+
+ENV PGDATABASE=haf_block_log
+ENV PG_ACCESS="host    all     all    0.0.0.0/0    trust"
+
+SHELL ["/bin/bash", "-c"]
+
+USER root
+
+# Install gosu for privilege de-escalation in entrypoint
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y gosu && \
+    rm -rf /var/lib/apt/lists/* && \
+    gosu nobody true
+
+# pg_cron needs these settings during initdb; they are removed after by 005-update-postgresql-conf.sh
+RUN echo "shared_preload_libraries='pg_cron'" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "cron.database_name='haf_block_log'" >> /usr/share/postgresql/postgresql.conf.sample
+
+# Copy hive_fork_manager extension files from build stage
+COPY --from=build \
+  /home/haf_admin/build/extensions/hive_fork_manager/* \
+  /usr/share/postgresql/${POSTGRES_VERSION}/extension/
+COPY --from=build \
+  /home/haf_admin/build/lib/libquery_supervisor.so \
+  /usr/lib/postgresql/${POSTGRES_VERSION}/lib/
+COPY --from=build \
+  /home/haf_admin/build/lib/libhfm-* \
+  /usr/lib/postgresql/${POSTGRES_VERSION}/lib/
+
+# The first COPY above includes the update script generator
+# (hive_fork_manager_update_script_generator.sh) from the build output.
+
+# Make extension directory writable by postgres for version-to-version symlink creation
+RUN chown -R postgres:postgres /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager*
+
+# Copy init scripts, config, and entrypoint
+COPY docker/split/postgres-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/postgres-entrypoint.sh
+
+# Copy first-boot init scripts
+COPY docker/split/docker-entrypoint-initdb.d/ /docker-entrypoint-initdb.d/
+# Copy builtin roles SQL from canonical source (must run before 030-create-haf-block-log-db.sql
+# which references hive_applications_owner_group created here)
+COPY --from=build "${HAF_SOURCE_DIR}/scripts/haf_builtin_roles.sql" /docker-entrypoint-initdb.d/025-haf-builtin-roles.sql
+# Copy pghero SQL from canonical source
+COPY --from=build "${HAF_SOURCE_DIR}/scripts/pghero.sql" /docker-entrypoint-initdb.d/pghero.sql
+# Copy cron jobs SQL from canonical source
+COPY --from=build "${HAF_SOURCE_DIR}/docker/cron_jobs.sql" /docker-entrypoint-initdb.d/cron_jobs.sql
+
+# Copy always-run scripts (includes symlinks, will be resolved by COPY)
+COPY docker/split/docker-entrypoint-always-initdb.d/ /docker-entrypoint-always-initdb.d/
+# Re-create symlinks that COPY resolved into copies
+RUN cd /docker-entrypoint-always-initdb.d && \
+    ln -sf ../docker-entrypoint-initdb.d/010-create-pg-hba-conf.sh 010-create-pg-hba-conf.sh && \
+    ln -sf ../docker-entrypoint-initdb.d/260-setup-cron-jobs.sh 260-setup-cron-jobs.sh
+
+# Copy PostgreSQL configuration
+COPY docker/split/postgresql-conf.d/ /etc/postgresql/conf.d/
+
+# Create directory for user-overridable config
+RUN mkdir -p /etc/postgresql/haf_api_node_conf.d
+
+# Create default data directories
+RUN mkdir -p /var/lib/postgresql/tablespace && \
+    chown -R postgres:postgres /var/lib/postgresql
+
+EXPOSE 5432
+
+STOPSIGNAL SIGTERM
+
+ENTRYPOINT ["postgres-entrypoint.sh"]
+
+ARG BUILD_TIME
+ARG GIT_COMMIT_SHA
+ARG GIT_CURRENT_BRANCH
+LABEL org.opencontainers.image.created="$BUILD_TIME"
+LABEL org.opencontainers.image.revision="$GIT_COMMIT_SHA"
+LABEL org.opencontainers.image.ref.name="HAF PostgreSQL"
+LABEL org.opencontainers.image.title="HAF PostgreSQL Database"
+LABEL org.opencontainers.image.description="PostgreSQL with hive_fork_manager extension for HAF"
+LABEL io.hive.image.branch="$GIT_CURRENT_BRANCH"
+ENV HAF_COMMIT=${GIT_COMMIT_SHA}
+
+
+# --- haf-hived: Minimal hived with sql_serializer plugin ---
+FROM ubuntu:24.04 AS haf-hived
+
+ARG P2P_PORT=2001
+ENV P2P_PORT=${P2P_PORT}
+
+ARG WS_PORT=8090
+ENV WS_PORT=${WS_PORT}
+
+ARG HTTP_PORT=8091
+ENV HTTP_PORT=${HTTP_PORT}
+
+ENV DATADIR=/home/hived/datadir
+ENV SHM_DIR=${DATADIR}/blockchain
+
+SHELL ["/bin/bash", "-c"]
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+      libpq5 postgresql-client ca-certificates && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd --gid 2001 hived && \
+    useradd --create-home --shell /bin/bash --uid 2001 --gid hived --comment "Hived daemon account" hived && \
+    mkdir -p /home/hived/bin /home/hived/datadir /home/hived/shm_dir && \
+    chown -R hived:hived /home/hived
+
+COPY --from=build --chown=hived:hived \
+  /home/hived/bin/hived \
+  /home/hived/bin/cli_wallet \
+  /home/hived/bin/compress_block_log \
+  /home/hived/bin/get_dev_key \
+  /home/hived/bin/blockchain_converte[r] \
+  /home/hived/bin/block_log_util \
+  /home/hived/bin/op_body_filter \
+  /home/hived/bin/
+
+COPY --chown=hived:hived docker/split/hived-entrypoint.sh /docker_entrypoint.sh
+
+USER hived:hived
+WORKDIR /home/hived
+
+STOPSIGNAL SIGINT
+
+EXPOSE ${P2P_PORT} ${WS_PORT} ${HTTP_PORT}
+
+ENTRYPOINT ["/docker_entrypoint.sh"]
+
+ARG BUILD_TIME
+ARG GIT_COMMIT_SHA
+ARG GIT_CURRENT_BRANCH
+LABEL org.opencontainers.image.created="$BUILD_TIME"
+LABEL org.opencontainers.image.revision="$GIT_COMMIT_SHA"
+LABEL org.opencontainers.image.ref.name="HAF hived"
+LABEL org.opencontainers.image.title="HAF hived Node"
+LABEL org.opencontainers.image.description="Hived blockchain node with sql_serializer plugin for HAF"
+LABEL io.hive.image.branch="$GIT_CURRENT_BRANCH"
+ENV HAF_COMMIT=${GIT_COMMIT_SHA}

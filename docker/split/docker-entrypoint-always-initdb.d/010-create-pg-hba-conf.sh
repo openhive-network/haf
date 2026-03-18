@@ -1,0 +1,1 @@
+../docker-entrypoint-initdb.d/010-create-pg-hba-conf.sh

@@ -31,7 +31,16 @@ print_help () {
 }
 
 psql_do() {
-     psql -w "${POSTGRES_ACCESS[@]}" -v ON_ERROR_STOP=on -U "$DB_ADMIN" "$@"
+  if [[ "$(id -un)" == "$DB_ADMIN" ]]; then
+    # Already running as the DB admin user (e.g., haf_admin)
+    psql -w "${POSTGRES_ACCESS[@]}" -v ON_ERROR_STOP=on -U "$DB_ADMIN" "$@"
+  elif sudo -n true 2>/dev/null; then
+    # Running with passwordless sudo available (single-container setup)
+    sudo -Enu "$DB_ADMIN" psql -w "${POSTGRES_ACCESS[@]}" -v ON_ERROR_STOP=on -U "$DB_ADMIN" "$@"
+  else
+    # No usable sudo (e.g., running as postgres user in split container with trust auth)
+    psql -w "${POSTGRES_ACCESS[@]}" -v ON_ERROR_STOP=on -U "$DB_ADMIN" "$@"
+  fi
 }
 
 DB_NAME="haf_block_log"
