@@ -91,6 +91,8 @@ BEGIN
                          ''hive::protocol::account_create_with_delegation_operation'',
                          ''hive::protocol::account_update2_operation''))
                     AND ov.block_num BETWEEN _blockFrom AND _blockTo
+                    AND ov.id >= hafd.operation_id(_blockFrom, 0)
+                    AND ov.id < hafd.operation_id(_blockTo + 1, 0)
                 ), calculated_metadata AS MATERIALIZED
                 (
                     SELECT

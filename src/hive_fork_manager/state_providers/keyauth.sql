@@ -347,7 +347,10 @@ BEGIN
                     ov.timestamp,
                     ov.op_type_id
             FROM %2$s.operations_view_extended ov
-            WHERE ov.block_num BETWEEN _first_block AND _last_block  AND ov.op_type_id IN (SELECT pmot.id FROM pow_op_type pmot)
+            WHERE ov.block_num BETWEEN _first_block AND _last_block
+                AND ov.id >= hafd.operation_id(_first_block, 0)
+                AND ov.id < hafd.operation_id(_last_block + 1, 0)
+                AND ov.op_type_id IN (SELECT pmot.id FROM pow_op_type pmot)
         ),
         pow_raw_auth_records AS MATERIALIZED
         (
@@ -406,7 +409,10 @@ BEGIN
                         ov.timestamp,
                         ov.op_type_id
                     FROM %2$s.operations_view_extended ov
-                    WHERE ov.block_num BETWEEN _first_block AND _last_block  AND ov.op_type_id IN (SELECT mot.id FROM matching_op_types mot)
+                    WHERE ov.block_num BETWEEN _first_block AND _last_block
+                        AND ov.id >= hafd.operation_id(_first_block, 0)
+                        AND ov.id < hafd.operation_id(_last_block + 1, 0)
+                        AND ov.op_type_id IN (SELECT mot.id FROM matching_op_types mot)
             ),
             raw_auth_records AS MATERIALIZED
             (

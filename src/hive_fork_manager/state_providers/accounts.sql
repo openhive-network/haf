@@ -70,14 +70,15 @@ BEGIN
 
     EXECUTE format(
         'INSERT INTO hafd.%s_accounts( name )
-        SELECT hive.get_created_from_account_create_operations( hafd._operation_from_jsonb(jsonb_build_object(''type'', replace(ot.name, ''hive::protocol::'', ''''), ''value'', ov.body_value)) ) as name
+        SELECT hive.get_created_from_account_create_operations( hafd._operation_from_jsonb(jsonb_build_object(''type'', replace((SELECT ot.name FROM hafd.operation_types ot WHERE ot.id = ov.op_type_id), ''hive::protocol::'', ''''), ''value'', ov.body_value)) ) as name
         FROM %s.operations_view ov
-        JOIN hafd.operation_types ot ON ov.op_type_id = ot.id
         WHERE
-            ARRAY[ lower( ot.name ) ] <@ ARRAY[ ''hive::protocol::account_created_operation'' ]
+            ov.op_type_id = (SELECT id FROM hafd.operation_types WHERE name = ''hive::protocol::account_created_operation'')
             AND ov.block_num BETWEEN %s AND %s
+            AND ov.id >= hafd.operation_id(%s, 0)
+            AND ov.id < hafd.operation_id(%s + 1, 0)
         ON CONFLICT DO NOTHING'
-        , _context, __context_schema, _first_block, _last_block
+        , _context, __context_schema, _first_block, _last_block, _first_block, _last_block
     );
 END;
 $BODY$
