@@ -871,17 +871,17 @@ haf_split_image_smoke_test:
     - |
       export HAF_POSTGRES_IMAGE=haf-postgres:test
       export HAF_HIVED_IMAGE=haf-hived:test
-      docker compose -f docker/split/docker-compose.yml up -d postgres
+      docker compose -f docker/split/docker-compose.yml up -d db
     - echo "=== Waiting for PostgreSQL healthcheck ==="
     - |
       for i in $(seq 1 60); do
-        if docker compose -f docker/split/docker-compose.yml exec -T postgres pg_isready -U haf_admin -d haf_block_log 2>/dev/null; then
+        if docker compose -f docker/split/docker-compose.yml exec -T db pg_isready -U haf_admin -d haf_block_log 2>/dev/null; then
           echo "PostgreSQL is ready after ${i} attempts"
           break
         fi
         if [ "$i" -eq 60 ]; then
           echo "ERROR: PostgreSQL did not become ready in time"
-          docker compose -f docker/split/docker-compose.yml logs postgres
+          docker compose -f docker/split/docker-compose.yml logs db
           exit 1
         fi
         sleep 2
@@ -889,26 +889,26 @@ haf_split_image_smoke_test:
     - echo "=== Validating database initialization ==="
     - |
       # Verify hive_fork_manager extension is installed
-      docker compose -f docker/split/docker-compose.yml exec -T postgres \
+      docker compose -f docker/split/docker-compose.yml exec -T db \
         psql -U haf_admin -d haf_block_log -t -A \
         -c "SELECT extname, extversion FROM pg_extension WHERE extname = 'hive_fork_manager'" | grep -q hive_fork_manager
       echo "PASS: hive_fork_manager extension installed"
 
       # Verify key roles exist
-      docker compose -f docker/split/docker-compose.yml exec -T postgres \
+      docker compose -f docker/split/docker-compose.yml exec -T db \
         psql -U haf_admin -d haf_block_log -t -A \
         -c "SELECT rolname FROM pg_roles WHERE rolname IN ('hived', 'haf_admin', 'haf_maintainer', 'haf_app_public') ORDER BY rolname" | \
         grep -q hived
       echo "PASS: HAF roles created"
 
       # Verify tablespace exists
-      docker compose -f docker/split/docker-compose.yml exec -T postgres \
+      docker compose -f docker/split/docker-compose.yml exec -T db \
         psql -U haf_admin -d haf_block_log -t -A \
         -c "SELECT spcname FROM pg_tablespace WHERE spcname = 'haf_tablespace'" | grep -q haf_tablespace
       echo "PASS: haf_tablespace created"
 
       # Verify pg_cron extension
-      docker compose -f docker/split/docker-compose.yml exec -T postgres \
+      docker compose -f docker/split/docker-compose.yml exec -T db \
         psql -U haf_admin -d haf_block_log -t -A \
         -c "SELECT extname FROM pg_extension WHERE extname = 'pg_cron'" | grep -q pg_cron
       echo "PASS: pg_cron extension installed"
