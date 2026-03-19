@@ -417,7 +417,7 @@ status=0
 if [ ${DO_MAINTENANCE} -eq 1 ];
 then
   echo "Running maintance script located at ${MAINTENANCE_SCRIPT_NAME} using additional command line arguments:" "${HIVED_ARGS[*]}"
-  $MAINTENANCE_SCRIPT_NAME "${HIVED_ARGS[@]}"
+  exec $MAINTENANCE_SCRIPT_NAME "${HIVED_ARGS[@]}"
 elif [ ${PERFORM_DUMP} -eq 1 ];
 then
   echo "Attempting to perform instance snapshot dump"
