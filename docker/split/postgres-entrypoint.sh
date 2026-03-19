@@ -40,7 +40,7 @@ docker_process_init_files() {
         ;;
       *.sql)
         echo "  Running $f"
-        psql -U postgres -f "$f"
+        psql -U postgres -d postgres -f "$f"
         ;;
       *)
         echo "  Ignoring $f (not .sh or .sql)"
