@@ -765,6 +765,39 @@ haf_image_build:
         docker tag $HAF_INSTANCE ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
         docker push ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
       fi
+    # Build and push split container images (haf-postgres + haf-hived)
+    # These share the build stage with the instance target, so only the final
+    # COPY layers need building (~30 seconds each)
+    - |
+      source docker_image_name.env 2>/dev/null || true
+      SPLIT_TAG="${CI_COMMIT_SHORT_SHA}"
+      POSTGRES_REGISTRY="${CI_REGISTRY_IMAGE}/postgres"
+      HIVED_REGISTRY="${CI_REGISTRY_IMAGE}/hived"
+
+      echo "Building split container images..."
+      docker buildx build \
+        --target=haf-postgres \
+        --tag "${POSTGRES_REGISTRY}:${SPLIT_TAG}" \
+        --build-arg POSTGRES_VERSION=${POSTGRES_VERSION:-17} \
+        --push \
+        -f Dockerfile .
+
+      docker buildx build \
+        --target=haf-hived \
+        --tag "${HIVED_REGISTRY}:${SPLIT_TAG}" \
+        --build-arg POSTGRES_VERSION=${POSTGRES_VERSION:-17} \
+        --push \
+        -f Dockerfile .
+
+      echo "Split images pushed:"
+      echo "  ${POSTGRES_REGISTRY}:${SPLIT_TAG}"
+      echo "  ${HIVED_REGISTRY}:${SPLIT_TAG}"
+
+      # Add branch-based tags
+      if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
+        docker buildx imagetools create -t "${POSTGRES_REGISTRY}:latest" "${POSTGRES_REGISTRY}:${SPLIT_TAG}"
+        docker buildx imagetools create -t "${HIVED_REGISTRY}:latest" "${HIVED_REGISTRY}:${SPLIT_TAG}"
+      fi
 
 haf_image_build_testnet:
   extends: .haf_image_build
