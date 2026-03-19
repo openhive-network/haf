@@ -1,0 +1,5 @@
+# CI override: reduce PostgreSQL memory settings for DinD environments.
+# The image defaults (16GB shared_buffers) are too large for CI runners.
+services:
+  db:
+    command: ["-c", "shared_buffers=128MB", "-c", "effective_cache_size=256MB", "-c", "maintenance_work_mem=64MB", "-c", "wal_buffers=16MB"]
