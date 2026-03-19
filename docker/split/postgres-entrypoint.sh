@@ -23,6 +23,7 @@ set -Eeo pipefail
 POSTGRES_VERSION="${POSTGRES_VERSION:-18}"
 PGDATA="${PGDATA:-/var/lib/postgresql/${POSTGRES_VERSION}/haf}"
 export PGDATA
+export PATH="/usr/lib/postgresql/${POSTGRES_VERSION}/bin:$PATH"
 
 # Process init files: .sh files are sourced/executed, .sql files are run via psql
 docker_process_init_files() {
