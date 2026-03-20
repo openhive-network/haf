@@ -7,3 +7,4 @@ schema = hafd
 # this extension is required by block_day_stats views performing a PIVOT operation
 requires = 'tablefunc'
 
+# Split container support
