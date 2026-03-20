@@ -42,7 +42,7 @@ if [ ! -f "$CONFIG_DIR/config.ini" ]; then
   /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
     --data-dir="${CONFIG_DIR}" --shared-file-dir="${SHM_DIR}" --psql-wal-directory="${WAL_DIR}" \
     --plugin=sql_serializer --psql-url="${PSQL_URL}" \
-    "$@" --dump-config > /dev/null 2>&1
+    "$@" --dump-config > /dev/null 2>&1 || true
 
   # add a default set of plugins that API nodes should run
   sed -i 's/^# plugin = .*$/plugin = metadata node_status_api account_by_key account_by_key_api block_api condenser_api database_api json_rpc market_history market_history_api network_broadcast_api p2p rc_api state_snapshot transaction_status transaction_status_api wallet_bridge_api webserver/g' "$CONFIG_DIR/config.ini"
