@@ -480,6 +480,10 @@ detect_changes:
         curl -fsSL "${HIVE_RAW_URL}/${script}" -o "$TARGET"
         chmod +x "$TARGET"
       done
+    # Restore HAF's build_instance.sh wrapper (common-ci-configuration may overwrite
+    # it with hive's version during template setup)
+    - |
+      git checkout -- scripts/ci-helpers/build_instance.sh 2>/dev/null || true
     # Fetch smart-image-build.sh from common-ci-configuration
     - |
       COMMON_CI_URL="https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/bash"
