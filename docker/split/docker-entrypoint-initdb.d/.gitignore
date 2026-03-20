@@ -1,0 +1,3 @@
+# Files copied from canonical sources at build time (for local testing only)
+025-haf-builtin-roles.sql
+pghero.sql

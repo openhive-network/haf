@@ -4,15 +4,14 @@ set -Eeo pipefail
 # HAF PostgreSQL container entrypoint.
 # Handles database initialization on first boot and extension updates on restart.
 #
-# Based on the official postgres Docker entrypoint pattern but self-contained
-# (does not depend on the stock postgres image).
-#
 # On first boot (empty PGDATA):
 #   1. Run initdb to initialize the cluster
 #   2. Start a temporary postgres server
 #   3. Run docker-entrypoint-initdb.d/* scripts (create DB, roles, extension)
-#   4. Stop temporary server
-#   5. Start postgres normally
+#   4. Stop and restart temp server (to pick up shared_preload_libraries from conf.d)
+#   5. Run docker-entrypoint-always-initdb.d/* scripts (pg_cron, cron jobs)
+#   6. Stop temporary server
+#   7. Start postgres normally
 #
 # On subsequent boots (existing PGDATA):
 #   1. Start a temporary postgres server
@@ -91,7 +90,7 @@ if [ -z "$DATABASE_ALREADY_EXISTS" ]; then
 
   # Initialize the cluster in a temp directory (initdb refuses non-empty dirs)
   INITDB_TMPDIR=$(mktemp -d /tmp/initdb.XXXXXX)
-  "/usr/lib/postgresql/${POSTGRES_VERSION}/bin/initdb" -D "$INITDB_TMPDIR"
+  initdb -D "$INITDB_TMPDIR"
 
   # Move initialized files to PGDATA
   mkdir -p "$PGDATA"
@@ -103,6 +102,18 @@ if [ -z "$DATABASE_ALREADY_EXISTS" ]; then
   echo "=== Running first-boot initialization scripts ==="
   if [ -d /docker-entrypoint-initdb.d ]; then
     docker_process_init_files /docker-entrypoint-initdb.d/*
+  fi
+
+  # Restart the temp server to pick up shared_preload_libraries added by
+  # 005-update-postgresql-conf.sh (pg_cron, pg_stat_statements via conf.d).
+  # Without this restart, CREATE EXTENSION pg_cron fails because the pg_cron
+  # shared library isn't loaded yet.
+  docker_temp_server_stop
+  docker_temp_server_start
+
+  echo "=== Running always-run scripts (first boot) ==="
+  if [ -d /docker-entrypoint-always-initdb.d ]; then
+    docker_process_init_files /docker-entrypoint-always-initdb.d/*
   fi
 
   docker_temp_server_stop
