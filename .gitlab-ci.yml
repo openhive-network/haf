@@ -774,18 +774,27 @@ haf_image_build:
       POSTGRES_REGISTRY="${CI_REGISTRY_IMAGE}/postgres"
       HIVED_REGISTRY="${CI_REGISTRY_IMAGE}/hived"
 
-      echo "Building split container images..."
-      docker buildx build \
+      # Use the same registry cache as the main build to reuse compiled layers.
+      # Cache keys match build_instance.sh: ${REGISTRY}/cache:${NETWORK_TYPE}-build-pg${PG_VERSION}
+      CACHE_REPO="${CI_REGISTRY_IMAGE}/cache"
+      PG="${POSTGRES_VERSION:-17}"
+      NETWORK="${HIVE_NETWORK_TYPE:-mainnet}"
+      CACHE_ARGS="--cache-from=type=registry,ref=${CACHE_REPO}:${NETWORK}-build-pg${PG} --cache-from=type=registry,ref=${CACHE_REPO}:${NETWORK}-build-pg${PG}-instance"
+
+      echo "Building split container images (caching from ${CACHE_REPO}:${NETWORK}-build-pg${PG})..."
+      docker buildx build --provenance=false --progress=plain \
         --target=haf-postgres \
         --tag "${POSTGRES_REGISTRY}:${SPLIT_TAG}" \
-        --build-arg POSTGRES_VERSION=${POSTGRES_VERSION:-17} \
+        --build-arg POSTGRES_VERSION=${PG} \
+        ${CACHE_ARGS} \
         --push \
         -f Dockerfile .
 
-      docker buildx build \
+      docker buildx build --provenance=false --progress=plain \
         --target=haf-hived \
         --tag "${HIVED_REGISTRY}:${SPLIT_TAG}" \
-        --build-arg POSTGRES_VERSION=${POSTGRES_VERSION:-17} \
+        --build-arg POSTGRES_VERSION=${PG} \
+        ${CACHE_ARGS} \
         --push \
         -f Dockerfile .
 
