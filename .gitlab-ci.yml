@@ -750,8 +750,6 @@ haf_image_build:
     - |
       source docker_image_name.env
       echo "Adding latest/stable/version tags for mainnet image..."
-      # Pull image to local daemon (may not be loaded when using cached builds)
-      # timeout prevents hangs when Docker daemon is overloaded
       timeout 300 docker pull $HAF_INSTANCE || echo "Warning: docker pull failed or timed out"
       docker images
       if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
@@ -765,6 +763,39 @@ haf_image_build:
         docker tag $HAF_INSTANCE ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
         docker push ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
       fi
+
+haf_split_image_build:
+  extends: .docker_image_builder_job_template
+  stage: build_and_test_phase_1
+  variables:
+    POSTGRES_VERSION: "17"
+  needs:
+    - job: haf_image_build
+      artifacts: true
+  before_script:
+    - !reference [.docker_image_builder_job_template, before_script]
+  script:
+    - |
+      source docker_image_name.env
+      PG="${POSTGRES_VERSION}"
+      CACHE_REPO="${CI_REGISTRY_IMAGE}/cache"
+      TAG="${HAF_REGISTRY_TAG}"
+
+      echo "Building split images using cache from haf_image_build..."
+      for target in haf-postgres haf-hived; do
+        name="${target#haf-}"
+        docker buildx build --provenance=false --progress=plain \
+          --target="$target" \
+          --tag "${CI_REGISTRY_IMAGE}/${name}:${TAG}" \
+          --build-arg POSTGRES_VERSION=${PG} \
+          --cache-from=type=registry,ref=${CACHE_REPO}:mainnet-build-pg${PG} \
+          --cache-from=type=registry,ref=${CACHE_REPO}:mainnet-build-pg${PG}-instance \
+          --push \
+          -f Dockerfile .
+        echo "Pushed ${CI_REGISTRY_IMAGE}/${name}:${TAG}"
+      done
+  tags:
+    - public-runner-docker
 
 haf_image_build_testnet:
   extends: .haf_image_build
