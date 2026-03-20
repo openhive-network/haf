@@ -796,25 +796,16 @@ haf_split_image_build:
         exit 0
       fi
 
-      # Use the pre-built build image as the 'build' stage context.
-      # Try /build:<tag> first (pushed on fresh builds), fall back to
-      # the instance image itself (contains compiled binaries in its layers).
-      BUILD_IMG="${CI_REGISTRY_IMAGE}/build:${TAG}"
-      if ! docker manifest inspect "$BUILD_IMG" >/dev/null 2>&1; then
-        BUILD_IMG="${HAF_INSTANCE}"
-        echo "Using instance image as build context: ${BUILD_IMG}"
-      else
-        echo "Using build image: ${BUILD_IMG}"
-      fi
-
-      echo "Building split images..."
+      echo "Building split images with registry cache..."
       for target in haf-postgres haf-hived; do
         name="${target#haf-}"
         docker buildx build --provenance=false --progress=plain \
           --target="$target" \
           --tag "${CI_REGISTRY_IMAGE}/${name}:${TAG}" \
           --build-arg POSTGRES_VERSION=${PG} \
-          --build-context "build=docker-image://${BUILD_IMG}" \
+          --build-arg SCCACHE_REDIS="${SCCACHE_REDIS:-}" \
+          --cache-from=type=registry,ref=${CACHE_REPO}:mainnet-build-pg${PG} \
+          --cache-from=type=registry,ref=${CACHE_REPO}:mainnet-build-pg${PG}-instance \
           --push \
           -f Dockerfile .
         echo "Pushed ${CI_REGISTRY_IMAGE}/${name}:${TAG}"
