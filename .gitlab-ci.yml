@@ -792,35 +792,32 @@ haf_split_image_build:
       done
 
       if [[ "$NEED_BUILD" == "false" ]]; then
-        echo "Split images already exist for tag ${TAG}, skipping build."
-      else
-        # Use the pre-built build image as the 'build' stage context if available.
-        # On fresh builds, build_instance.sh pushes it as /build:<tag>.
-        # On cache hits, it doesn't exist — fall back to cache-from only.
-        BUILD_CONTEXT_ARG=""
-        BUILD_IMG="${CI_REGISTRY_IMAGE}/build:${TAG}"
-        if docker manifest inspect "$BUILD_IMG" >/dev/null 2>&1; then
-          BUILD_CONTEXT_ARG="--build-context build=docker-image://${BUILD_IMG}"
-          echo "Using pre-built build image: ${BUILD_IMG}"
-        else
-          echo "No build image at ${BUILD_IMG}, using registry cache only"
-        fi
-
-        echo "Building split images..."
-        for target in haf-postgres haf-hived; do
-          name="${target#haf-}"
-          docker buildx build --provenance=false --progress=plain \
-            --target="$target" \
-            --tag "${CI_REGISTRY_IMAGE}/${name}:${TAG}" \
-            --build-arg POSTGRES_VERSION=${PG} \
-            ${BUILD_CONTEXT_ARG} \
-            --cache-from=type=registry,ref=${CACHE_REPO}:mainnet-build-pg${PG} \
-            --cache-from=type=registry,ref=${CACHE_REPO}:mainnet-build-pg${PG}-instance \
-            --push \
-            -f Dockerfile .
-          echo "Pushed ${CI_REGISTRY_IMAGE}/${name}:${TAG}"
-        done
+        echo "Split images already exist for tag ${TAG}, skipping."
+        exit 0
       fi
+
+      # The build image (/build:<tag>) is only available after fresh builds,
+      # not after cache hits. Without it, we can't skip the compilation stage.
+      BUILD_IMG="${CI_REGISTRY_IMAGE}/build:${TAG}"
+      if ! docker manifest inspect "$BUILD_IMG" >/dev/null 2>&1; then
+        echo "Build image ${BUILD_IMG} not available (instance was a cache hit)."
+        echo "Split images must be built on the same pipeline as a fresh instance build."
+        echo "Skipping — split images will be built on the next source change."
+        exit 0
+      fi
+
+      echo "Building split images (build context: ${BUILD_IMG})..."
+      for target in haf-postgres haf-hived; do
+        name="${target#haf-}"
+        docker buildx build --provenance=false --progress=plain \
+          --target="$target" \
+          --tag "${CI_REGISTRY_IMAGE}/${name}:${TAG}" \
+          --build-arg POSTGRES_VERSION=${PG} \
+          --build-context "build=docker-image://${BUILD_IMG}" \
+          --push \
+          -f Dockerfile .
+        echo "Pushed ${CI_REGISTRY_IMAGE}/${name}:${TAG}"
+      done
   tags:
     - public-runner-docker
 
