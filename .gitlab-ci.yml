@@ -782,14 +782,18 @@ haf_split_image_build:
       CACHE_REPO="${CI_REGISTRY_IMAGE}/cache"
       TAG="${HAF_REGISTRY_TAG}"
 
-      echo "Building split images using cache from haf_image_build..."
+      # Use the pre-built build image as the 'build' stage context — this skips
+      # compilation entirely and just builds the final COPY layers
+      BUILD_IMG="${CI_REGISTRY_IMAGE}/build:${TAG}"
+
+      echo "Building split images (build context: ${BUILD_IMG})..."
       for target in haf-postgres haf-hived; do
         name="${target#haf-}"
         docker buildx build --provenance=false --progress=plain \
           --target="$target" \
           --tag "${CI_REGISTRY_IMAGE}/${name}:${TAG}" \
           --build-arg POSTGRES_VERSION=${PG} \
-          --cache-from=type=registry,ref=${CACHE_REPO}:mainnet-build-pg${PG} \
+          --build-context "build=docker-image://${BUILD_IMG}" \
           --cache-from=type=registry,ref=${CACHE_REPO}:mainnet-build-pg${PG}-instance \
           --push \
           -f Dockerfile .
