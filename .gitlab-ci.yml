@@ -746,6 +746,7 @@ haf_image_build:
     POSTGRES_VERSION: "17"
   tags:
     - bigjob
+  after_script_timeout: 15m
   after_script:
     - |
       source docker_image_name.env
