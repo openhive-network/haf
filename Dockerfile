@@ -382,8 +382,11 @@ COPY --from=build \
 # The first COPY above includes the update script generator
 # (hive_fork_manager_update_script_generator.sh) from the build output.
 
-# Make extension directory writable by postgres for version-to-version symlink creation
-RUN chown -R postgres:postgres /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager*
+# Make extension directory writable by postgres for version-to-version symlink creation.
+# The update script generator creates new symlinks (hive_fork_manager--<old>--<new>.sql)
+# which requires write access to the directory itself.
+RUN chown postgres:postgres /usr/share/postgresql/${POSTGRES_VERSION}/extension/ && \
+    chown postgres:postgres /usr/share/postgresql/${POSTGRES_VERSION}/extension/hive_fork_manager*
 
 # Copy init scripts, config, and entrypoint
 COPY docker/split/postgres-entrypoint.sh /usr/local/bin/
