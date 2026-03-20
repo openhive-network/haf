@@ -794,22 +794,27 @@ haf_split_image_build:
       if [[ "$NEED_BUILD" == "false" ]]; then
         echo "Split images already exist for tag ${TAG}, skipping build."
       else
-        # Use the pre-built build image as the 'build' stage context.
-        # Try the commit-specific tag first, fall back to the cache key.
+        # Use the pre-built build image as the 'build' stage context if available.
+        # On fresh builds, build_instance.sh pushes it as /build:<tag>.
+        # On cache hits, it doesn't exist — fall back to cache-from only.
+        BUILD_CONTEXT_ARG=""
         BUILD_IMG="${CI_REGISTRY_IMAGE}/build:${TAG}"
-        if ! docker manifest inspect "$BUILD_IMG" >/dev/null 2>&1; then
-          BUILD_IMG="${CACHE_REPO}:mainnet-build-pg${PG}"
-          echo "Build image not at ${CI_REGISTRY_IMAGE}/build:${TAG}, using cache: ${BUILD_IMG}"
+        if docker manifest inspect "$BUILD_IMG" >/dev/null 2>&1; then
+          BUILD_CONTEXT_ARG="--build-context build=docker-image://${BUILD_IMG}"
+          echo "Using pre-built build image: ${BUILD_IMG}"
+        else
+          echo "No build image at ${BUILD_IMG}, using registry cache only"
         fi
 
-        echo "Building split images (build context: ${BUILD_IMG})..."
+        echo "Building split images..."
         for target in haf-postgres haf-hived; do
           name="${target#haf-}"
           docker buildx build --provenance=false --progress=plain \
             --target="$target" \
             --tag "${CI_REGISTRY_IMAGE}/${name}:${TAG}" \
             --build-arg POSTGRES_VERSION=${PG} \
-            --build-context "build=docker-image://${BUILD_IMG}" \
+            ${BUILD_CONTEXT_ARG} \
+            --cache-from=type=registry,ref=${CACHE_REPO}:mainnet-build-pg${PG} \
             --cache-from=type=registry,ref=${CACHE_REPO}:mainnet-build-pg${PG}-instance \
             --push \
             -f Dockerfile .
