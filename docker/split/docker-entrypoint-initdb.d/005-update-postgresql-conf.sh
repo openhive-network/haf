@@ -12,7 +12,7 @@ sed -i -e '/^#include_if_exists/i                                               
        -e '/^#include_if_exists/i include_dir = '\''/etc/postgresql/conf.d'\''               # default customization options built into' \
        "$PGDATA/postgresql.conf"
 
-# Remove pg_cron lines added to postgresql.conf.sample for initdb compatibility
-sed -i -e '/^shared_preload_libraries='\''pg_cron'\''/d' \
-       -e '/^cron.database_name='\''haf_block_log'\''/d' \
-       "$PGDATA/postgresql.conf"
+# Keep pg_cron lines from postgresql.conf.sample in place — they're needed during
+# the temp server phase when init scripts run (CREATE EXTENSION pg_cron requires
+# the shared library and its GUCs to be available). The conf.d files will also
+# set these values, but duplicates are harmless (last value wins).
