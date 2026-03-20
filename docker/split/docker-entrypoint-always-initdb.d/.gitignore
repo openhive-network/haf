@@ -1,1 +1,3 @@
-# Copied from canonical source at build time (for local testing only)\ncron_jobs.sql
+# Copied from canonical source at build time (for local testing only)
+cron_jobs.dat
+cron_jobs.sql

@@ -403,7 +403,7 @@ RUN cd /docker-entrypoint-always-initdb.d && \
     ln -sf ../docker-entrypoint-initdb.d/010-create-pg-hba-conf.sh 010-create-pg-hba-conf.sh
 # Copy cron jobs SQL from canonical source (into always-initdb.d since pg_cron
 # requires shared_preload_libraries which isn't available during temp server init)
-COPY --from=build "${HAF_SOURCE_DIR}/docker/cron_jobs.sql" /docker-entrypoint-always-initdb.d/cron_jobs.sql
+COPY --from=build "${HAF_SOURCE_DIR}/docker/cron_jobs.sql" /docker-entrypoint-always-initdb.d/cron_jobs.dat
 
 # Copy PostgreSQL configuration
 COPY docker/split/postgresql-conf.d/ /etc/postgresql/conf.d/
