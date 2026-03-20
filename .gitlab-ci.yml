@@ -774,6 +774,7 @@ haf_split_image_build:
       artifacts: true
   before_script:
     - !reference [.docker_image_builder_job_template, before_script]
+    - echo "${CI_REGISTRY_PASSWORD}" | docker login -u "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}" || true
   script:
     - |
       source docker_image_name.env
