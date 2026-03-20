@@ -782,23 +782,40 @@ haf_split_image_build:
       CACHE_REPO="${CI_REGISTRY_IMAGE}/cache"
       TAG="${HAF_REGISTRY_TAG}"
 
-      # Use the pre-built build image as the 'build' stage context — this skips
-      # compilation entirely and just builds the final COPY layers
-      BUILD_IMG="${CI_REGISTRY_IMAGE}/build:${TAG}"
-
-      echo "Building split images (build context: ${BUILD_IMG})..."
-      for target in haf-postgres haf-hived; do
-        name="${target#haf-}"
-        docker buildx build --provenance=false --progress=plain \
-          --target="$target" \
-          --tag "${CI_REGISTRY_IMAGE}/${name}:${TAG}" \
-          --build-arg POSTGRES_VERSION=${PG} \
-          --build-context "build=docker-image://${BUILD_IMG}" \
-          --cache-from=type=registry,ref=${CACHE_REPO}:mainnet-build-pg${PG}-instance \
-          --push \
-          -f Dockerfile .
-        echo "Pushed ${CI_REGISTRY_IMAGE}/${name}:${TAG}"
+      # Check if split images already exist (skip if cache hit from a previous build)
+      NEED_BUILD=false
+      for name in postgres hived; do
+        if ! docker manifest inspect "${CI_REGISTRY_IMAGE}/${name}:${TAG}" >/dev/null 2>&1; then
+          NEED_BUILD=true
+          break
+        fi
       done
+
+      if [[ "$NEED_BUILD" == "false" ]]; then
+        echo "Split images already exist for tag ${TAG}, skipping build."
+      else
+        # Use the pre-built build image as the 'build' stage context.
+        # Try the commit-specific tag first, fall back to the cache key.
+        BUILD_IMG="${CI_REGISTRY_IMAGE}/build:${TAG}"
+        if ! docker manifest inspect "$BUILD_IMG" >/dev/null 2>&1; then
+          BUILD_IMG="${CACHE_REPO}:mainnet-build-pg${PG}"
+          echo "Build image not at ${CI_REGISTRY_IMAGE}/build:${TAG}, using cache: ${BUILD_IMG}"
+        fi
+
+        echo "Building split images (build context: ${BUILD_IMG})..."
+        for target in haf-postgres haf-hived; do
+          name="${target#haf-}"
+          docker buildx build --provenance=false --progress=plain \
+            --target="$target" \
+            --tag "${CI_REGISTRY_IMAGE}/${name}:${TAG}" \
+            --build-arg POSTGRES_VERSION=${PG} \
+            --build-context "build=docker-image://${BUILD_IMG}" \
+            --cache-from=type=registry,ref=${CACHE_REPO}:mainnet-build-pg${PG}-instance \
+            --push \
+            -f Dockerfile .
+          echo "Pushed ${CI_REGISTRY_IMAGE}/${name}:${TAG}"
+        done
+      fi
   tags:
     - public-runner-docker
 
