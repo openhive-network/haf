@@ -102,6 +102,11 @@ snapshot_download(\
   repo_id='intfloat/multilingual-e5-base', \
   local_dir='/home/hived/tokenizer-files/e5-base', \
   allow_patterns=['tokenizer.json']\
+); \
+snapshot_download(\
+  repo_id='jinaai/jina-embeddings-v5-text-small', \
+  local_dir='/home/hived/tokenizer-files/jina-v5-small', \
+  allow_patterns=['tokenizer.json']\
 )"
 USER root
 
