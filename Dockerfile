@@ -228,6 +228,7 @@ ENV PG_ACCESS="host    haf_block_log     haf_app_admin    172.0.0.0/8    trust\n
 
 ENV POSTGRES_VERSION=${POSTGRES_VERSION}
 
+ENV PGUSER=haf_admin
 ENV PGDATABASE=haf_block_log
 
 ENV HAF_SOURCE_DIR="/home/hived/source/${HIVE_SUBDIR}"
