@@ -370,6 +370,13 @@ $BODY$
         __lead_context hafd.context_name := _contexts[ 1 ];
         __hive_sync_state hafd.sync_state;
     BEGIN
+        -- Coordinate with hived's event cleanup (end_massive_sync / set_irreversible),
+        -- which takes EXCLUSIVE lock on contexts_attachment. ROW SHARE here ensures
+        -- no events are deleted while we're modifying contexts.events_id in squash
+        -- functions or find_next_event. ROW SHARE locks are compatible with each other,
+        -- so multiple applications can process events concurrently.
+        LOCK TABLE hafd.contexts_attachment IN ROW SHARE MODE;
+
         PERFORM hive.squash_events( _contexts );
 
         SELECT hive.get_sync_state() INTO __hive_sync_state;

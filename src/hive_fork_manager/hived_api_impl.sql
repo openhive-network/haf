@@ -330,19 +330,10 @@ BEGIN
     FROM hafd.events_queue heq
     WHERE heq.event != 'BACK_FROM_FORK' AND heq.block_num = ( _new_irreversible_block + 1 ); --next block after irreversible
 
-    -- You may think that SELECT FOR UPDATE needs to be used here in USING clause
-    -- but SELECT FOR UPDATE will lock hafd.contexts, so it want to acquire lock
-    -- between hived and application, and if application will modify contexts and never commit (by mistake or maliciously)
-    -- then hived will be locked forever
-    --
-    -- Important notice from the pg documentation https://www.postgresql.org/docs/current/transaction-iso.html :
-    -- UPDATE, DELETE, SELECT FOR UPDATE, and SELECT FOR SHARE commands behave the same as SELECT in terms of searching
-    -- for target rows: they will only find target rows that were committed as of the command start time. However, such
-    -- a target row might have already been updated (or deleted or locked) by another concurrent transaction by the
-    -- time it is found.
-    --
-    -- It means that SELECT from USING clause will return min event = 10, but in case of a bug an application
-    -- context may back to event 9 and then when DELETE is being committed it will violate FK(event_queue(id)<->contexts(events_id))
+    -- The caller (end_massive_sync / set_irreversible) holds EXCLUSIVE lock on
+    -- hafd.contexts_attachment, which blocks any concurrent squash_and_get_state
+    -- (that holds ROW SHARE on the same table). This ensures no application can
+    -- modify contexts.events_id while we read MIN(events_id) and delete events.
 
     DELETE FROM hafd.events_queue heq
     USING ( SELECT MIN( hc.events_id) as id FROM hafd.contexts hc ) as min_event
