@@ -7,3 +7,4 @@ TARGET_INCLUDE_DIRECTORIES( ${target_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/psql_
 TARGET_INCLUDE_DIRECTORIES( ${target_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/pq_utils/include )
 TARGET_INCLUDE_DIRECTORIES( ${target_name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/googletest/googlemock/include )
 TARGET_INCLUDE_DIRECTORIES( ${target_name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/googletest/googletest/include )
+TARGET_LINK_LIBRARIES( ${target_name} PRIVATE ${CMAKE_BINARY_DIR}/lib/libgmock.a ${CMAKE_BINARY_DIR}/lib/libgtest.a )

@@ -4,7 +4,7 @@ ExternalProject_Add(
         GIT_REPOSITORY https://github.com/google/googletest.git
         GIT_TAG v1.13.0
         INSTALL_DIR "${CMAKE_BINARY_DIR}"
-        CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}"
+        CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}" "-DCMAKE_INSTALL_LIBDIR=lib" "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
         STEP_TARGETS mkdir download update build configure install
         BUILD_BYPRODUCTS "${CMAKE_BINARY_DIR}/lib/libgmock.a" "${CMAKE_BINARY_DIR}/lib/libgtest.a" "${CMAKE_BINARY_DIR}/lib/libgtest_main.a"
 )

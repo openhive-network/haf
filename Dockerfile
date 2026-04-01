@@ -3,7 +3,7 @@
 # docker buildx build --progress=plain --target=ci-base-image --tag registry.gitlab.syncad.com/hive/haf/ci-base-image$CI_IMAGE_TAG --file Dockerfile .
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
-ARG POSTGRES_VERSION=17
+ARG POSTGRES_VERSION=18
 ARG CI_IMAGE_TAG=ubuntu24.04-pg${POSTGRES_VERSION}-10
 
 ARG BUILD_IMAGE_TAG
@@ -112,29 +112,11 @@ RUN useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service 
 USER hived
 WORKDIR /home/hived
 
-FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py3.14-7 AS ci-base-image
+FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-haf:pypa_2_28-pg18-4 AS ci-base-image
 
 ARG POSTGRES_VERSION
 ENV POSTGRES_VERSION=${POSTGRES_VERSION}
 ENV PATH="/home/hived/.local/bin:$PATH"
-
-SHELL ["/bin/bash", "-c"]
-
-USER root
-WORKDIR /usr/local/src
-COPY ./hive/scripts/openssl.conf /usr/local/src/hive/scripts/openssl.conf
-COPY ./hive/scripts/setup_ubuntu.sh /usr/local/src/hive/scripts/
-COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
-
-# Install development packages (haf_admin already exists in ci-base-image)
-RUN ./scripts/setup_ubuntu.sh --dev --hived-account="hived" \
-  && rm -rf /var/lib/apt/lists/*
-
-# Install user packages (faketime, websocat, poetry) as hived
-# Run as root to avoid sudo issues, then switch to hived for the build stage
-WORKDIR /home/hived
-RUN HOME=/home/hived /usr/local/src/scripts/setup_ubuntu.sh --user && \
-    chown -R hived:users /home/hived
 
 USER hived
 
@@ -264,13 +246,23 @@ COPY --from=build --chown=hived:users \
   /home/hived/bin/op_body_filter \
   /home/hived/bin/
 
-COPY --from=build --chown=hived:users /home/hived/hive_base_config/faketime/src/libfaketime*.so.1 \
-  /home/hived/hive_base_config/faketime/src/
-COPY --from=build --chown=root:root /usr/local/lib/faketime/* /usr/local/lib/faketime/
+COPY --from=build --chown=root:root /usr/local/lib/faketime/ /usr/local/lib/faketime/
+RUN mkdir -p /home/hived/hive_base_config/faketime/src && \
+    cp /usr/local/lib/faketime/libfaketime.so.1 /home/hived/hive_base_config/faketime/src/ && \
+    cp /usr/local/lib/faketime/libfaketimeMT.so.1 /home/hived/hive_base_config/faketime/src/ && \
+    chown -R hived:users /home/hived/hive_base_config/faketime
+
+# Copy Boost shared libraries from build (AlmaLinux Boost 1.88.0 not available on Ubuntu)
+COPY --from=build --chown=root:root \
+  /usr/local/lib/libboost_chrono.so.1.88.0 \
+  /usr/local/lib/libboost_system.so.1.88.0 \
+  /usr/local/lib/libboost_thread.so.1.88.0 \
+  /usr/local/lib/
+RUN sudo ldconfig
 
 COPY --from=build \
-  /usr/share/postgresql/${POSTGRES_VERSION}/extension/* \
-  /usr/share/postgresql/${POSTGRES_VERSION}/extension
+  /usr/pgsql-${POSTGRES_VERSION}/share/extension/ \
+  /usr/share/postgresql/${POSTGRES_VERSION}/extension/
 
 COPY --from=build \
   /home/hived/build/extensions/hive_fork_manager/* \
