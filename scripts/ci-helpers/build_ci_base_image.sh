@@ -9,9 +9,11 @@ set -e
 docker buildx build --progress=plain --target=minimal-runtime \
   --build-arg CI_REGISTRY_IMAGE="$REGISTRY/" --build-arg CI_IMAGE_TAG=$CI_IMAGE_TAG \
   --build-arg BUILD_IMAGE_TAG=$CI_IMAGE_TAG \
+  --build-arg PIP_INDEX_URL --build-arg PIP_TRUSTED_HOST \
   --tag "${REGISTRY}/minimal-runtime:$CI_IMAGE_TAG" --file Dockerfile .
 
 docker buildx build --progress=plain --target=ci-base-image \
   --build-arg CI_REGISTRY_IMAGE="$REGISTRY/" --build-arg CI_IMAGE_TAG=$CI_IMAGE_TAG \
   --build-arg BUILD_IMAGE_TAG=$CI_IMAGE_TAG \
+  --build-arg PIP_INDEX_URL --build-arg PIP_TRUSTED_HOST \
   -t "${REGISTRY}/ci-base-image:$CI_IMAGE_TAG" -f Dockerfile .

@@ -10,6 +10,10 @@ stages:
 variables:
   PYTEST_NUMBER_OF_PROCESSES: 8
   CTEST_NUMBER_OF_JOBS: 4
+  # Package caching proxies on genfiles — passed as build-args to Dockerfile.
+  # Empty values are safe (pip falls back to pypi.org).
+  PIP_INDEX_URL: "http://pypi-cache.syncad.com:8080/root/pypi/+simple/"
+  PIP_TRUSTED_HOST: "pypi-cache.syncad.com"
   # HAF_COMMIT is used as cache key - in HAF's own CI, it's the current commit
   HAF_COMMIT: $CI_COMMIT_SHA
   # Enable CI-specific PostgreSQL config with reduced memory (4GB shared_buffers vs 16GB)

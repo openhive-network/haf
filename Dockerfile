@@ -12,7 +12,10 @@ ARG IMAGE_TAG_PREFIX
 FROM registry.gitlab.syncad.com/hive/hive/minimal-runtime:ubuntu24.04-3 AS minimal-runtime-base
 
 ARG POSTGRES_VERSION
-
+ARG PIP_INDEX_URL
+ARG PIP_TRUSTED_HOST
+ENV PIP_INDEX_URL=${PIP_INDEX_URL}
+ENV PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST}
 ENV PATH="/home/hived/.local/bin:$PATH"
 
 SHELL ["/bin/bash", "-c"]
@@ -22,6 +25,9 @@ WORKDIR /usr/local/src
 COPY ./hive/scripts/openssl.conf /usr/local/src/hive/scripts/openssl.conf
 COPY ./hive/scripts/setup_ubuntu.sh /usr/local/src/hive/scripts/
 COPY ./scripts/setup_ubuntu.sh /usr/local/src/scripts/
+
+# Install auto-apt-proxy for automatic apt caching proxy detection (safe no-op when no proxy available)
+RUN apt-get update && apt-get install -y --no-install-recommends auto-apt-proxy && rm -rf /var/lib/apt/lists/*
 
 # create required accounts (single hived user with sudo, UID 1000)
 RUN bash -x ./scripts/setup_ubuntu.sh --hived-account="hived" && rm -rf /var/lib/apt/lists/*
