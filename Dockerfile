@@ -112,7 +112,7 @@ RUN useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service 
 USER hived
 WORKDIR /home/hived
 
-FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-haf:pypa_2_28-pg18-4 AS ci-base-image
+FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-haf:9232c574543821cee86c6aa33595d19164847b33 AS ci-base-image
 
 ARG POSTGRES_VERSION
 ENV POSTGRES_VERSION=${POSTGRES_VERSION}
