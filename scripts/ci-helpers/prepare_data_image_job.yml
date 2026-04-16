@@ -19,18 +19,18 @@
 
 include:
   # All templates from common-ci-configuration
-  - project: 'hive/common-ci-configuration'
-    ref: develop
-    file:
-      - '/templates/base.gitlab-ci.yml'
-      - '/templates/docker_image_jobs.gitlab-ci.yml'
-      - '/templates/haf_data_preparation.gitlab-ci.yml'
-      - '/templates/haf_app_testing.gitlab-ci.yml'
-      - '/templates/cache_cleanup.gitlab-ci.yml'
-      - '/templates/python_projects.gitlab-ci.yml'
-      - '/templates/test_jobs.gitlab-ci.yml'
+- project: 'hive/common-ci-configuration'
+  ref: e2825f108f61a949862fb7f4d4793b78ecf712af
+  file:
+  - '/templates/base.gitlab-ci.yml'
+  - '/templates/docker_image_jobs.gitlab-ci.yml'
+  - '/templates/haf_data_preparation.gitlab-ci.yml'
+  - '/templates/haf_app_testing.gitlab-ci.yml'
+  - '/templates/cache_cleanup.gitlab-ci.yml'
+  - '/templates/python_projects.gitlab-ci.yml'
+  - '/templates/test_jobs.gitlab-ci.yml'
   # Local CI image tag variables
-  - local: '/scripts/ci-helpers/ci_image_tag_vars.yml'
+- local: '/scripts/ci-helpers/ci_image_tag_vars.yml'
 
 # =============================================================================
 # Base docker builder job for HAF
@@ -42,8 +42,8 @@ include:
   variables:
     FF_NETWORK_PER_BUILD: "true"
   before_script:
-    - !reference [.docker_image_builder_job_template, before_script]
-    - git config --global --add safe.directory '*'
+  - !reference [.docker_image_builder_job_template, before_script]
+  - git config --global --add safe.directory '*'
 
 .docker_image_cleanup_job:
   extends: .docker_image_cleanup_job_template
