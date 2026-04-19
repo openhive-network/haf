@@ -373,6 +373,23 @@ void indexes_controler::poll_and_create_indexes()
             catch (const std::exception& e)
             {
                elog("Error while creating index: ${e}", ("e", e.what()));
+               try
+               {
+                 // A failed CREATE INDEX CONCURRENTLY leaves behind an invalid index.
+                 // Drop it and reset status so the poller retries on the next cycle.
+                 std::string schema = table_name.substr(0, table_name.find('.'));
+                 std::string drop_cmd = "DROP INDEX IF EXISTS " + schema + "." + index_constraint_name + ";";
+                 wlog("Dropping invalid index after failed creation: ${cmd}", ("cmd", drop_cmd));
+                 tx.exec(drop_cmd);
+                 std::string reset_status =
+                   "UPDATE hafd.indexes_constraints SET status = 'missing' WHERE index_constraint_name ='" + index_constraint_name + "';";
+                 wlog("Resetting index status to missing for retry: ${index}", ("index", index_constraint_name));
+                 tx.exec(reset_status);
+               }
+               catch (const std::exception& cleanup_error)
+               {
+                 elog("Error during index cleanup after failed creation: ${e}", ("e", cleanup_error.what()));
+               }
             }
           }
           ilog("Finished creating all indexes for table: ${table_name}", (table_name));

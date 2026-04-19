@@ -544,6 +544,18 @@ BEGIN
     PERFORM hive.recluster_account_operations_if_index_dropped();
   END IF;
 
+  --reset any indexes stuck in 'creating' from a previous interrupted run,
+  --dropping the invalid index left behind by failed CREATE INDEX CONCURRENTLY
+  FOR __command IN
+    SELECT index_constraint_name FROM hafd.indexes_constraints
+    WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'creating'
+  LOOP
+    RAISE NOTICE 'Resetting stuck index to missing: %', __command;
+    EXECUTE format('DROP INDEX IF EXISTS %s.%I', split_part(_table_name, '.', 1), __command);
+    UPDATE hafd.indexes_constraints SET status = 'missing'
+    WHERE table_name = _table_name AND index_constraint_name = __command;
+  END LOOP;
+
   --restoring indexes, primary keys, unique constraints
   FOR __command IN
     SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing'
