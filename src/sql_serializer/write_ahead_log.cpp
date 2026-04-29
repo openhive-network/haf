@@ -29,7 +29,7 @@ namespace hive::plugins::sql_serializer {
     _creation_time_string = std::move(creation_time_string);
     _serial_number = serial_number;
     _filename = std::move(full_path);
-    _file.open(_filename, std::ios::trunc | std::ios::in | std::ios::out | std::ios::binary);
+    _file.open(_filename.string(), std::ios::trunc | std::ios::in | std::ios::out | std::ios::binary);
     FC_ASSERT(_file, "Error creating new log file ${_filename}", (_filename));
     _file_size = 0;
   }
@@ -55,7 +55,7 @@ namespace hive::plugins::sql_serializer {
 
     _filename = path / filename;
     FC_ASSERT(boost::filesystem::exists(_filename), "File ${_filename} doesn't exist", (_filename));
-    _file.open(_filename, std::ios::in | std::ios::out | std::ios::binary | std::ios::app);
+    _file.open(_filename.string(), std::ios::in | std::ios::out | std::ios::binary | std::ios::app);
     FC_ASSERT(_file, "Error opening existing log file ${_filename}", (_filename));
 
     // compute file size
@@ -187,7 +187,7 @@ namespace hive::plugins::sql_serializer {
 
     try {
       bfs::path test_file = _wal_directory / ".write_test";
-      std::ofstream test_stream(test_file);
+      std::ofstream test_stream(test_file.string());
       FC_ASSERT(test_stream.good(), "Directory ${_wal_directory} is not writeable", (_wal_directory));
       test_stream.close();
       boost::filesystem::remove(test_file);

@@ -25,7 +25,7 @@ int errcode(int sqlerrcode)
   return 0;
 }
 
-int errmsg(const char* [[maybe_unused]] fmt,...)
+int errmsg([[maybe_unused]] const char* fmt,...)
 {
   return 0;
 }

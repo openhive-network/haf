@@ -10,6 +10,11 @@ MACRO( ADD_UNIT_TESTS module_name)
     ADD_POSTGRES_INCLUDES( ${test_target} )
     TARGET_INCLUDE_DIRECTORIES( ${test_target} PRIVATE ${CMAKE_SOURCE_DIR}/tests/unit/mockups )
 
+    FIND_PACKAGE( Boost REQUIRED )
+    TARGET_INCLUDE_DIRECTORIES( ${test_target} PRIVATE ${Boost_INCLUDE_DIRS} )
+    FIND_PACKAGE( OpenSSL REQUIRED )
+    TARGET_INCLUDE_DIRECTORIES( ${test_target} PRIVATE ${OPENSSL_INCLUDE_DIR} )
+
     ADD_POSTGRES_LIBRARIES( ${test_target} )
     IF ( TARGET test_${module_name} )
         TARGET_LINK_LIBRARIES( ${test_target} PRIVATE test_${module_name} )

@@ -25,6 +25,10 @@ MACRO( ADD_RUNTIME_LOADED_LIB )
     ADD_POSTGRES_INCLUDES( ${target_name} )
     ADD_POSTGRES_LIBRARIES( ${target_name} )
 
+    IF( APPLE )
+        TARGET_LINK_OPTIONS( ${target_name} PRIVATE -Wl,-undefined,dynamic_lookup )
+    ENDIF()
+
     TARGET_LINK_LIBRARIES( ${target_name} PUBLIC ${LIBRARY_LINK_WITH} )
 ENDMACRO()
 
@@ -44,6 +48,10 @@ MACRO( ADD_LOADTIME_LOADED_LIB )
     ADD_POSTGRES_INCLUDES( ${target_name} )
     ADD_POSTGRES_INCLUDES( ${test_lib} )
     ADD_POSTGRES_LIBRARIES( ${target_name} )
+
+    IF( APPLE )
+        TARGET_LINK_OPTIONS( ${target_name} PRIVATE -Wl,-undefined,dynamic_lookup )
+    ENDIF()
 
     TARGET_LINK_LIBRARIES( ${target_name} PUBLIC ${LIBRARY_LINK_WITH} )
     TARGET_LINK_LIBRARIES( ${test_lib} PUBLIC ${LIBRARY_LINK_WITH} )
