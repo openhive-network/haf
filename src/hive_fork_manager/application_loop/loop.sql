@@ -205,11 +205,20 @@ DECLARE
     __current_block_num INTEGER;
     __last_shadow_vacuum_block INTEGER;
     __vacuum_performed BOOLEAN := FALSE;
+    __had_prior_xact BOOLEAN;
 BEGIN
-    -- here is the only place when main synchronization connection makes commit
-    -- 1. commit if there is a pending transaction
-    -- This should be the first line in the procedure.
-    IF pg_current_xact_id_if_assigned() IS NOT NULL THEN
+    -- Whether the caller invoked us with a transaction already carrying an
+    -- assigned XID. This is the same condition that has always gated the
+    -- COMMIT below; capture it up front because the heartbeat UPDATE later
+    -- in this procedure assigns an XID itself. When it is false the caller
+    -- is driving us inside an explicit transaction block (e.g. the example
+    -- apps), where issuing COMMIT is not allowed, so we skip both COMMITs.
+    __had_prior_xact := pg_current_xact_id_if_assigned() IS NOT NULL;
+
+    -- 1. commit if there is a pending transaction.
+    -- This should be the first statement in the procedure. (A second
+    -- COMMIT follows the heartbeat UPDATE below, see issue #328.)
+    IF __had_prior_xact THEN
         COMMIT;
 
         SELECT current_block_num, (loop).last_shadow_vacuum_block
@@ -235,7 +244,15 @@ BEGIN
     UPDATE hafd.contexts ctx
     SET last_active_at = __now
     WHERE ctx.name = ANY(_contexts);
-
+    -- Commit the heartbeat immediately so this write transaction is not
+    -- held open across the pg_sleep inside hive.app_next_block during
+    -- live sync, which would pin the global snapshot horizon and throttle
+    -- HOT-prune / autovacuum (issue #328). Only when we are allowed to
+    -- COMMIT here (see __had_prior_xact); otherwise the heartbeat is
+    -- committed by the caller's own transaction control.
+    IF __had_prior_xact THEN
+        COMMIT;
+    END IF;
 
     IF _limit IS NOT NULL
     THEN
