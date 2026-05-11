@@ -215,6 +215,16 @@ BEGIN
     -- apps), where issuing COMMIT is not allowed, so we skip both COMMITs.
     __had_prior_xact := pg_current_xact_id_if_assigned() IS NOT NULL;
 
+    -- Subscribe to block-arrival notifications so hive.app_next_block can
+    -- wait on hive.wait_for_new_block instead of polling with pg_sleep
+    -- (issue #328). LISTEN is idempotent, so this is a no-op after the
+    -- first iteration in a session. The registration becomes effective at
+    -- the next COMMIT -- either the gated one below or, for callers that
+    -- drive their own transactions, their own COMMIT; until then the wait
+    -- falls back to its timeout.
+    LISTEN haf_new_block;
+    LISTEN haf_new_irreversible;
+
     -- 1. commit if there is a pending transaction.
     -- This should be the first statement in the procedure. (A second
     -- COMMIT follows the heartbeat UPDATE below, see issue #328.)
@@ -245,8 +255,8 @@ BEGIN
     SET last_active_at = __now
     WHERE ctx.name = ANY(_contexts);
     -- Commit the heartbeat immediately so this write transaction is not
-    -- held open across the pg_sleep inside hive.app_next_block during
-    -- live sync, which would pin the global snapshot horizon and throttle
+    -- held open across the wait inside hive.app_next_block during live
+    -- sync, which would pin the global snapshot horizon and throttle
     -- HOT-prune / autovacuum (issue #328). Only when we are allowed to
     -- COMMIT here (see __had_prior_xact); otherwise the heartbeat is
     -- committed by the caller's own transaction control.

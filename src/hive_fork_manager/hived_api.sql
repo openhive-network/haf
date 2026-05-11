@@ -86,6 +86,9 @@ BEGIN
     INSERT INTO hafd.events_queue( event, block_num )
         VALUES( 'NEW_BLOCK', _block.num );
 
+    -- Wake forking apps waiting in hive.wait_for_new_block (issue #328).
+    NOTIFY haf_new_block;
+
     INSERT INTO hafd.blocks_reversible VALUES( _block.*, __fork_id );
     INSERT INTO hafd.transactions_reversible VALUES( ( unnest( _transactions ) ).*, __fork_id );
     INSERT INTO hafd.transactions_multisig_reversible VALUES( ( unnest( _signatures ) ).*, __fork_id );
@@ -130,6 +133,9 @@ BEGIN
     INSERT INTO hafd.events_queue( event, block_num )
     VALUES( 'NEW_IRREVERSIBLE', _block.num );
 
+    -- Wake non-forking apps waiting in hive.wait_for_new_block (issue #328).
+    NOTIFY haf_new_irreversible;
+
     UPDATE hafd.hive_state SET consistent_block = _block.num;
 
     BEGIN
@@ -156,6 +162,10 @@ BEGIN
         -- Just emit the event and update consistent_block.
         INSERT INTO hafd.events_queue( event, block_num )
         VALUES( 'NEW_IRREVERSIBLE', _block_num );
+
+        -- Wake non-forking apps waiting in hive.wait_for_new_block (issue #328).
+        NOTIFY haf_new_irreversible;
+
         UPDATE hafd.hive_state SET consistent_block = _block_num;
 
         BEGIN
@@ -198,6 +208,10 @@ BEGIN
     -- application contexts will use the event to clear data in shadow tables
     INSERT INTO hafd.events_queue( event, block_num )
     VALUES( 'NEW_IRREVERSIBLE', _block_num );
+
+    -- Wake non-forking apps waiting in hive.wait_for_new_block (issue #328).
+    NOTIFY haf_new_irreversible;
+
     UPDATE hafd.hive_state SET consistent_block = _block_num;
 END;
 $BODY$

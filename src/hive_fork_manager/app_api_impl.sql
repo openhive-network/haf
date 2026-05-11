@@ -531,7 +531,12 @@ BEGIN
     FROM unnest( _context_names ) as contexts;
 
     IF __result[1].first_block > __result[1].last_block THEN
-        PERFORM pg_sleep( 1.5 );
+        -- Wait for a new reversible block. hive.app_next_iteration has
+        -- subscribed to haf_new_block; once that LISTEN is committed a
+        -- NOTIFY from hive.push_block wakes this call. The 4 s timeout
+        -- (> 3 s block interval) is the fallback while the LISTEN is not
+        -- yet effective and a safety net for missed signals.
+        PERFORM hive.wait_for_new_block( 4000 );
         RETURN NULL;
     END IF;
 
@@ -576,8 +581,13 @@ BEGIN
                 AND __hive_sync_state != 'P2P'::hafd.sync_state
             )
         THEN
-            -- we are in LIVE sync or waiting for the first block (*WAIT states)
-            PERFORM pg_sleep( 1.5 );
+            -- Wait for a new irreversible block. hive.app_next_iteration
+            -- has subscribed to haf_new_irreversible; once that LISTEN is
+            -- committed a NOTIFY from hive.set_irreversible / push_block_lite
+            -- wakes this call. The 4 s timeout (> 3 s block interval) is the
+            -- fallback while the LISTEN is not yet effective and a safety
+            -- net for missed signals.
+            PERFORM hive.wait_for_new_block( 4000 );
             EXIT;
         END IF;
 

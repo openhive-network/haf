@@ -87,6 +87,7 @@ ADD_PSQL_EXTENSION(
             state_providers/update_providers.sql
 
             vacuum_shadow_table.sql
+            wait_for_new_block.sql
 
 )
 
