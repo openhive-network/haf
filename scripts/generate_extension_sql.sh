@@ -111,6 +111,7 @@ DEPLOY_SOURCES=(
     application_loop/contexts_log_api.sql
     state_providers/update_providers.sql
     vacuum_shadow_table.sql
+    wait_for_new_block.sql
 )
 
 # Verify all source files exist before starting
