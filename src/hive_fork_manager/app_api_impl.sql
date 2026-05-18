@@ -24,22 +24,35 @@ LANGUAGE plpgsql STABLE;
 
 --- Allows to wait (until specified _timeout) until HAF database will be ready for application data processing.
 --- Raises exception on _timeout.
+--- Logging is gated on whether a real wait occurred: the steady-state hot path
+--- (instance already ready on first check) is silent. During an actual wait we
+--- emit one "Waiting..." line on entry, a heartbeat every ~10 s, and one
+--- "ready, exiting" line on the transition out (issue #331).
 CREATE OR REPLACE FUNCTION hive.wait_for_ready_instance(IN _context_names hive.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
 RETURNS VOID
 AS
 $BODY$
 DECLARE
-  __retry INT := 0;
+  __waited BOOLEAN := FALSE;
+  __last_heartbeat_at TIMESTAMPTZ := CLOCK_TIMESTAMP();
 BEGIN
   WHILE (CLOCK_TIMESTAMP() - TRANSACTION_TIMESTAMP() <= _timeout) LOOP
-    __retry := __retry + 1;
     IF hive.is_instance_ready() THEN
-      RAISE NOTICE 'HAF instance is ready. Exiting wait loop.';
+      IF __waited THEN
+        RAISE NOTICE 'HAF instance is ready. Exiting wait loop.';
+      END IF;
       RETURN;
-    ELSIF __retry = 1 THEN
-      RAISE NOTICE 'Waiting for HAF instance to be ready...';
     END IF;
-    RAISE NOTICE '# %, waiting time: % s - waiting for another % s', __retry, extract(epoch from (CLOCK_TIMESTAMP() - TRANSACTION_TIMESTAMP())), extract(epoch from (_wait_time));
+
+    IF NOT __waited THEN
+      RAISE NOTICE 'Waiting for HAF instance to be ready...';
+      __waited := TRUE;
+      __last_heartbeat_at := CLOCK_TIMESTAMP();
+    ELSIF CLOCK_TIMESTAMP() - __last_heartbeat_at >= INTERVAL '10 seconds' THEN
+      RAISE NOTICE 'Still waiting for HAF instance (% s elapsed)',
+        extract(epoch from (CLOCK_TIMESTAMP() - TRANSACTION_TIMESTAMP()))::int;
+      __last_heartbeat_at := CLOCK_TIMESTAMP();
+    END IF;
 
     --- Update last activity time to prevent auto-detaching of apps stopped by this call, when HAF enters live mode
     UPDATE hafd.contexts
