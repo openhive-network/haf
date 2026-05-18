@@ -25,94 +25,37 @@ fi
 
 mkdir -p "$OUTPUT_DIR"
 
-# Schema sources - defines table structures and base types
-# These must be loaded first (from CMakeLists.txt SCHEMA_SOURCES)
-SCHEMA_SOURCES=(
-    schemas.sql
-    context_rewind/data_schema_types.sql
-    application_loop/stages.sql
-    context_rewind/data_schema.sql
-    events_queue.sql
-    forks.sql
-    app_context.sql
-    types/domains.sql
-    types/operation/operation.sql
-    types/operation/operation_flow.sql
-    types/operation/operation_impl.sql
-    types/operation/operation_cmp.sql
-    types/operation/operation_casts.sql
-    types/operation/operation_id.sql
-    types/asset_unique_id.sql
-    irreversible_blocks.sql
-    reversible_blocks.sql
-    state_provider.sql
-    hived_connections.sql
-    hived_api_impl_indexes.sql
-    hived_api.sql
-    state_providers/keyauth_types.sql
-    save_restore_view_data.sql
-    application_loop/contexts_log.sql
-)
+# Parse SCHEMA_SOURCES / DEPLOY_SOURCES out of the ADD_PSQL_EXTENSION(...) macro
+# in CMakeLists.txt. CMakeLists is the single source of truth — see issue #332.
+CMAKELISTS="$SRC_DIR/CMakeLists.txt"
 
-# Deploy sources - functions and procedures that can be updated
-# These are loaded after schema sources (from CMakeLists.txt DEPLOY_SOURCES)
-DEPLOY_SOURCES=(
-    custom_json_type_schema_update.sql
-    trigger_switch/trigger_off.sql
-    context_rewind/sink_id_functions.sql
-    context_rewind/names.sql
-    context_rewind/triggers.sql
-    context_rewind/event_triggers.sql
-    context_rewind/register_table.sql
-    context_rewind/detach_table.sql
-    context_rewind/back_from_fork.sql
-    context_rewind/irreversible.sql
-    context_rewind/rewind_api.sql
-    types/operation/compatibility_with_old_haf_apps.sql
-    types/operation/operation_flow.sql
-    types/operation/operation_id.sql
-    types/asset_unique_id.sql
-    pruning/prune_irreversible_blocks.sql
-    tools.sql
-    block_views_for_head_block.sql
-    block_day_stats_view.sql
-    block_day_stats_all_op_view.sql
-    blocks_views_for_contexts.sql
-    state_providers/keyauth.sql
-    get_keyauths.sql
-    get_required_authorities.sql
-    get_metadata.sql
-    get_vesting_balance.sql
-    state_providers/accounts.sql
-    state_providers/metadata.sql
-    hived_api_impl.sql
-    app_api_impl.sql
-    hived_api.sql
-    app_api.sql
-    api_helpers/block_api_support.sql
-    authorization.sql
-    get_impacted_accounts.sql
-    get_impacted_balances.sql
-    rc_delegation.sql
-    convert_blocks.sql
-    get_legacy_style_operation.sql
-    extract_set_witness_properties.sql
-    strip_json_null_escapes.sql
-    trigger_switch/trigger_on.sql
-    types/types.sql
-    types/cast_functions.sql
-    types/casts.sql
-    types/operation/operation_flow.sql
-    types/process_operation.sql
-    asset_utils.sql
-    transaction_utils.sql
-    application_loop/stages_functions.sql
-    application_loop/loop.sql
-    application_loop/contexts_log_api.sql
-    state_providers/update_providers.sql
-    vacuum_shadow_table.sql
-    wait_for_new_block.sql
-)
+parse_cmake_list() {
+    awk -v want="$1" '
+        { sub(/#.*/, "") }
+        /ADD_PSQL_EXTENSION[[:space:]]*\(/ { in_macro = 1 }
+        in_macro && /^[[:space:]]*\)/      { in_macro = 0; mode = "" }
+        !in_macro { next }
+        {
+            for (i = 1; i <= NF; i++) {
+                tok = $i
+                if (tok == "NAME" || tok == "SCHEMA_SOURCES" || tok == "DEPLOY_SOURCES") {
+                    mode = tok
+                    continue
+                }
+                if (mode == "NAME") { mode = ""; continue }
+                if (mode == want && tok ~ /\.sql$/) print tok
+            }
+        }
+    ' "$CMAKELISTS"
+}
+
+mapfile -t SCHEMA_SOURCES < <(parse_cmake_list SCHEMA_SOURCES)
+mapfile -t DEPLOY_SOURCES < <(parse_cmake_list DEPLOY_SOURCES)
+
+if [[ ${#SCHEMA_SOURCES[@]} -eq 0 || ${#DEPLOY_SOURCES[@]} -eq 0 ]]; then
+    echo "ERROR: failed to parse SCHEMA_SOURCES/DEPLOY_SOURCES from $CMAKELISTS" >&2
+    exit 1
+fi
 
 # Verify all source files exist before starting
 echo "Verifying source files..."

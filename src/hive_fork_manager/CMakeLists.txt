@@ -1,3 +1,6 @@
+# SCHEMA_SOURCES / DEPLOY_SOURCES below are also parsed by
+# scripts/generate_extension_sql.sh (overlay build path). Keep entries as
+# whitespace-separated tokens ending in .sql; comments use `#`.
 ADD_PSQL_EXTENSION(
     NAME hive_fork_manager
     SCHEMA_SOURCES schemas.sql
