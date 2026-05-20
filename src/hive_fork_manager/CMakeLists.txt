@@ -89,6 +89,8 @@ ADD_PSQL_EXTENSION(
             vacuum_shadow_table.sql
             wait_for_new_block.sql
 
+            app_locks.sql
+
 )
 
 ADD_SUBDIRECTORY( shared_lib )
