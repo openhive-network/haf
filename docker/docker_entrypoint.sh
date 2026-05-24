@@ -142,6 +142,16 @@ trap cleanup EXIT
 
 enable_pg_cron
 
+# Listening endpoints for hived, overridable via the container environment so a
+# node can opt into IPv6, e.g. P2P_ENDPOINT=[::]:2001 (dual-stack on Linux) or a
+# specific address such as P2P_ENDPOINT=[2001:db8::1]:2001.
+# Defaults stay 0.0.0.0 (IPv4) for now: switching the default to dual-stack [::]
+# is deferred until a release includes the P2P outbound-connection bind fix, so
+# that current binaries keep sourcing outbound connections from the listening port.
+P2P_ENDPOINT="${P2P_ENDPOINT:-0.0.0.0:${P2P_PORT}}"
+WS_ENDPOINT="${WS_ENDPOINT:-0.0.0.0:${WS_PORT}}"
+HTTP_ENDPOINT="${HTTP_ENDPOINT:-0.0.0.0:${HTTP_PORT}}"
+
 {
 export LD_PRELOAD="${OVERRIDE_LD_PRELOAD:-}"
 /bin/bash <<EOF
@@ -152,7 +162,7 @@ if [ ! -f "$DATADIR/config.ini" ]; then
   echo "WARNING: No config file exists at $DATADIR/config.ini, creating a default config file"
   echo "WARNING: Default config uses larger shared memory - consider providing config_5M.ini for CI builds"
 
-  /home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
+  /home/hived/bin/hived --webserver-ws-endpoint="${WS_ENDPOINT}" --webserver-http-endpoint="${HTTP_ENDPOINT}" --p2p-endpoint="${P2P_ENDPOINT}" \
     --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --psql-wal-directory="$WAL_DIR" \
     --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
     ${HIVED_ARGS[@]} --dump-config > /dev/null 2>&1
@@ -170,7 +180,7 @@ fi
 # Log shared memory configuration for debugging
 echo "Config shared-file-size: \$(grep -E '^shared-file-size' "$DATADIR/config.ini" 2>/dev/null || echo 'not set')"
 
-/home/hived/bin/hived --webserver-ws-endpoint=0.0.0.0:${WS_PORT} --webserver-http-endpoint=0.0.0.0:${HTTP_PORT} --p2p-endpoint=0.0.0.0:${P2P_PORT} \
+/home/hived/bin/hived --webserver-ws-endpoint="${WS_ENDPOINT}" --webserver-http-endpoint="${HTTP_ENDPOINT}" --p2p-endpoint="${P2P_ENDPOINT}" \
   --data-dir="$DATADIR" --shared-file-dir="$SHM_DIR" --psql-wal-directory="$WAL_DIR" \
   --plugin=sql_serializer --psql-url="dbname=haf_block_log host=/var/run/postgresql port=5432" \
   ${HIVED_ARGS[@]}
