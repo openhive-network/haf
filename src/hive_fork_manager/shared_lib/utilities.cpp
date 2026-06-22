@@ -1,6 +1,7 @@
 #include "operation_base.hpp"
 
 #include "extract_set_witness_properties.hpp"
+#include "l2_jcs.hpp"
 
 #include <hive/protocol/forward_impacted.hpp>
 #include <hive/protocol/forward_keyauths.hpp>
@@ -10,6 +11,7 @@
 #include <fc/io/json.hpp>
 #include <fc/string.hpp>
 #include <fc/crypto/hex.hpp>
+#include <fc/crypto/sha256.hpp>
 
 #include <psql_utils/pg_cxx.hpp>
 #include <psql_utils/logger.hpp>
@@ -1109,6 +1111,97 @@ Datum pubkey_from_signature(PG_FUNCTION_ARGS)
   });
 
   PG_RETURN_TEXT_P(cstring_to_text(retval.c_str()));
+}
+
+/**
+CREATE OR REPLACE FUNCTION hive.l2_transaction_digest(
+  IN _signed_fields JSONB,
+  IN _chain_id TEXT DEFAULT NULL
+) RETURNS BYTEA
+
+Second-layer (L2) transaction signing digest: sha256( chain_id || JCS(_signed_fields) ),
+where JCS is the RFC-8785 canonical form (see l2_jcs). _signed_fields is the object
+{app, version, operations, expiration, nonce?} WITHOUT the signatures. _chain_id is a
+hex chain id; defaults to this build's HIVE_CHAIN_ID.
+*/
+PG_FUNCTION_INFO_V1(l2_transaction_digest);
+
+Datum l2_transaction_digest(PG_FUNCTION_ARGS)
+{
+  if (PG_ARGISNULL(0))
+  {
+    issue_error_with_code(ERRCODE_NULL_VALUE_NOT_ALLOWED, "l2_transaction_digest requires non-null _signed_fields argument");
+  }
+
+  Datum json_text = DirectFunctionCall1(jsonb_out, JsonbPGetDatum(PG_GETARG_JSONB_P(0)));
+  const char* signed_fields_json = DatumGetCString(json_text);
+
+  hive::protocol::chain_id_type chain_id = HIVE_CHAIN_ID;
+
+  if (!PG_ARGISNULL(1))
+  {
+    const char* chain_id_str = text_to_cstring(PG_GETARG_TEXT_PP(1));
+
+    PsqlTools::PsqlUtils::pg_call_cxx([&chain_id_str, &chain_id]() {
+      chain_id = hive::protocol::chain_id_type(chain_id_str);
+    });
+  }
+
+  fc::sha256 digest;
+
+  PsqlTools::PsqlUtils::pg_call_cxx([&signed_fields_json, &chain_id, &digest]() {
+    fc::variant v = fc::json::from_string(signed_fields_json, fc::json::format_validation_mode::full);
+
+    std::string canonical;
+    l2::jcs_canonicalize(v, canonical);
+
+    fc::sha256::encoder enc;
+    enc.write(chain_id.data(), chain_id.data_size());
+    enc.write(canonical.data(), static_cast<uint32_t>(canonical.size()));
+    digest = enc.result();
+  });
+
+  int size = digest.data_size() + VARHDRSZ;
+  bytea* result = (bytea*)palloc(size);
+  SET_VARSIZE(result, size);
+  memcpy(VARDATA(result), digest.data(), digest.data_size());
+
+  PG_RETURN_BYTEA_P(result);
+}
+
+/**
+CREATE OR REPLACE FUNCTION hive.l2_pubkey_to_bytea(
+  IN _public_key TEXT
+) RETURNS BYTEA
+
+Convert a base58 STM-prefixed public key string to its 33-byte compressed binary
+form (the inverse of hive.public_key_to_string). Used to match keys recovered from
+L2 signatures against the binary keys stored in authority tables.
+*/
+PG_FUNCTION_INFO_V1(l2_pubkey_to_bytea);
+
+Datum l2_pubkey_to_bytea(PG_FUNCTION_ARGS)
+{
+  if (PG_ARGISNULL(0))
+  {
+    issue_error_with_code(ERRCODE_NULL_VALUE_NOT_ALLOWED, "l2_pubkey_to_bytea requires non-null _public_key argument");
+  }
+
+  const char* pubkey_str = text_to_cstring(PG_GETARG_TEXT_PP(0));
+
+  fc::ecc::public_key_data key_data;
+
+  PsqlTools::PsqlUtils::pg_call_cxx([&pubkey_str, &key_data]() {
+    hive::protocol::public_key_type key{ std::string(pubkey_str) };
+    key_data = key;
+  });
+
+  int size = sizeof(fc::ecc::public_key_data) + VARHDRSZ;
+  bytea* result = (bytea*)palloc(size);
+  SET_VARSIZE(result, size);
+  memcpy(VARDATA(result), &key_data, sizeof(fc::ecc::public_key_data));
+
+  PG_RETURN_BYTEA_P(result);
 }
 
 } /// extern "C"
