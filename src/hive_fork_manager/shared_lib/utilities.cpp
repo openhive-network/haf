@@ -810,8 +810,9 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
   // Helper function to convert bytea to fc::ecc::public_key_data
   fc::ecc::public_key_data bytea_to_public_key_data(const bytea* input_data) {
-      // Ensure the bytea data has the expected size
-      if (VARSIZE(input_data) - VARHDRSZ != sizeof(fc::ecc::public_key_data)) {
+      // *_ANY varlena macros: a PP-fetched bytea may carry a 1-byte short header
+      // (e.g. small byteas from an array), for which VARSIZE()/VARDATA() misreport.
+      if (VARSIZE_ANY_EXHDR(input_data) != sizeof(fc::ecc::public_key_data)) {
           ereport(ERROR,
               (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
                   errmsg("Size mismatch between bytea and fc::ecc::public_key_data")));
@@ -819,7 +820,7 @@ Datum get_impacted_balances(PG_FUNCTION_ARGS)
 
       fc::ecc::public_key_data key_data;
 
-      memcpy(&key_data, VARDATA(input_data), sizeof(key_data));
+      memcpy(&key_data, VARDATA_ANY(input_data), sizeof(key_data));
 
       return key_data;
   }
@@ -1086,8 +1087,12 @@ Datum pubkey_from_signature(PG_FUNCTION_ARGS)
   bytea* signature = PG_GETARG_BYTEA_PP(0);
   bytea* digest = PG_GETARG_BYTEA_PP(1);
 
-  size_t signature_len = VARSIZE(signature) - VARHDRSZ;
-  size_t digest_len = VARSIZE(digest) - VARHDRSZ;
+  // Use the *_ANY varlena macros: PG_GETARG_BYTEA_PP can return a 1-byte
+  // short-header datum (e.g. for small byteas sourced from an array via unnest),
+  // for which VARSIZE()/VARDATA() (which assume a 4-byte header) misreport the
+  // length and data pointer.
+  size_t signature_len = VARSIZE_ANY_EXHDR(signature);
+  size_t digest_len = VARSIZE_ANY_EXHDR(digest);
 
   if (signature_len != sizeof(hive::protocol::signature_type)) {
     issue_error_with_code(ERRCODE_INVALID_PARAMETER_VALUE, "Invalid signature size");
@@ -1101,9 +1106,9 @@ Datum pubkey_from_signature(PG_FUNCTION_ARGS)
 
   PsqlTools::PsqlUtils::pg_call_cxx([&signature, &signature_len, &digest, &digest_len, &retval]() {
     hive::protocol::signature_type sig;
-    memcpy(sig.begin(), VARDATA(signature), signature_len);
+    memcpy(sig.begin(), VARDATA_ANY(signature), signature_len);
 
-    hive::protocol::digest_type digest_hash(VARDATA(digest), digest_len);
+    hive::protocol::digest_type digest_hash(VARDATA_ANY(digest), digest_len);
 
     fc::ecc::public_key recovered_key(sig, digest_hash);
     hive::protocol::public_key_type pubkey(recovered_key);
