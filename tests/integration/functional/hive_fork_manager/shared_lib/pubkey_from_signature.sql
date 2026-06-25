@@ -55,6 +55,26 @@ BEGIN
             RAISE EXCEPTION 'Test 3 failed: % %', SQLERRM, SQLSTATE;
     END;
 
+    -- Regression (build-independent): a signature sourced from an ARRAY via unnest is
+    -- passed with a 1-byte short varlena header; the function must handle it
+    -- (VARSIZE_ANY_EXHDR/VARDATA_ANY) rather than VARSIZE()-VARHDRSZ, which previously
+    -- raised "Invalid signature size". This is exactly how l2.recovered_keys passes
+    -- signatures. Assert the array path recovers the same key as the direct path
+    -- (no hard-coded key, so this holds on mainnet and testnet builds alike).
+    test_transaction := '{"ref_block_num":30,"ref_block_prefix":1561542156,"expiration":"2023-01-02T11:26:57","operations":[{"type":"transfer_operation","value":{"from":"initminer","to":"alice","amount":{"amount":"10000","precision":3,"nai":"@@000000021"},"memo":"memo"}}],"extensions":[],"signatures":[]}'::JSONB;
+    BEGIN
+        test_signature := '\x1fe49e20f7b64efb3316d8921930c417c5cf63c73b7d8a15ceeb5493132c6cef6e5727feee25e01826e17e0c810083ad356245a6491b6b78e08e234076a68d8ba7';
+        recovered_pubkey := hive.pubkey_from_signature(test_signature, hive.transaction_sig_digest(test_transaction, default_chain_id));
+        SELECT hive.pubkey_from_signature(s, hive.transaction_sig_digest(test_transaction, default_chain_id))
+          INTO recovered_pubkey2
+        FROM unnest(ARRAY[test_signature]) AS s;
+        ASSERT recovered_pubkey2 IS NOT NULL, 'array-sourced signature recovery returned NULL';
+        ASSERT recovered_pubkey2 = recovered_pubkey, 'array-sourced (short-header) recovery must match direct recovery';
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE EXCEPTION 'Test 4 (array-sourced signature) failed: % %', SQLERRM, SQLSTATE;
+    END;
+
 EXCEPTION
     WHEN OTHERS THEN
         RAISE EXCEPTION 'Test failed: % %', SQLERRM, SQLSTATE;
