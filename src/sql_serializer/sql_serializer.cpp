@@ -856,9 +856,11 @@ void sql_serializer_plugin_impl::handle_transactions(const vector<std::shared_pt
     auto hash = trx->get_transaction_id();
     const hive::protocol::signed_transaction& signed_trx = trx->get_transaction();
     size_t sig_size = signed_trx.signatures.size();
+    int64_t rc_cost = trx->get_rc_cost();
 
     currently_caching_data->total_size += sizeof(hash) + sizeof(block_num) + sizeof(trx_in_block) +
-      sizeof(signed_trx.ref_block_num) + sizeof(signed_trx.ref_block_prefix) + sizeof(signed_trx.expiration) + sizeof(signed_trx.signatures[0]);
+      sizeof(signed_trx.ref_block_num) + sizeof(signed_trx.ref_block_prefix) + sizeof(signed_trx.expiration) + sizeof(signed_trx.signatures[0]) +
+      sizeof(rc_cost);
 
     currently_caching_data->transactions.emplace_back(
       hash,
@@ -867,7 +869,8 @@ void sql_serializer_plugin_impl::handle_transactions(const vector<std::shared_pt
       signed_trx.ref_block_num,
       signed_trx.ref_block_prefix,
       signed_trx.expiration,
-      (sig_size == 0) ? fc::optional<signature_type>() : fc::optional<signature_type>(signed_trx.signatures[0])
+      (sig_size == 0) ? fc::optional<signature_type>() : fc::optional<signature_type>(signed_trx.signatures[0]),
+      (rc_cost < 0) ? fc::optional<int64_t>() : fc::optional<int64_t>(rc_cost)
     );
 
     if(sig_size > 1)

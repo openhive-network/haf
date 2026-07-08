@@ -39,7 +39,7 @@ BEGIN
 
     INSERT INTO hafd.transactions_reversible
     VALUES
-    ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF',  1 )
+    ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:24-07'::timestamp, '\xBEEF', NULL,  1 )
     ;
 
     INSERT INTO hafd.operations_reversible(id, trx_in_block, op_type_id, op_pos, body_value, fork_id)

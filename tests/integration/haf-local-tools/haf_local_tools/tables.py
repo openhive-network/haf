@@ -182,6 +182,7 @@ class Transactions(HiveDataBase):
     ref_block_prefix = Column(BigInteger)
     expiration = Column(DateTime)
     signature = Column(LargeBinary)
+    rc_cost = Column(BigInteger)
 
 
 class TransactionsReversible(HiveDataBase):
@@ -194,6 +195,7 @@ class TransactionsReversible(HiveDataBase):
     ref_block_prefix = Column(BigInteger)
     expiration = Column(DateTime)
     signature = Column(LargeBinary)
+    rc_cost = Column(BigInteger)
     fork_id = Column(BigInteger, primary_key=True)
 
 

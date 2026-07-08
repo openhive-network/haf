@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS hafd.transactions (
     ref_block_prefix bigint NOT NULL,
     expiration timestamp without time zone NOT NULL,
     signature bytea DEFAULT NULL,
+    rc_cost bigint DEFAULT NULL, -- RC cost of the transaction set during block evaluation, NULL for blocks evaluated before HF20
     CONSTRAINT pk_hive_transactions PRIMARY KEY ( trx_hash )
 );
 ALTER TABLE hafd.transactions ADD CONSTRAINT fk_1_hive_transactions FOREIGN KEY (block_num) REFERENCES hafd.blocks (num) NOT VALID;

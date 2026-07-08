@@ -58,6 +58,7 @@ BEGIN
         , htr.ref_block_prefix
         , htr.expiration
         , htr.signature
+        , htr.rc_cost
     FROM
         hafd.transactions_reversible htr
     JOIN ( SELECT

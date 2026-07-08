@@ -118,11 +118,13 @@ namespace hive
             uint32_t ref_block_prefix = 0;
             fc::time_point_sec expiration;
             fc::optional<signature_type> signature;
+            fc::optional<int64_t> rc_cost; // empty when not evaluated (pre HF20)
 
             process_transaction_t(const block_data_with_hash::hash_t& _hash, const int _block_number, const int32_t _trx_in_block,
-                                  const uint16_t _ref_block_num, const uint32_t _ref_block_prefix, const fc::time_point_sec& _expiration, const fc::optional<signature_type>& _signature)
+                                  const uint16_t _ref_block_num, const uint32_t _ref_block_prefix, const fc::time_point_sec& _expiration, const fc::optional<signature_type>& _signature,
+                                  const fc::optional<int64_t>& _rc_cost)
               : block_data_with_hash{_hash, _block_number}, trx_in_block{_trx_in_block},
-              ref_block_num{_ref_block_num}, ref_block_prefix{_ref_block_prefix}, expiration{_expiration}, signature{_signature}
+              ref_block_num{_ref_block_num}, ref_block_prefix{_ref_block_prefix}, expiration{_expiration}, signature{_signature}, rc_cost{_rc_cost}
             {}
           };
 
