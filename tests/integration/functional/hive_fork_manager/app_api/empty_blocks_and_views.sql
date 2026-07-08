@@ -53,7 +53,7 @@ BEGIN
     -- block 2 on fork 3 has no transactions
     INSERT INTO hafd.transactions_reversible
     VALUES
-           ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF', 2 )
+           ( 2, 0::SMALLINT, '\xDEED20', 101, 100, '2016-06-22 19:10:22-07'::timestamp, '\xBEEF', NULL, 2 )
     ;
 
     -- block 2 on fork 3 has no signatures
@@ -97,14 +97,14 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM a.transactions_view
         EXCEPT SELECT * FROM ( VALUES
-              ( 1, 0::SMALLINT, '\xDEED10'::bytea, 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF'::bytea )
+              ( 1, 0::SMALLINT, '\xDEED10'::bytea, 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF'::bytea, NULL::BIGINT )
         ) as pattern
     ) , 'Unexpected rows in the transacations view';
 
 
     ASSERT NOT EXISTS (
         SELECT * FROM ( VALUES
-              ( 1, 0::SMALLINT, '\xDEED10'::bytea, 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF'::bytea )
+              ( 1, 0::SMALLINT, '\xDEED10'::bytea, 101, 100, '2016-06-22 19:10:21-07'::timestamp, '\xBEEF'::bytea, NULL::BIGINT )
         ) as pattern
         EXCEPT SELECT * FROM a.transactions_view
     ) , 'Unexpected rows in the transacations view2';

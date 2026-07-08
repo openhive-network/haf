@@ -291,7 +291,8 @@ BEGIN
                t.ref_block_num,
                t.ref_block_prefix,
                t.expiration,
-               t.signature
+               t.signature,
+               t.rc_cost
             FROM %s.context_data_view c,
             LATERAL
             (
@@ -301,7 +302,8 @@ BEGIN
                        ht.ref_block_num,
                        ht.ref_block_prefix,
                        ht.expiration,
-                       ht.signature
+                       ht.signature,
+                       ht.rc_cost
                     FROM hafd.transactions ht
                     WHERE ht.block_num <= c.min_block
                     UNION ALL
@@ -311,7 +313,8 @@ BEGIN
                         reversible.ref_block_num,
                         reversible.ref_block_prefix,
                         reversible.expiration,
-                        reversible.signature
+                        reversible.signature,
+                        reversible.rc_cost
                     FROM ( SELECT
                         htr.block_num,
                         htr.trx_in_block,
@@ -320,6 +323,7 @@ BEGIN
                         htr.ref_block_prefix,
                         htr.expiration,
                         htr.signature,
+                        htr.rc_cost,
                         htr.fork_id
                     FROM hafd.transactions_reversible htr
                     JOIN (
@@ -342,7 +346,8 @@ BEGIN
                    t.ref_block_num,
                    t.ref_block_prefix,
                    t.expiration,
-                   t.signature
+                   t.signature,
+                   t.rc_cost
                 FROM %s.context_data_view c,
                 LATERAL
                 (
@@ -352,7 +357,8 @@ BEGIN
                            ht.ref_block_num,
                            ht.ref_block_prefix,
                            ht.expiration,
-                           ht.signature
+                           ht.signature,
+                           ht.rc_cost
                         FROM hafd.transactions ht
                         WHERE ht.block_num <= c.min_block
                 ) t
@@ -385,7 +391,8 @@ EXECUTE format(
            ht.ref_block_num,
            ht.ref_block_prefix,
            ht.expiration,
-           ht.signature
+           ht.signature,
+           ht.rc_cost
         FROM hafd.transactions ht
        ;'
     , __schema

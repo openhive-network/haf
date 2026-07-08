@@ -34,8 +34,8 @@ DECLARE
     __applied_hardforks2 hafd.applied_hardforks%ROWTYPE;
 BEGIN
     __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G' , 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
-    __transaction1 = ( 101, 0::SMALLINT, '\xDEED', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
-    __transaction2 = ( 101, 1::SMALLINT, '\xBEEF', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xDEED' );
+    __transaction1 = ( 101, 0::SMALLINT, '\xDEED', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF', 20 );
+    __transaction2 = ( 101, 1::SMALLINT, '\xBEEF', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xDEED', 20 );
     __operation1_1 = ( hafd.operation_id(101, 0), 0, 1, 0, '{"message":"ZERO OPERATION"}' :: jsonb, NULL );
     __operation2_1 = ( hafd.operation_id(101, 1), 1, 2, 1, '{"message":"ONE OPERATION"}' :: jsonb, NULL );
     __signatures1 = ( '\xDEED', '\xFEED' );
@@ -92,6 +92,7 @@ BEGIN
                     AND ref_block_prefix=100
                     AND expiration='2016-06-22 19:10:25-07'::timestamp
                     AND signature='\xBEEF'
+                    AND rc_cost = 20
                     AND fork_id = 1
     ) = 1, 'Wrong 1 transaction data'
     ;
@@ -105,6 +106,7 @@ BEGIN
            AND ref_block_prefix=100
            AND expiration='2016-06-22 19:10:25-07'::timestamp
            AND signature='\xDEED'
+           AND rc_cost = 20
            AND fork_id = 1
     ) = 1, 'Wrong 2 transaction data'
     ;

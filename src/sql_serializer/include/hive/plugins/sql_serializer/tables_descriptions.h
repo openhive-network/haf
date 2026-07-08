@@ -92,6 +92,8 @@ namespace hive::plugins::sql_serializer {
         result += data.expiration.to_iso_string();
         result += "',";
         result += escape_raw(data.signature);
+        result += ',';
+        result += data.rc_cost.valid() ? std::to_string(*data.rc_cost) : std::string("NULL");
         return result;
       }
       };

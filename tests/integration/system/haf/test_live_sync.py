@@ -68,3 +68,9 @@ def test_live_sync(prepared_networks_and_database_12_8):
 
     assert 'transfer_operation' in types
     assert 'producer_reward_operation' in types
+
+    # rc_cost is set by hived during block evaluation and must be dumped together with the transaction
+    # (it can legitimately be 0, e.g. for some recover_account transactions, but never NULL after HF20)
+    trxs = session.query(Transactions).filter(Transactions.block_num == transaction_block_num).all()
+    assert trxs != []
+    assert all(trx.rc_cost is not None and trx.rc_cost >= 0 for trx in trxs)

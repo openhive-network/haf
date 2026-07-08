@@ -62,7 +62,7 @@ BEGIN
               'STM65wH1LZ7BfSHcK69SShnqCAH5xdoSZpGkUjmzHJ5GCuxEK9V5G',
               1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 );
   __transaction = ( 101, 0::SMALLINT, '\xDEED', 101, 100,
-                    '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
+                    '2016-06-22 19:10:25-07'::timestamp, '\xBEEF', 20 );
   __signatures = ( '\xDEED', '\xFEED' );
   __account = ( 1, 'bamdecs', 101 );
   __applied_hardfork = ( 1, 101, hafd.operation_id(101, 0) );

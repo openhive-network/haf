@@ -136,7 +136,8 @@ SELECT
    t.ref_block_num,
    t.ref_block_prefix,
    t.expiration,
-   t.signature
+   t.signature,
+   t.rc_cost
 FROM
 (
     SELECT ht.block_num,
@@ -145,7 +146,8 @@ FROM
            ht.ref_block_num,
            ht.ref_block_prefix,
            ht.expiration,
-           ht.signature
+           ht.signature,
+           ht.rc_cost
     FROM hafd.transactions ht
     UNION ALL
     SELECT reversible.block_num,
@@ -154,7 +156,8 @@ FROM
             reversible.ref_block_num,
             reversible.ref_block_prefix,
             reversible.expiration,
-            reversible.signature
+            reversible.signature,
+            reversible.rc_cost
     FROM ( SELECT
             htr.block_num,
             htr.trx_in_block,
@@ -163,6 +166,7 @@ FROM
             htr.ref_block_prefix,
             htr.expiration,
             htr.signature,
+            htr.rc_cost,
             htr.fork_id
     FROM hafd.transactions_reversible htr
     JOIN (
@@ -393,7 +397,7 @@ BEGIN
 
     CREATE OR REPLACE VIEW hive.transactions_view AS
         SELECT block_num, trx_in_block, trx_hash, ref_block_num,
-               ref_block_prefix, expiration, signature
+               ref_block_prefix, expiration, signature, rc_cost
         FROM hafd.transactions;
 
     CREATE OR REPLACE VIEW hive.operations_view AS

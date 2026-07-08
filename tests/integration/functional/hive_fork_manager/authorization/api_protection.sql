@@ -119,8 +119,8 @@ BEGIN
 
     BEGIN
         __block = ( 101, '\xBADD', '\xCAFE', '2016-06-22 19:10:25-07'::timestamp );
-        __transaction1 = ( 101, 0::SMALLINT, '\xDEED', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF' );
-        __transaction2 = ( 101, 1::SMALLINT, '\xBEEF', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xDEED' );
+        __transaction1 = ( 101, 0::SMALLINT, '\xDEED', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF', 20 );
+        __transaction2 = ( 101, 1::SMALLINT, '\xBEEF', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xDEED', 20 );
         __operation1_1 = ( 1, 101, 0, 0, '{"message":"ZERO OPERATION"}' :: jsonb, NULL );
         __operation2_1 = ( 2, 101, 1, 0, '{"message":"ONE OPERATION"}' :: jsonb, NULL );
         __signatures1 = ( '\xDEED', '\xFEED' );
