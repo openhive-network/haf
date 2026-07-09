@@ -272,48 +272,9 @@ BEGIN
         ALTER TABLE hafd.hive_state ADD COLUMN lite_mode boolean NOT NULL DEFAULT FALSE;
     END IF;
 
-    -- rc_cost is appended as the last column of hafd.transactions,
-    -- matching the column order of freshly created databases
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'hafd' AND table_name = 'transactions' AND column_name = 'rc_cost'
-    ) THEN
-        ALTER TABLE hafd.transactions ADD COLUMN rc_cost bigint DEFAULT NULL;
-    END IF;
-
-    -- hafd.transactions_reversible gets rc_cost in the middle (before fork_id) on fresh
-    -- installs (LIKE hafd.transactions + appended fork_id), which plain ALTER TABLE ADD
-    -- COLUMN cannot reproduce. Rewrite the table: append rc_cost, then move fork_id to
-    -- the end (rename + re-add + copy + drop), so the visible column order matches a
-    -- freshly created database. The table holds at most a recent (non-irreversible)
-    -- portion of blocks, so it is small (and usually empty during the update procedure).
-    -- Rewriting in place (instead of creating a new table) keeps the extension
-    -- membership, pg_extension_config_dump registration, ownership and grants intact.
-    IF to_regclass('hafd.transactions_reversible') IS NOT NULL AND NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'hafd' AND table_name = 'transactions_reversible' AND column_name = 'rc_cost'
-    ) THEN
-        ALTER TABLE hafd.transactions_multisig_reversible DROP CONSTRAINT fk_1_hive_transactions_multisig_reversible;
-        ALTER TABLE hafd.transactions_reversible
-            DROP CONSTRAINT uq_hive_transactions_reversible,
-            DROP CONSTRAINT fk_1_hive_transactions_reversible;
-
-        ALTER TABLE hafd.transactions_reversible ADD COLUMN rc_cost bigint DEFAULT NULL;
-        ALTER TABLE hafd.transactions_reversible RENAME COLUMN fork_id TO fork_id_tmp;
-        ALTER TABLE hafd.transactions_reversible ADD COLUMN fork_id BIGINT;
-        UPDATE hafd.transactions_reversible SET fork_id = fork_id_tmp;
-        ALTER TABLE hafd.transactions_reversible ALTER COLUMN fork_id SET NOT NULL;
-        -- also drops the indexes which included the old fork_id column
-        ALTER TABLE hafd.transactions_reversible DROP COLUMN fork_id_tmp;
-
-        ALTER TABLE hafd.transactions_reversible
-            ADD CONSTRAINT fk_1_hive_transactions_reversible FOREIGN KEY (block_num, fork_id) REFERENCES hafd.blocks_reversible(num,fork_id),
-            ADD CONSTRAINT uq_hive_transactions_reversible PRIMARY KEY( trx_hash, fork_id );
-        CREATE INDEX hive_transactions_reversible_block_num_trx_in_block_fork_id_idx ON hafd.transactions_reversible( block_num, trx_in_block, fork_id );
-
-        ALTER TABLE hafd.transactions_multisig_reversible
-            ADD CONSTRAINT fk_1_hive_transactions_multisig_reversible FOREIGN KEY (trx_hash, fork_id) REFERENCES hafd.transactions_reversible(trx_hash, fork_id);
-    END IF;
+    -- Note: there is intentionally no migration for the rc_cost column of hafd.transactions
+    -- and hafd.transactions_reversible - the values cannot be backfilled without a replay,
+    -- so the schema hash mismatch reported by verify_table_schema forces one.
 END \$\$;
 "
 
