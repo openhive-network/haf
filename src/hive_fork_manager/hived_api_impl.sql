@@ -273,20 +273,35 @@ BEGIN
 
     __max_block_num := LEAST(__lowest_irreversible_block, _new_irreversible_block);
 
+    -- A row from an old fork is obsolete only if a later fork actually superseded it, i.e. some
+    -- fork event with a higher id has its common block (hafd.fork.block_num) BELOW the row's height
+    -- (the post-fork re-dump only covers blocks above the common block, and rows at or below it were
+    -- never popped from hived's state).  An old-fork row at or below every later fork's common block
+    -- is the only copy of that block and must be kept until it becomes irreversible (first condition),
+    -- otherwise a subsequent hive.set_irreversible() finds nothing to copy and violates
+    -- fk_1_hive_irreversible_data.  This can happen whenever a fork arrives while consistent_block
+    -- lags behind the fork's common block.
+
     DELETE FROM hafd.account_operations_reversible har
     USING hafd.operations_reversible hor
     WHERE
             har.operation_id = hor.id
         AND har.fork_id = hor.fork_id
-        AND ( hafd.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
+        AND ( hafd.operation_id_to_block_num(hor.id) <= __max_block_num
+              OR ( hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+                   AND hafd.operation_id_to_block_num(hor.id) > ( SELECT MIN(hf2.block_num) FROM hafd.fork hf2 WHERE hf2.id > hor.fork_id ) ) )
     ;
 
     DELETE FROM hafd.applied_hardforks_reversible hjr
-    WHERE hjr.block_num <= __max_block_num OR hjr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    WHERE hjr.block_num <= __max_block_num
+       OR ( hjr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+            AND hjr.block_num > ( SELECT MIN(hf2.block_num) FROM hafd.fork hf2 WHERE hf2.id > hjr.fork_id ) )
     ;
 
     DELETE FROM hafd.operations_reversible hor
-    WHERE hafd.operation_id_to_block_num(hor.id) <= __max_block_num OR hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    WHERE hafd.operation_id_to_block_num(hor.id) <= __max_block_num
+       OR ( hor.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+            AND hafd.operation_id_to_block_num(hor.id) > ( SELECT MIN(hf2.block_num) FROM hafd.fork hf2 WHERE hf2.id > hor.fork_id ) )
     ;
 
 
@@ -295,19 +310,27 @@ BEGIN
     WHERE
             htr.fork_id = htmr.fork_id
         AND htr.trx_hash = htmr.trx_hash
-        AND ( htr.block_num <= __max_block_num OR htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id ) )
+        AND ( htr.block_num <= __max_block_num
+              OR ( htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+                   AND htr.block_num > ( SELECT MIN(hf2.block_num) FROM hafd.fork hf2 WHERE hf2.id > htr.fork_id ) ) )
     ;
 
     DELETE FROM hafd.transactions_reversible htr
-    WHERE  htr.block_num <= __max_block_num OR htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    WHERE  htr.block_num <= __max_block_num
+       OR ( htr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+            AND htr.block_num > ( SELECT MIN(hf2.block_num) FROM hafd.fork hf2 WHERE hf2.id > htr.fork_id ) )
     ;
 
     DELETE FROM hafd.accounts_reversible har
-    WHERE har.block_num <= __max_block_num OR har.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    WHERE har.block_num <= __max_block_num
+       OR ( har.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+            AND har.block_num > ( SELECT MIN(hf2.block_num) FROM hafd.fork hf2 WHERE hf2.id > har.fork_id ) )
     ;
 
     DELETE FROM hafd.blocks_reversible hbr
-    WHERE hbr.num <= __max_block_num OR hbr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+    WHERE hbr.num <= __max_block_num
+       OR ( hbr.fork_id < LEAST( __min_ctx_fork_id, __max_fork_id )
+            AND hbr.num > ( SELECT MIN(hf2.block_num) FROM hafd.fork hf2 WHERE hf2.id > hbr.fork_id ) )
     ;
 END;
 $BODY$
