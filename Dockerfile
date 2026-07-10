@@ -72,9 +72,11 @@ ARG POSTGRES_VERSION
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential git postgresql-${POSTGRES_VERSION} postgresql-server-dev-${POSTGRES_VERSION}
 
-# Clone the pg_cron repository.
+# Clone the pg_cron repository, pinned to a release tag: unpinned master broke the build when
+# upstream added an unconditional -lintl (for mingw64) to SHLIB_LINK, which doesn't exist as a
+# standalone library on glibc systems.
 WORKDIR /tmp
-RUN git clone https://github.com/citusdata/pg_cron.git
+RUN git clone --depth 1 --branch v1.6.7 https://github.com/citusdata/pg_cron.git
 
 # Build and "install" pg_cron to a temporary location (using DESTDIR).
 WORKDIR /tmp/pg_cron
