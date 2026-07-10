@@ -152,7 +152,7 @@ default:
       # Clone and fetch from develop branch
       git clone --no-checkout "$HIVE_URL" hive
       cd hive
-      git fetch origin develop
+      git fetch origin develop master || git fetch origin "$HIVE_COMMIT"
       git checkout $HIVE_COMMIT
       # Initialize only test-related submodules inside hive (skip rocksdb, zstd, fc, appbase, compression_dictionaries)
       ok=0
@@ -183,7 +183,7 @@ default:
       # Clone and fetch from develop branch
       git clone --no-checkout "$HIVE_URL" hive
       cd hive
-      git fetch origin develop
+      git fetch origin develop master || git fetch origin "$HIVE_COMMIT"
       git checkout $HIVE_COMMIT
       # Initialize ALL submodules recursively (needed for rebuilding HAF)
       # Nested fc submodules (rocksdb, secp256k1-zkp, websocketpp) fetch from
