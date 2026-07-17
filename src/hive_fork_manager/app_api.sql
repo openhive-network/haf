@@ -390,8 +390,11 @@ BEGIN
 
     -- we are reattaching the contexts but the triggers won't be recreated
     -- because now the contexts are non-forking
+    -- reattach at the context's own position (after detach, which for forking
+    -- contexts has already rewound it to the irreversible block) - anchoring at
+    -- hc.irreversible_block skipped or re-delivered blocks (issue #334)
     PERFORM
-        hive.context_attach( context.text, hc.irreversible_block )
+        hive.context_attach( context.text, hc.current_block_num )
     FROM hafd.contexts hc
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
 
@@ -445,8 +448,11 @@ BEGIN
     WHERE hc.name = ANY( _contexts );
     --recursive
     -- to recreate triggers
+    -- reattach at the context's own position - anchoring at hc.irreversible_block
+    -- teleported the context past blocks not yet processed by the application,
+    -- which were then never delivered to it (issue #334)
     PERFORM
-        hive.context_attach( context.text, hc.irreversible_block )
+        hive.context_attach( context.text, hc.current_block_num )
     FROM hafd.contexts hc
     JOIN unnest( _contexts ) as context ON context.text = hc.name;
 
