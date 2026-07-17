@@ -268,6 +268,11 @@ BEGIN
         RAISE EXCEPTION 'Context % has already processed block nr %', _context, _last_synced_block;
     END IF;
 
+    IF _last_synced_block > __current_block_num THEN
+        RAISE WARNING 'Attaching context % at block %, ahead of its last processed block % - blocks <%, %> will never be delivered to the application'
+            , _context, _last_synced_block, __current_block_num, __current_block_num + 1, _last_synced_block;
+    END IF;
+
 
     IF NOT hive.is_lite_schema() THEN
         PERFORM hive.attach_table( hrt.origin_table_schema, hrt.origin_table_name, __context_id )
