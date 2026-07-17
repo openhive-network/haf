@@ -8,6 +8,12 @@
 -- Regression test for issue #334 (root cause of haf_block_explorer#133, where
 -- app_context_set_forking reattached the context at the irreversible block and the
 -- backlog was silently skipped).
+--
+-- Scenario: 10 irreversible blocks, massive stage active while the distance to head is
+-- at least 5, batches of 2. The loop delivers (1,2)(3,4)(5,6), then the re-analyze
+-- inside the next iteration flips the stage to live and hands out (7,7) - so the first
+-- live-stage iteration happens with the cursor at 7 while the irreversible block is
+-- already 10: a live backlog at the switch, exactly like the incident.
 
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
@@ -15,7 +21,7 @@ AS
 $BODY$
 DECLARE
     __account hafd.accounts%ROWTYPE;
-    __context_stages hafd.application_stages := ARRAY[ hive.stage( 'MASSIVE_PROCESSING', 3, 2 ), hafd.live_stage() ];
+    __context_stages hafd.application_stages := ARRAY[ hive.stage( 'MASSIVE_PROCESSING', 5, 2 ), hafd.live_stage() ];
     __block INTEGER;
 BEGIN
     CREATE SCHEMA A;
@@ -37,7 +43,7 @@ BEGIN
         , NULL
     );
 
-    FOR __block IN 2 .. 6 LOOP
+    FOR __block IN 2 .. 10 LOOP
         PERFORM hive.push_block(
              ( __block, '\xBADD20', '\xCAFE20', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
             , NULL
@@ -48,10 +54,10 @@ BEGIN
             , NULL
         );
     END LOOP;
-    PERFORM hive.set_irreversible( 6 );
+    PERFORM hive.set_irreversible( 10 );
 
     PERFORM test.install_mock_hive_get_estimated_hive_head_block();
-    PERFORM test.set_head_block_num( 6 );
+    PERFORM test.set_head_block_num( 10 );
 END;
 $BODY$
 ;
@@ -62,7 +68,6 @@ AS
 $BODY$
 DECLARE
     __blocks hive.blocks_range;
-    __block INTEGER;
     __cursor_before INTEGER;
     __cursor_after INTEGER;
     __switched BOOLEAN := FALSE;
@@ -76,25 +81,9 @@ BEGIN
         END IF;
 
         IF NOT __switched AND hive.get_current_stage_name( 'context' ) = 'live' THEN
-            -- the application reached its first live-stage iteration; meanwhile the
-            -- chain moved on and more blocks became irreversible (with OBI the
-            -- irreversible block follows the head almost immediately)
-            FOR __block IN 7 .. 10 LOOP
-                PERFORM hive.push_block(
-                     ( __block, '\xBADD30', '\xCAFE30', '2016-06-22 19:10:25-07'::timestamp, 5, '\x4007', E'[]', '\x2157', 'STM65w', 1000, 1000, 1000000, 1000, 1000, 1000, 2000, 2000 )
-                    , NULL
-                    , NULL
-                    , NULL
-                    , NULL
-                    , NULL
-                    , NULL
-                );
-            END LOOP;
-            PERFORM hive.set_irreversible( 10 );
-            PERFORM test.set_head_block_num( 10 );
-
-            -- the application switches its context to forking exactly as
-            -- haf_block_explorer does: before processing the just-delivered range
+            -- the application switches its context to forking on the first live-stage
+            -- iteration, exactly as haf_block_explorer does - with the cursor still
+            -- behind the irreversible block
             SELECT current_block_num INTO __cursor_before FROM hafd.contexts WHERE name = 'context';
             PERFORM hive.app_context_set_forking( 'context' );
             SELECT current_block_num INTO __cursor_after FROM hafd.contexts WHERE name = 'context';
