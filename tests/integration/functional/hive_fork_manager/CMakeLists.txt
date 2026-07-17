@@ -297,6 +297,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( application_loop/is_livesync.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/iteration_move_to_massive.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/iteration_move_to_massive2.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/set_forking_at_live_transition.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/negative.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/non_forking_app.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/process_BFF_event.sql )
