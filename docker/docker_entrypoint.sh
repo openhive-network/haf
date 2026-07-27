@@ -142,15 +142,21 @@ trap cleanup EXIT
 
 enable_pg_cron
 
-# Listening endpoints for hived, overridable via the container environment so a
-# node can opt into IPv6, e.g. P2P_ENDPOINT=[::]:2001 (dual-stack on Linux) or a
-# specific address such as P2P_ENDPOINT=[2001:db8::1]:2001.
-# Defaults stay 0.0.0.0 (IPv4) for now: switching the default to dual-stack [::]
-# is deferred until a release includes the P2P outbound-connection bind fix, so
-# that current binaries keep sourcing outbound connections from the listening port.
-P2P_ENDPOINT="${P2P_ENDPOINT:-0.0.0.0:${P2P_PORT}}"
-WS_ENDPOINT="${WS_ENDPOINT:-0.0.0.0:${WS_PORT}}"
-HTTP_ENDPOINT="${HTTP_ENDPOINT:-0.0.0.0:${HTTP_PORT}}"
+# Listening endpoints for hived, overridable via the container environment, e.g.
+# P2P_ENDPOINT=0.0.0.0:2001 for IPv4-only or a specific address such as
+# P2P_ENDPOINT=[2001:db8::1]:2001.
+# The default is dual-stack [::] (accepts both IPv6 and IPv4) whenever the kernel
+# has IPv6 enabled; the hived in this image binds outbound connections using the
+# peer's address family, so a [::] listener still sources IPv4 connections from
+# the listening port.  Kernels booted with ipv6.disable=1 fall back to 0.0.0.0.
+if [ -f /proc/net/if_inet6 ]; then
+  DEFAULT_BIND_ADDR="[::]"
+else
+  DEFAULT_BIND_ADDR="0.0.0.0"
+fi
+P2P_ENDPOINT="${P2P_ENDPOINT:-${DEFAULT_BIND_ADDR}:${P2P_PORT}}"
+WS_ENDPOINT="${WS_ENDPOINT:-${DEFAULT_BIND_ADDR}:${WS_PORT}}"
+HTTP_ENDPOINT="${HTTP_ENDPOINT:-${DEFAULT_BIND_ADDR}:${HTTP_PORT}}"
 
 {
 export LD_PRELOAD="${OVERRIDE_LD_PRELOAD:-}"
