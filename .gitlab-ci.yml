@@ -86,7 +86,7 @@ variables:
   # Use Ubuntu-based ci-base-image with PostgreSQL 18 dev packages
   # Ubuntu variant needed because hived is built on Ubuntu 24.04 and replay jobs
   # run the binary directly on the ci-base-image (requires matching glibc)
-  BUILDER_IMAGE_TAG: ":ubuntu24.04-pg18-1"
+  BUILDER_IMAGE_TAG: ":ubuntu26.04-pg18-2"
   HIVE_CI_BASE_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-ubuntu${BUILDER_IMAGE_TAG}"
   PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-ubuntu${BUILDER_IMAGE_TAG}"
   CI_DEBUG_SERVICES: "true"

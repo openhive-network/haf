@@ -4,12 +4,12 @@
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
 ARG POSTGRES_VERSION=17
-ARG CI_IMAGE_TAG=ubuntu24.04-pg${POSTGRES_VERSION}-10
+ARG CI_IMAGE_TAG=ubuntu26.04-pg${POSTGRES_VERSION}-1
 
 ARG BUILD_IMAGE_TAG
 ARG IMAGE_TAG_PREFIX
 
-FROM registry.gitlab.syncad.com/hive/hive/minimal-runtime:ubuntu24.04-3 AS minimal-runtime-base
+FROM registry.gitlab.syncad.com/hive/hive/minimal-runtime:ubuntu26.04-1 AS minimal-runtime-base
 
 ARG POSTGRES_VERSION
 ARG PIP_INDEX_URL
@@ -31,36 +31,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends auto-apt-proxy 
 
 # create required accounts (single hived user with sudo, UID 1000)
 RUN bash -x ./scripts/setup_ubuntu.sh --hived-account="hived" && rm -rf /var/lib/apt/lists/*
-# install postgres and Python 3.14 from deadsnakes PPA
+# install postgres (Python 3.14 is the system python3 on Ubuntu 26.04)
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg curl ca-certificates software-properties-common && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y postgresql-common gnupg curl ca-certificates && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
-    # PG18+ needs snapshot repo (pre-release); keep standard pgdg for extensions (pgvector, etc.)
-    if [ "${POSTGRES_VERSION}" -ge 18 ]; then \
-        cp /etc/apt/sources.list.d/pgdg.sources /etc/apt/sources.list.d/pgdg-snapshot.sources && \
-        sed -i -e 's/Suites: noble-pgdg/Suites: noble-pgdg-snapshot/' -e "s/Components: main/Components: main ${POSTGRES_VERSION}/" /etc/apt/sources.list.d/pgdg-snapshot.sources && \
-        echo 'Package: *' > /etc/apt/preferences.d/pgdg-snapshot.pref && \
-        echo 'Pin: release n=noble-pgdg-snapshot' >> /etc/apt/preferences.d/pgdg-snapshot.pref && \
-        echo 'Pin-Priority: 1001' >> /etc/apt/preferences.d/pgdg-snapshot.pref; \
-    fi && \
-    # Add deadsnakes PPA for Python 3.14 manually (avoid add-apt-repository which fails in DinD due to IPv6/Launchpad API issues)
-    echo "deb https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu noble main" > /etc/apt/sources.list.d/deadsnakes-ppa.list && \
-    curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF23C5A6CF475977595C89F51BA6932366A755776" | gpg --batch --dearmor -o /etc/apt/trusted.gpg.d/deadsnakes-ppa.gpg && \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.14 python3.14-venv python3-pip postgresql-${POSTGRES_VERSION} postgresql-${POSTGRES_VERSION}-pgvector postgresql-plpython3-${POSTGRES_VERSION} libpq5 \
-                                                                              libboost-chrono1.83.0 libboost-context1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 busybox netcat-openbsd && \
-    # Make Python 3.14 the default python3
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.14 1 && \
-    update-alternatives --set python3 /usr/bin/python3.14 && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3 python3-venv python3-pip postgresql-${POSTGRES_VERSION} postgresql-${POSTGRES_VERSION}-pgvector postgresql-plpython3-${POSTGRES_VERSION} libpq5 \
+                                                                              libboost-chrono1.90.0 libboost-context1.90.0 libboost-filesystem1.90.0 libboost-thread1.90.0 busybox netcat-openbsd && \
     # Add BeautifulSoup for hivesense preprocessing posts (3.1MB)
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3-bs4 python3-lxml && \
     # Install Tokenizers (~48MB) for hivesense
-    python3.14 -m pip install --target /usr/lib/python3/dist-packages --break-system-packages tokenizers pysbd base58 && \
+    python3 -m pip install --target /usr/lib/python3/dist-packages --break-system-packages tokenizers pysbd base58 && \
     # Install ParadeDB pg_search extension for BM25 search
+    # TODO: switch to the -resolute_ asset when bumping pg_search to >= 0.25
+    # (v0.21.13 only ships noble builds; the Rust extension runs fine on 26.04)
     curl -L "https://github.com/paradedb/paradedb/releases/download/v0.21.13/postgresql-${POSTGRES_VERSION}-pg-search_0.21.13-1PARADEDB-noble_amd64.deb" -o /tmp/pg_search.deb && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y /tmp/pg_search.deb && \
     rm /tmp/pg_search.deb && \
-    apt-get remove -y gnupg curl software-properties-common && \
+    apt-get remove -y gnupg curl && \
     apt-get autoremove -y && \
     busybox --install -s
 
@@ -117,7 +105,7 @@ RUN useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service 
 USER hived
 WORKDIR /home/hived
 
-FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image:ubuntu24.04-py3.14-7 AS ci-base-image
+FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-ubuntu:ubuntu26.04-pg18-2 AS ci-base-image
 
 ARG POSTGRES_VERSION
 ENV POSTGRES_VERSION=${POSTGRES_VERSION}
@@ -218,7 +206,7 @@ ENV HIVE_CONVERTER_BUILD=${HIVE_CONVERTER_BUILD}
 ARG HIVE_LINT=OFF
 ENV HIVE_LINT=${HIVE_LINT}
 
-ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu24.04-pg${POSTGRES_VERSION}-10}
+ENV BUILD_IMAGE_TAG=${BUILD_IMAGE_TAG:-:ubuntu26.04-pg${POSTGRES_VERSION}-1}
 
 ARG P2P_PORT=2001
 ENV P2P_PORT=${P2P_PORT}
