@@ -469,9 +469,12 @@ detect_changes:
   extends: .prepare_haf_image
   stage: build_and_test_phase_1
   variables:
-    # Build jobs need ALL submodules (including rocksdb, zstd) for compilation
-    # Override the global 'none' strategy with 'recursive' for builds
-    GIT_SUBMODULE_STRATEGY: recursive
+    # Build jobs need ALL submodules (including rocksdb, zstd) for compilation.
+    # Submodules are initialized manually via .init_submodules_full below:
+    # runner-level recursive updates fail deterministically on cached
+    # workspaces ("Unable to find current revision" in nested fc submodules);
+    # the manual path clones hive fresh and retries.
+    GIT_SUBMODULE_STRATEGY: none
     # Smart image build thresholds - re-tag when gap > 20, rebuild when > 25
     RETAG_THRESHOLD: "20"
     SEARCH_DEPTH: "25"
@@ -487,6 +490,8 @@ detect_changes:
     - !reference [.docker_image_builder_job_template, before_script]
     # Fix git safe.directory issue on some runners (CVE-2022-24765)
     - git config --global --add safe.directory '*'
+    # Fresh clone + recursive init of the hive submodule (with retries)
+    - !reference [.init_submodules_full, before_script]
     # Load source patterns from the single source of truth
     - |
       SOURCE_PATTERNS=$("${CI_PROJECT_DIR}/scripts/ci-helpers/source-patterns.sh")
