@@ -155,7 +155,13 @@ default:
       git fetch origin develop
       git checkout $HIVE_COMMIT
       # Initialize only test-related submodules inside hive (skip rocksdb, zstd, fc, appbase, compression_dictionaries)
-      git submodule update --init tests/python/hive-local-tools/tests_api
+      ok=0
+      for attempt in 1 2 3; do
+        if git submodule update --init tests/python/hive-local-tools/tests_api; then ok=1; break; fi
+        echo "submodule update failed (attempt $attempt), retrying..."
+        sleep 10
+      done
+      [ "$ok" -eq 1 ]
       cd ..
       # Update any remaining HAF submodules (currently none besides hive which is handled above)
       git submodule update --init
@@ -180,7 +186,16 @@ default:
       git fetch origin develop
       git checkout $HIVE_COMMIT
       # Initialize ALL submodules recursively (needed for rebuilding HAF)
-      git submodule update --init --recursive
+      # Nested fc submodules (rocksdb, secp256k1-zkp, websocketpp) fetch from
+      # external mirrors and flake intermittently; retry up to 3 times
+      ok=0
+      for attempt in 1 2 3; do
+        if git submodule update --init --recursive; then ok=1; break; fi
+        echo "submodule update failed (attempt $attempt), retrying..."
+        git submodule sync --recursive
+        sleep 10
+      done
+      [ "$ok" -eq 1 ]
       cd ..
       # Update any remaining HAF submodules (currently none besides hive which is handled above)
       git submodule update --init
