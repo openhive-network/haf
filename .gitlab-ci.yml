@@ -68,6 +68,11 @@ variables:
   GIT_SUBMODULE_STRATEGY: none
   # Force HTTPS for submodule URLs (helps with nested submodules)
   GIT_SUBMODULE_FORCE_HTTPS: "true"
+  # Retry the whole get-sources step: shallow-pinned nested submodules
+  # (rocksdb, secp256k1-zkp, websocketpp under hive/libraries/fc) fetch from
+  # external mirrors and intermittently fail with "Unable to find current
+  # revision" on cold runner caches
+  GET_SOURCES_ATTEMPTS: "3"
   # Allow file:// protocol for nested submodules
   GIT_CONFIG_COUNT: 1
   GIT_CONFIG_KEY_0: "protocol.file.allow"
