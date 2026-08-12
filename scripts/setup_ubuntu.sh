@@ -37,7 +37,7 @@ install_ai_packages() {
   apt-get update
   DEBIAN_FRONTEND=noninteractive apt-get install -y \
     git \
-    python3.12 python3.12-venv python3.12-dev python3-pip \
+    python3 python3-venv python3-dev python3-pip \
     postgresql-plpython3-${POSTGRES_VERSION} \
     curl \
     python3-bs4 python3-lxml
@@ -108,7 +108,7 @@ install_all_dev_packages() {
 
   DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-${POSTGRES_VERSION} postgresql-server-dev-${POSTGRES_VERSION} \
   netcat-openbsd \
-  git python3.12 python3.12-venv python3.12-dev python3-pip postgresql-plpython3-${POSTGRES_VERSION} curl # for hivesense
+  git python3 python3-venv python3-dev python3-pip postgresql-plpython3-${POSTGRES_VERSION} curl # for hivesense
 
   apt-get clean
   rm -rf /var/lib/apt/lists/*
