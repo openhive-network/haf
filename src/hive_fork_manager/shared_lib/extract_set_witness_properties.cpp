@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "extract_set_witness_properties.hpp"
 
 #include <hive/protocol/types.hpp>

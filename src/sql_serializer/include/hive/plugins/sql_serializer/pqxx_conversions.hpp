@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <hive/protocol/config.hpp>
 #include <type_traits>
 #include <cstring>

@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "hive/plugins/sql_serializer/block_num_rendezvous_trigger.hpp"
 
 #include "fc/exception/exception.hpp"

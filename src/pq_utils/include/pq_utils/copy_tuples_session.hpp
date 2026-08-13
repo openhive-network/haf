@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include "pq_utils/copy_session.hpp"
 #include <memory>
 

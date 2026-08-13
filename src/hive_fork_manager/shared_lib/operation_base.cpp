@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "operation_base.hpp"
 
 #include "to_jsonb.hpp"

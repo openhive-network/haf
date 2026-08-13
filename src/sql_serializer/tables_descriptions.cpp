@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <hive/plugins/sql_serializer/tables_descriptions.h>
 #include <hive/plugins/sql_serializer/pqxx_conversions.hpp>
 

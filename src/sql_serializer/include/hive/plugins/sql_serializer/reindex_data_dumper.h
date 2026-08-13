@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <hive/plugins/sql_serializer/data_dumper.h>
 
 #include <hive/plugins/sql_serializer/table_data_writer.h>

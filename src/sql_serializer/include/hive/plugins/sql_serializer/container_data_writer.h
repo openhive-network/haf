@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <hive/plugins/sql_serializer/block_num_rendezvous_trigger.hpp>
 #include <hive/plugins/sql_serializer/queries_commit_data_processor.h>
 #include <hive/plugins/sql_serializer/tables_descriptions.h>

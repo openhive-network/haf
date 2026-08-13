@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <hive/plugins/sql_serializer/container_data_writer.h>
 #include <hive/plugins/sql_serializer/indexes_controler.h>
 #include <hive/plugins/sql_serializer/queries_commit_data_processor.h>

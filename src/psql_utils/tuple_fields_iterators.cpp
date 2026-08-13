@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "psql_utils/tuple_fields_iterators.hpp"
 
 #include "include/exceptions.hpp"

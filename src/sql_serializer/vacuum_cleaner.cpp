@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <hive/plugins/sql_serializer/vacuum_cleaner.h>
 
 #include <fc/log/logger.hpp>

@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "pq_utils/copy_session.hpp"
 
 #include "psql_utils/postgres_includes.hpp"

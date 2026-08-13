@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include "psql_utils/custom_configuration.h"
 
 #include <chrono>

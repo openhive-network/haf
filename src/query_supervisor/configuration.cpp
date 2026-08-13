@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <boost/algorithm/string.hpp>
 
 #include "configuration.hpp"

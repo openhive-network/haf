@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <hive/plugins/sql_serializer/indexes_controler.h>
 #include <hive/plugins/sql_serializer/write_ahead_log.hpp>
 

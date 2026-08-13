@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <hive/plugins/sql_serializer/sql_serializer_plugin.hpp>
 
 #include <hive/plugins/sql_serializer/cached_data.h>

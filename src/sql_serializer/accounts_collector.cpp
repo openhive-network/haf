@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <hive/plugins/sql_serializer/accounts_collector.h>
 
 #include <hive/chain/util/impacted.hpp>

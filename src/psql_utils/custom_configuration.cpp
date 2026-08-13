@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "psql_utils/custom_configuration.h"
 
 #include "include/exceptions.hpp"

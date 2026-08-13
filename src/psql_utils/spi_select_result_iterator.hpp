@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include "psql_utils/spi_session.hpp"
 
 #include <boost/optional.hpp>

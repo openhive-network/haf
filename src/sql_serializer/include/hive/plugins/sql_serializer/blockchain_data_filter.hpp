@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <hive/chain/util/data_filter.hpp>
 #include<set>
 

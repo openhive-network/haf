@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <hive/plugins/sql_serializer/indexation_state.hpp>
 
 #include <hive/plugins/sql_serializer/all_accounts_dumper.h>

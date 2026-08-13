@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <hive/plugins/sql_serializer/all_accounts_dumper.h>
 
 #include <hive/plugins/sql_serializer/chunks_for_writers_spillter.h>

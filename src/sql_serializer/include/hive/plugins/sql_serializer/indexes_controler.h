@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <hive/plugins/sql_serializer/indexes_interruptor.h>
