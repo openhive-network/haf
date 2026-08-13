@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include "psql_utils/postgres_includes.hpp"
 
 #include <boost/optional.hpp>

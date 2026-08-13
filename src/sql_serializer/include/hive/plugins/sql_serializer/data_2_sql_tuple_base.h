@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <hive/protocol/operations.hpp>
 
 #include <fc/io/sstream.hpp>

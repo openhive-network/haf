@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <operation_conversion.hpp>
 
 #include <fc/exception/exception.hpp>

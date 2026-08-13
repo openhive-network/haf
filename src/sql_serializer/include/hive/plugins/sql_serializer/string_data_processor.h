@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <functional>
 
 #include <hive/plugins/sql_serializer/data_processor.hpp>

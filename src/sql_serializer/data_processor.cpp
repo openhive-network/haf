@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <hive/plugins/sql_serializer/data_processor.hpp>
 
 #include <fc/exception/exception.hpp>

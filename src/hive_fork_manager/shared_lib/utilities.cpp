@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "operation_base.hpp"
 
 #include "extract_set_witness_properties.hpp"

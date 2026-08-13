@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <psql_utils/postgres_includes.hpp>
 #include <psql_utils/pg_cxx.hpp>
 

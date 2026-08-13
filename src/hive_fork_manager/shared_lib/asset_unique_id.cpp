@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "psql_utils/postgres_includes.hpp"
 
 #include "include/asset_unique_id.hpp"

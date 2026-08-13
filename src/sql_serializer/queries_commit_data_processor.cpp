@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <hive/plugins/sql_serializer/queries_commit_data_processor.h>
 
 namespace hive{ namespace plugins{ namespace sql_serializer {

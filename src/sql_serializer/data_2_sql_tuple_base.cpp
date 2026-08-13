@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <hive/plugins/sql_serializer/data_2_sql_tuple_base.h>
 
 #include <cstring>

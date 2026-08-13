@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include "psql_utils/query_handler/root_query_handler.hpp"
 
 #include <functional>

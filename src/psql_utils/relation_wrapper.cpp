@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "relation_wrapper.hpp"
 
 #include "include/exceptions.hpp"

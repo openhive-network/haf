@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "pq_utils/copy_tuples_session.hpp"
 
 #include "include/exceptions.hpp"

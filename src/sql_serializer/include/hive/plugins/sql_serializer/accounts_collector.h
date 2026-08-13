@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <hive/plugins/sql_serializer/sql_serializer_objects.hpp>
 #include <hive/plugins/sql_serializer/filter_collector.hpp>
 #include <hive/plugins/sql_serializer/cached_data.h>

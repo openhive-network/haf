@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <hive/plugins/sql_serializer/livesync_data_dumper.h>
 #include <transactions_controller/transaction_controllers.hpp>
 

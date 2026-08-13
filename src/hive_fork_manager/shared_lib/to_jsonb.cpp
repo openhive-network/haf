@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "to_jsonb.hpp"
 
 #include <psql_utils/postgres_includes.hpp>

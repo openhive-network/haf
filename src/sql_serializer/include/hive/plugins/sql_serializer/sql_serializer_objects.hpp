@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <hive/protocol/operation_id.hpp>
 
 // STL

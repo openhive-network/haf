@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <boost/unordered/concurrent_flat_map.hpp>
 
 #include <functional>
