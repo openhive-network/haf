@@ -21,7 +21,7 @@ variables:
   HAF_CI_MODE: "1"
   # Hive ref for fetching CI helper scripts at runtime (symlinks don't work without submodule checkout)
   # Should match the ref used in scripts/ci-helpers/prepare_data_image_job.yml include
-  HIVE_SCRIPTS_REF: "3f8bf00eb992941b02be8fd18726476c9df143e5"
+  HIVE_SCRIPTS_REF: "c30378b3d6a9b69b445ebd7fc2fe370d3d57c638"
 
   # =============================================================================
   # Quick Test / Auto-Skip Mode

@@ -19,7 +19,7 @@
 // Internal
 #include <hive/chain/util/extractors.hpp>
 #include <hive/chain/hive_object_types.hpp>
-#include <hive/chain/account_object.hpp>
+#include <hive/chain/detail/state/account_object.hpp>
 #include <hive/chain/util/operation_extractor.hpp>
 
 #ifndef HIVE_SQL_SERIALIZER_SPACE_ID
