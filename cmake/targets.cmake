@@ -18,6 +18,13 @@ MACRO( ADD_RUNTIME_LOADED_LIB )
     FILE( GLOB_RECURSE sources ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp )
 
     ADD_LIBRARY( ${target_name} SHARED ${sources} )
+    # Postgres modules must not re-export symbols of the static libraries they
+    # embed (fc, boost, hive_protocol): when two modules (libhfm, query_supervisor)
+    # both export e.g. fc::cout_ptr, the dynamic linker binds both to one storage
+    # and both run an exit-time destructor on it - double destruction, observed as
+    # "corrupted double-linked list"/SIGABRT of the backend at connection exit.
+    # Only the module's own object files (the PG entry points) stay exported.
+    TARGET_LINK_OPTIONS( ${target_name} PRIVATE "LINKER:--exclude-libs,ALL" )
 
     SETUP_COMPILER( ${target_name} )
     SETUP_CLANG_TIDY( ${target_name} )
