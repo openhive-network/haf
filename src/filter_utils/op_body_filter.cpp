@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cstdint>
 #include <hive/plugins/sql_serializer/blockchain_data_filter.hpp>
 

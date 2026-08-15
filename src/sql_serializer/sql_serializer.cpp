@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cstdint>
 #include <hive/plugins/sql_serializer/sql_serializer_plugin.hpp>
 
@@ -18,6 +19,7 @@
 #include <hive/chain/util/type_registrar_definition.hpp>
 
 #include <hive/chain/notifications.hpp>
+#include <hive/chain/detail/state/reward_fund_object.hpp>
 #include <hive/chain/detail/state/witness_objects.hpp>
 #include <hive/chain/index.hpp>
 
@@ -784,6 +786,13 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
 
     const hive::chain::dynamic_global_property_object& dgpo = chain_db.get_dynamic_global_properties();
 
+    /* dgpo no longer tracks the global reward fund (it lives in reward_fund_object from
+       genesis since hive 0a4b7c445); keep the historical column semantics: fund balance
+       before HF17, zero afterwards (the old dgpo field was zeroed at HF17). */
+    const hive::protocol::HIVE_asset total_reward_fund_hive =
+      chain_db.has_hardfork( HIVE_HARDFORK_0_17__771 ) ?
+      hive::protocol::HIVE_asset() : chain_db.get_reward_fund().get_reward_balance();
+
     currently_caching_data->total_size += note.block_id.data_size() + sizeof(note.block_num);
     currently_caching_data->blocks.emplace_back(
       note.block_id,
@@ -796,18 +805,18 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
       block_header.witness_signature,
       witness_ptr->signing_key,
 
-      dgpo.hbd_interest_rate,
+      dgpo.get_hbd_interest_rate(),
 
-      dgpo.total_vesting_shares,
-      dgpo.total_vesting_fund_hive,
+      dgpo.get_total_vesting_shares(),
+      dgpo.get_total_vesting_fund_hive(),
 
-      dgpo.total_reward_fund_hive,
+      total_reward_fund_hive,
 
-      dgpo.virtual_supply,
-      dgpo.current_supply,
+      dgpo.get_virtual_supply(),
+      dgpo.get_current_supply(),
 
-      dgpo.current_hbd_supply,
-      dgpo.init_hbd_supply
+      dgpo.get_current_hbd_supply(),
+      dgpo.get_initial_hbd_supply()
       );
 
     _custom_json_cache.flush_pending( db_url, theApp );
