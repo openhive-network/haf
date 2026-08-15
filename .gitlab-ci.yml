@@ -1327,6 +1327,8 @@ replay_with_keyauths:
       - "replay_with_keyauths.log"
       - "node_logs.log"
       - "node_logs1.log"
+      - "pg_logs/"
+    when: always
   tags:
     - public-runner-docker
 
@@ -1348,6 +1350,8 @@ replay_with_json_metadata:
       - "replay_with_json_metadata.log"
       - "node_logs.log"
       - "node_logs1.log"
+      - "pg_logs/"
+    when: always
   tags:
     - public-runner-docker
 
