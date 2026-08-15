@@ -135,12 +135,12 @@ def wait_for_irreversible_progress(node, block_num):
 
 
 def get_head_block(node):
-    head_block_number = node.api.database.get_dynamic_global_properties()["head_block_number"]
+    head_block_number = node.api.database.get_dynamic_global_properties().head_block_number
     return head_block_number
 
 
 def get_irreversible_block(node):
-    irreversible_block_num = node.api.database.get_dynamic_global_properties()["last_irreversible_block_num"]
+    irreversible_block_num = node.api.database.get_dynamic_global_properties().last_irreversible_block_num
     return irreversible_block_num
 
 
