@@ -42,10 +42,11 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3-bs4 python3-lxml && \
     # Install Tokenizers (~48MB) for hivesense
     python3 -m pip install --target /usr/lib/python3/dist-packages --break-system-packages tokenizers pysbd base58 && \
-    # Install ParadeDB pg_search extension for BM25 search
-    # TODO: switch to the -resolute_ asset when bumping pg_search to >= 0.25
-    # (v0.21.13 only ships noble builds; the Rust extension runs fine on 26.04)
-    curl -L "https://github.com/paradedb/paradedb/releases/download/v0.21.13/postgresql-${POSTGRES_VERSION}-pg-search_0.21.13-1PARADEDB-noble_amd64.deb" -o /tmp/pg_search.deb && \
+    # Install ParadeDB pg_search extension for BM25 search.
+    # Must be the resolute build: the noble .deb links libicuuc.so.74, which
+    # does not exist on 26.04 (ICU 76) - the package installs but
+    # CREATE EXTENSION fails with "could not load library" (hivemind#340).
+    curl -L "https://github.com/paradedb/paradedb/releases/download/v0.25.3/postgresql-${POSTGRES_VERSION}-pg-search_0.25.3-1PARADEDB-resolute_amd64.deb" -o /tmp/pg_search.deb && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y /tmp/pg_search.deb && \
     rm /tmp/pg_search.deb && \
     apt-get remove -y gnupg curl && \
