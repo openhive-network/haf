@@ -12,7 +12,9 @@ POSTGRES_VERSION="${POSTGRES_VERSION:-17}"
 sudo apt-get install -y git cmake ninja-build g++ python3 python3-dev python3-venv python3-pip python3-jinja2 postgresql-server-dev-${POSTGRES_VERSION} \
   liburing-dev libboost-all-dev libssl-dev libbz2-dev libsnappy-dev libpqxx-dev libreadline-dev zopfli libzstd-dev libjitterentropy3-dev
 # Install pexpect via pip for Python 3.14 (apt package is for system Python 3.12)
-python3 -m pip install pexpect
+# Newer CI images enforce PEP 668 (externally-managed-environment); the flag is
+# unknown to older pip, so fall back to the bare install there.
+python3 -m pip install --break-system-packages pexpect 2>/dev/null || python3 -m pip install pexpect
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTPATH/.."
