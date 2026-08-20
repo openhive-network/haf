@@ -549,7 +549,19 @@ BEGIN
         -- NOTIFY from hive.push_block wakes this call. The 4 s timeout
         -- (> 3 s block interval) is the fallback while the LISTEN is not
         -- yet effective and a safety net for missed signals.
-        PERFORM hive.wait_for_new_block( 4000 );
+        -- Issue #341 mitigation: these app sessions never return to idle
+        -- (eternal CALL main()), so they can never consume their LISTEN
+        -- notifications and PostgreSQL keeps re-signalling them as queue
+        -- laggards -- the latch wake above can fire hundreds of times per
+        -- second, turning the empty-iteration path into a busy-spin. Until
+        -- the loop is restructured (proper fix tracked in #341), floor
+        -- latch-woken empty iterations at 0.25 s. Worst case this adds
+        -- 0.25 s of processing latency and a 0.25 s xmin pin per iteration,
+        -- both well under the pre-#328 pg_sleep(1.5) polling it degrades to;
+        -- a genuine timeout (no wake) needs no extra sleep.
+        IF hive.wait_for_new_block( 4000 ) THEN
+            PERFORM pg_sleep( 0.25 );
+        END IF;
         RETURN NULL;
     END IF;
 
@@ -600,7 +612,19 @@ BEGIN
             -- wakes this call. The 4 s timeout (> 3 s block interval) is the
             -- fallback while the LISTEN is not yet effective and a safety
             -- net for missed signals.
-            PERFORM hive.wait_for_new_block( 4000 );
+            -- Issue #341 mitigation: these app sessions never return to idle
+            -- (eternal CALL main()), so they can never consume their LISTEN
+            -- notifications and PostgreSQL keeps re-signalling them as queue
+            -- laggards -- the latch wake above can fire hundreds of times per
+            -- second, turning the empty-iteration path into a busy-spin. Until
+            -- the loop is restructured (proper fix tracked in #341), floor
+            -- latch-woken empty iterations at 0.25 s. Worst case this adds
+            -- 0.25 s of processing latency and a 0.25 s xmin pin per iteration,
+            -- both well under the pre-#328 pg_sleep(1.5) polling it degrades to;
+            -- a genuine timeout (no wake) needs no extra sleep.
+            IF hive.wait_for_new_block( 4000 ) THEN
+                PERFORM pg_sleep( 0.25 );
+            END IF;
             EXIT;
         END IF;
 
