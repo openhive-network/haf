@@ -116,6 +116,12 @@ namespace hive::plugins::sql_serializer {
       std::shared_ptr< data_dumper > _dumper;
       std::shared_ptr< flush_trigger > _trigger;
       int32_t _irreversible_block_num;
+      /// A previous run left the hafd indexes dropped (interrupted massive sync);
+      /// re-dumping over its data via P2P would corrupt it (issue #340).
+      bool _prior_massive_sync_interrupted = false;
+      /// Highest block committed to hafd.blocks by previous runs, read at startup;
+      /// P2P entry that would re-dump at or below it is refused (issue #340).
+      uint32_t _psql_head_at_startup = 0;
       indexes_controler _indexes_controler;
       write_ahead_log_manager& _write_ahead_log;
 
