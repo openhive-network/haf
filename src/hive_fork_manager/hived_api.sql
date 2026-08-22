@@ -270,6 +270,28 @@ END;
 $BODY$
 ;
 
+CREATE OR REPLACE FUNCTION hive.is_interrupted_massive_sync()
+    RETURNS BOOL
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+BEGIN
+    -- TRUE when a previous run dropped the hafd table indexes for massive sync and
+    -- never completed the restore (context 0 rows are hived's own bookkeeping;
+    -- app-registered index requests carry their app's context id and are ignored
+    -- here). Blocks dumped by such a run cannot be safely extended: hived's
+    -- persisted state may trail the rows already committed here, and resuming
+    -- re-dumps the overlap into constraint-less tables (issue #340). An empty
+    -- hafd.blocks means nothing was dumped yet, so restarting from genesis is
+    -- equivalent to a fresh start and remains allowed.
+    RETURN EXISTS ( SELECT 1 FROM hafd.indexes_constraints
+                    WHERE 0 = ANY( contexts ) AND status <> 'created' )
+       AND EXISTS ( SELECT 1 FROM hafd.blocks );
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.is_irreversible_dirty()
     RETURNS BOOL
     LANGUAGE plpgsql

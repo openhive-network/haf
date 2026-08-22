@@ -173,6 +173,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.set_irreversible_dirty()
     , hive.set_irreversible_not_dirty()
     , hive.is_irreversible_dirty()
+    , hive.is_interrupted_massive_sync()
     , hive.disable_fk_of_irreversible()
     , hive.enable_fk_of_irreversible()
     , hive.save_and_drop_constraints( in _table_schema TEXT, in _table_name TEXT )

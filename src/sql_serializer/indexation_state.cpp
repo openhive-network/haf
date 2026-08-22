@@ -7,12 +7,16 @@
 #include <hive/plugins/sql_serializer/fake_data_dumper.h>
 #include <hive/plugins/sql_serializer/livesync_data_dumper.h>
 #include <hive/plugins/sql_serializer/reindex_data_dumper.h>
+#include <hive/plugins/sql_serializer/queries_commit_data_processor.h>
 #include <hive/plugins/sql_serializer/all_accounts_dumper.h>
 
 #include <fc/exception/exception.hpp>
 #include <fc/log/logger.hpp>
 
 #include <exception>
+
+#include <unistd.h>
+#include <signal.h>
 #include <type_traits>
 #include <thread>
 
@@ -196,6 +200,28 @@ indexation_state::indexation_state(
   , _write_ahead_log{write_ahead_log}
 {
   FC_ASSERT( _psql_first_block >= 1, "psql-first-block=${v} < 1", ("v", _psql_first_block) );
+
+  /* Detect an interrupted massive sync from a previous run up front, so a later
+   * attempt to enter a massive-class state can be refused (issue #340). */
+  queries_commit_data_processor interrupted_massive_checker(
+      _db_url
+    , "Check for interrupted massive sync"
+    , "massivechk"
+    , [this](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+        pqxx::result data = tx.exec(
+          "SELECT hive.is_interrupted_massive_sync() as _interrupted"
+          ", ( SELECT COALESCE( MAX( num ), 0 ) FROM hafd.blocks ) as _psql_head;" );
+        FC_ASSERT( !data.empty() && data.size() == 1, "No response from database" );
+        _prior_massive_sync_interrupted = data[0][ "_interrupted" ].as<bool>();
+        _psql_head_at_startup = data[0][ "_psql_head" ].as<uint32_t>();
+        return data_processor::data_processing_status();
+      }
+    , nullptr
+    , theApp
+  );
+  interrupted_massive_checker.trigger( data_processor::data_chunk_ptr(), 0 );
+  interrupted_massive_checker.join();
+
   cached_data_t empty_data{0};
   set_state( INDEXATION::START );
   ilog( "Entered START sync state" );
@@ -334,6 +360,45 @@ indexation_state::update_state(
   , uint32_t last_block_num, uint32_t number_of_blocks_to_add
 ) {
   FC_ASSERT( get_state() != INDEXATION::LIVE, "Move from LIVE state is illegal" );
+
+  /* Refuse to resume an interrupted massive sync over P2P when it would re-dump
+   * already-committed blocks (issue #340): after an interruption hived's persisted
+   * state can trail the rows the previous run committed, and the P2P massive dumper
+   * has no skip-already-dumped protection - resuming re-inserts the overlap into the
+   * constraint-less tables, and the corruption only surfaces when restore_indexes
+   * fails at the end of the whole sync. Make the failure immediate and explicit
+   * instead. Equally bad is hived resuming AHEAD of the dumped head (commits lost in
+   * the interruption): the gap becomes a silent hole that restore_indexes cannot even
+   * detect. Only an exact continuation - the first incoming block directly following
+   * the dumped head, the common case for a graceful stop on a quiet chain - is safe
+   * and stays allowed.
+   * Deliberately NOT guarded:
+   *  - REINDEX entry: replay resume skips already-dumped blocks and is a supported,
+   *    CI-tested flow (replay_with_restart) - and is also the documented recovery
+   *    for an interrupted P2P massive sync;
+   *  - REINDEX -> P2P mid-run continuation: by then this run's replay has realigned
+   *    hived with the dumped data;
+   *  - LIVE entry: a completed sync that crashed during index restoration recovers
+   *    by rebuilding indexes. */
+  if ( state == INDEXATION::P2P && get_state() != INDEXATION::REINDEX && _prior_massive_sync_interrupted
+       && last_block_num != _psql_head_at_startup + 1 ) {
+    /* A plain throw is not enough here: block-notification handlers run under a
+     * catch-and-log wrapper (database.cpp notify_pre_apply_block), so an exception
+     * alone lets hived keep syncing while HAF dumps nothing. Follow the
+     * data_processor::kill_node pattern - signal our own process for an orderly
+     * shutdown - and still throw to abort this handler invocation. */
+    elog( "A previous massive sync was interrupted before its indexes were restored, and continuing "
+          "to sync it over P2P would corrupt the data: blocks are dumped up to ${dumped} but the "
+          "sync resumes at block ${incoming} (a lower value re-dumps duplicate rows, a higher one "
+          "leaves a silent hole). Either replay from a block_log (replay realigns with the "
+          "already-dumped data), or wipe the HAF database and sync from scratch.",
+          ( "incoming", last_block_num )( "dumped", _psql_head_at_startup ) );
+    kill( getpid(), SIGINT );
+    FC_THROW_EXCEPTION( fc::assert_exception,
+      "Refusing to resume interrupted massive sync: dumped head ${dumped}, incoming block ${incoming}",
+      ( "incoming", last_block_num )( "dumped", _psql_head_at_startup ) );
+  }
+
   switch ( state ) {
     case INDEXATION::START:
       break;
