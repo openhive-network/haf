@@ -192,7 +192,14 @@ END;
 $body$;
 
 
-CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _contexts hive.contexts_group, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL, _limit INTEGER = NULL )
+-- _wait: TRUE (default) waits inside the database for the next block when there
+--        is nothing to process, as the classic eternal CALL main() loops expect.
+--        FALSE returns NULL immediately; the caller then idles on its own
+--        connection until a NOTIFY on haf_new_block / haf_new_irreversible
+--        arrives (see Readme: block processing drivers).
+-- Applications registered with hive.app_register get NULL while paused, and are
+-- never given a block that one of their dependencies has not committed yet.
+CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _contexts hive.contexts_group, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL, _limit INTEGER = NULL, _wait BOOLEAN = TRUE )
 LANGUAGE 'plpgsql'
 AS
 $body$
@@ -206,6 +213,7 @@ DECLARE
     __last_shadow_vacuum_block INTEGER;
     __vacuum_performed BOOLEAN := FALSE;
     __had_prior_xact BOOLEAN;
+    __block_limit INTEGER;
 BEGIN
     -- Whether the caller invoked us with a transaction already carrying an
     -- assigned XID. This is the same condition that has always gated the
@@ -271,13 +279,25 @@ BEGIN
         END IF;
     END IF;
 
+    IF hive.app_is_paused( _contexts ) THEN
+        IF _wait THEN
+            PERFORM pg_sleep( 1 );
+        END IF;
+        RETURN;
+    END IF;
+
     IF NOT hive.is_instance_ready() THEN
         PERFORM hive.set_waiting_for_haf_stage( _contexts );
-        PERFORM pg_sleep( 0.5 );
+        IF _wait THEN
+            PERFORM pg_sleep( 0.5 );
+        END IF;
         RETURN;
     END IF;
 
     ASSERT _override_max_batch IS NULL OR _override_max_batch > 0, 'Custom size of  blocks range is less than 1';
+
+    -- dependency gating: never deliver a block a dependency has not committed
+    __block_limit := hive.app_dependencies_block_limit( _contexts );
 
     IF EXISTS( SELECT 1 FROM hafd.contexts hc WHERE hc.name = ANY(_contexts) AND hc.stages = NULL )
     THEN
@@ -312,7 +332,7 @@ BEGIN
         -- app next block return range of irreversible blocks which are already synced
         -- but sync is in progress in sqlserializer and we may got millions of blocks
         -- here is no sense to switch the contexts
-        SELECT * FROM hive.app_next_block( _contexts ) INTO _blocks_range;
+        SELECT * FROM hive.app_next_block( _contexts, _wait, __block_limit ) INTO _blocks_range;
         IF _blocks_range IS NULL
         THEN
             RETURN;
@@ -331,6 +351,7 @@ BEGIN
               )
             , COALESCE( _limit, __lead_context_state.end_block_range)
             , __lead_context_state.end_block_range
+            , __block_limit
         );
     ELSE
         -- we continue iterating blocks in range
@@ -343,6 +364,15 @@ BEGIN
 
         _blocks_range.first_block = __lead_context_state.current_batch_end + 1;
 
+        IF _blocks_range.first_block > __block_limit THEN
+            -- a dependency has not committed the next block yet
+            _blocks_range := NULL;
+            IF _wait THEN
+                PERFORM pg_sleep( 0.25 );
+            END IF;
+            RETURN;
+        END IF;
+
         _blocks_range.last_block := LEAST(
               COALESCE(
                     _blocks_range.first_block + _override_max_batch - 1
@@ -351,6 +381,7 @@ BEGIN
             , COALESCE( _limit, __lead_context_state.end_block_range)
             , __lead_context_state.end_block_range
             , hive.get_irreversible_head_block()
+            , __block_limit
         );
     END IF;
 
@@ -369,11 +400,11 @@ BEGIN
 END;
 $body$;
 
-CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _context hafd.context_name, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL, _limit INTEGER = NULL )
+CREATE OR REPLACE PROCEDURE hive.app_next_iteration( _context hafd.context_name, _blocks_range OUT hive.blocks_range, _override_max_batch INTEGER = NULL, _limit INTEGER = NULL, _wait BOOLEAN = TRUE )
     LANGUAGE 'plpgsql'
 AS
 $body$
 BEGIN
-    CALL hive.app_next_iteration( ARRAY[ _context ], _blocks_range, _override_max_batch, _limit );
+    CALL hive.app_next_iteration( ARRAY[ _context ], _blocks_range, _override_max_batch, _limit, _wait );
 END;
 $body$;

@@ -195,7 +195,13 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names hive.contexts_group )
+-- _wait: when FALSE, return NULL immediately instead of waiting inside the
+--        database for the next block (for drivers that idle on their own
+--        connection, see Readme: block processing drivers).
+-- _block_limit: highest block that may be delivered; NULL computes it from the
+--        application registry (hive.app_dependencies_block_limit).
+-- Paused applications (hive.app_pause) get NULL.
+CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names hive.contexts_group, _wait BOOLEAN = TRUE, _block_limit INT = NULL )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
     VOLATILE
@@ -203,6 +209,7 @@ AS
 $BODY$
 DECLARE
     __hive_sync_state hafd.sync_state;
+    __block_limit INT := COALESCE( _block_limit, hive.app_dependencies_block_limit( _context_names ) );
 BEGIN
     PERFORM hive.app_check_contexts_synchronized( _context_names );
 
@@ -211,16 +218,23 @@ BEGIN
     SET last_active_at = NOW()
     WHERE name =ANY(_context_names);
 
+    IF hive.app_is_paused( _context_names ) THEN
+        IF _wait THEN
+            PERFORM pg_sleep( 1 );
+        END IF;
+        RETURN NULL;
+    END IF;
+
     SELECT hive.get_sync_state() INTO __hive_sync_state;
 
     -- if there there is  registered table for given context
     -- In lite mode, always use the non-forking path (defense-in-depth)
     IF NOT hive.is_lite_mode() AND hive.app_are_forking( _context_names ) AND ( __hive_sync_state = 'LIVE' OR NOT hive.is_pruning_enabled() )
     THEN
-        RETURN hive.app_next_block_forking_app( _context_names );
+        RETURN hive.app_next_block_forking_app( _context_names, _wait, __block_limit );
     END IF;
 
-    RETURN hive.app_next_block_non_forking_app( _context_names );
+    RETURN hive.app_next_block_non_forking_app( _context_names, _wait, __block_limit );
 END;
 $BODY$
 ;

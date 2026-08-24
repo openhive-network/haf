@@ -75,6 +75,49 @@ determine the range of blocks to synchronize, commit, and stop the application.
 5. At the beginning of 'hive.app_next_iteration', a transaction commit is issued.
 6. If the application needs to be stopped, then stop processing immediately after calling 'hive.app_next_iteration'.
 
+#### Application registry: dependencies, pausing and block-processing drivers
+An application is a group of contexts moved together by one loop. Registering it lets the
+fork manager coordinate applications with each other (issue #341):
+
+```sql
+SELECT hive.app_register( 'hivesense', ARRAY[ 'hivesense_app' ], _process_procedure => 'hivesense_app.process_blocks' );
+SELECT hive.app_add_dependency( 'hivesense', 'hivemind' );
+```
+
+* `hive.app_register( _name, _contexts, _process_procedure )` registers (or re-registers, which is
+  safe to run from install scripts) an application owned by the caller. Contexts may belong to a
+  single application. `_process_procedure` names a procedure taking `( hive.blocks_range )` that a
+  generic block-processing driver calls with every delivered range; leave it NULL for applications
+  that drive their own loop (e.g. with several connections).
+* `hive.app_add_dependency( _name, _depends_on )` / `hive.app_remove_dependency` declare that
+  `_name` must never process a block before `_depends_on` has processed *and committed* it.
+  Dependencies form a DAG (cycles are rejected). `hive.app_next_iteration` and `hive.app_next_block`
+  enforce this by capping every delivered range at the lowest `current_block_num` among the
+  dependencies' contexts (`hive.app_dependencies_block_limit`); a dependent application simply gets
+  NULL (nothing to do) until its dependency catches up. Since `current_block_num` is committed
+  together with the application's work for that block, the dependency's tables are complete up to
+  every block the dependent sees. Processing order and parallelism follow from this alone:
+  independent applications run concurrently, dependent ones trail their dependencies by at most
+  one iteration, and nobody has to sequence them.
+* `hive.app_pause( _name )` / `hive.app_resume( _name )` stop and restart block delivery for an
+  application without stopping its process: while paused, `hive.app_next_iteration` returns NULL.
+  `haf_maintainer` may pause or resume any application; owners may pause their own.
+* `hive.app_unregister( _name )` removes the registration (removing an application's last context
+  does this implicitly). Applications that depended on it lose that gate, which is logged as a warning.
+
+`hive.app_next_iteration( ..., _wait => FALSE )` returns NULL immediately when there is nothing to
+process instead of waiting inside the database. This is the entry point for *block-processing
+drivers*: a client that runs `LISTEN haf_new_block; LISTEN haf_new_irreversible;` once, then loops
+`CALL hive.app_next_iteration( ..., _wait => FALSE )` → `CALL <process_procedure>( range )` while
+ranges arrive, and otherwise idles on its connection until a notification (or a short timeout, e.g.
+1 s, since dependency progress does not notify) wakes it. An idle client consumes its notifications
+(which a session stuck in an eternal `CALL main()` never can), the backend shows as idle in
+`pg_stat_activity`, and no transaction is ever held open across a wait. `hive.push_block` notifies
+`haf_new_block`, `hive.set_irreversible` notifies `haf_new_irreversible`. The default
+`_wait => TRUE` keeps the classic eternal `CALL main()` loops working unchanged.
+
+The registry lives in `hafd.applications` and `hafd.application_dependencies`.
+
 #### Old still supported, most flexible but complicated algorithm
 For the sake of compliance with applications that used the old fork manager version, the old method of
 block synchronization is still supported. It is a complicated algorithm in which the application 

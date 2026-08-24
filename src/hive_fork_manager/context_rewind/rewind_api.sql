@@ -115,6 +115,8 @@ BEGIN
     FROM hafd.registered_tables hrt
     WHERE hrt.context_id = __context_id;
 
+    PERFORM hive.app_registry_context_removed( _name );
+
     DELETE FROM hafd.contexts_attachment WHERE context_id = __context_id;
     DELETE FROM hafd.contexts WHERE id = __context_id;
 

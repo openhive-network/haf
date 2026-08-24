@@ -71,6 +71,8 @@ GRANT ALL ON hafd.registered_tables TO hive_applications_group;
 GRANT ALL ON hafd.triggers TO hive_applications_group;
 GRANT ALL ON hafd.state_providers_registered TO hive_applications_group;
 GRANT ALL ON hafd.vacuum_requests TO hive_applications_group;
+GRANT ALL ON hafd.applications TO hive_applications_group;
+GRANT ALL ON hafd.application_dependencies TO hive_applications_group;
 
 -- protect an application rows aginst other applications
 REVOKE UPDATE( is_forking, owner ) ON hafd.contexts FROM GROUP hive_applications_group;
@@ -111,6 +113,31 @@ CREATE POLICY sp_applications_delete_hive_contexts_attachment ON hafd.contexts_a
 
 DROP POLICY IF EXISTS sp_applications_hive_state_providers ON hafd.state_providers_registered CASCADE;
 CREATE POLICY sp_applications_hive_state_providers ON hafd.state_providers_registered FOR SELECT TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
+
+-- application registry (issue #341): everyone in hive_applications_group may read it
+-- (dependency gating needs other applications' rows), only the owner (or a role that
+-- can impersonate the owner) may register/modify/unregister; haf_maintainer may
+-- pause/resume any application.
+REVOKE UPDATE( owner ) ON hafd.applications FROM GROUP hive_applications_group;
+ALTER TABLE hafd.applications ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS dp_hive_applications ON hafd.applications CASCADE;
+CREATE POLICY dp_hive_applications ON hafd.applications FOR INSERT WITH CHECK ( current_user = owner );
+DROP POLICY IF EXISTS sp_applications_hive_applications ON hafd.applications CASCADE;
+CREATE POLICY sp_applications_hive_applications ON hafd.applications FOR SELECT TO hive_applications_group, haf_maintainer USING( TRUE );
+DROP POLICY IF EXISTS sp_applications_update_hive_applications ON hafd.applications CASCADE;
+CREATE POLICY sp_applications_update_hive_applications ON hafd.applications FOR UPDATE TO hive_applications_group USING( TRUE ) WITH CHECK( hive.can_impersonate(current_user, owner) );
+DROP POLICY IF EXISTS sp_maintainer_update_hive_applications ON hafd.applications CASCADE;
+CREATE POLICY sp_maintainer_update_hive_applications ON hafd.applications FOR UPDATE TO haf_maintainer USING( TRUE ) WITH CHECK( TRUE );
+DROP POLICY IF EXISTS sp_applications_delete_hive_applications ON hafd.applications CASCADE;
+CREATE POLICY sp_applications_delete_hive_applications ON hafd.applications FOR DELETE TO hive_applications_group USING( hive.can_impersonate(current_user, owner) );
+
+ALTER TABLE hafd.application_dependencies ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS sp_applications_hive_application_dependencies ON hafd.application_dependencies CASCADE;
+CREATE POLICY sp_applications_hive_application_dependencies ON hafd.application_dependencies FOR SELECT TO hive_applications_group, haf_maintainer USING( TRUE );
+DROP POLICY IF EXISTS mp_applications_hive_application_dependencies ON hafd.application_dependencies CASCADE;
+CREATE POLICY mp_applications_hive_application_dependencies ON hafd.application_dependencies FOR ALL TO hive_applications_group
+    USING( EXISTS( SELECT 1 FROM hafd.applications a WHERE a.name = application AND hive.can_impersonate(current_user, a.owner) ) )
+    WITH CHECK( EXISTS( SELECT 1 FROM hafd.applications a WHERE a.name = application AND hive.can_impersonate(current_user, a.owner) ) );
 
 ALTER TABLE hafd.registered_tables ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS policy_hive_registered_tables ON hafd.registered_tables CASCADE;
@@ -255,6 +282,10 @@ GRANT USAGE ON SCHEMA hive to haf_maintainer;
 GRANT EXECUTE ON PROCEDURE hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL ) TO haf_maintainer;
 GRANT EXECUTE ON FUNCTION hive.is_instance_ready() TO haf_maintainer;
 GRANT ALL ON hafd.contexts TO haf_maintainer;
+GRANT ALL ON hafd.applications TO haf_maintainer;
+GRANT SELECT ON hafd.application_dependencies TO haf_maintainer;
+GRANT EXECUTE ON FUNCTION hive.app_pause( TEXT ) TO haf_maintainer;
+GRANT EXECUTE ON FUNCTION hive.app_resume( TEXT ) TO haf_maintainer;
 GRANT SELECT ON hafd.contexts_attachment TO haf_maintainer;
 GRANT SELECT ON hafd.indexes_constraints TO haf_maintainer;
 
