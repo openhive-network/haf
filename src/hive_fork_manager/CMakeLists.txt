@@ -7,6 +7,7 @@ ADD_PSQL_EXTENSION(
              context_rewind/data_schema_types.sql
              application_loop/stages.sql
              context_rewind/data_schema.sql
+             applications.sql
              events_queue.sql
              forks.sql
              app_context.sql
@@ -63,6 +64,7 @@ ADD_PSQL_EXTENSION(
             app_api_impl.sql
             hived_api.sql
             app_api.sql
+            app_registry.sql
             api_helpers/block_api_support.sql
             authorization.sql
             get_impacted_accounts.sql
