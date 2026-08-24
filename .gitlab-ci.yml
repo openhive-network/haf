@@ -318,7 +318,16 @@ detect_changes:
           echo "MR pipeline: comparing against target branch"
         elif [[ "${CI_PIPELINE_SOURCE:-}" == "push" ]]; then
           BASE_SHA="${CI_COMMIT_BEFORE_SHA:-HEAD~1}"
-          echo "Push pipeline: comparing against pre-push state ($BASE_SHA)"
+          # After a force-push CI_COMMIT_BEFORE_SHA is the replaced head (all zeros for a
+          # new branch): diffing against it shows only what the rewrite changed, not what
+          # the branch changes, and the pipeline can be misclassified as a SQL-only or
+          # test-only change. Fall back to the merge-base with develop in that case.
+          if [[ "$BASE_SHA" =~ ^0+$ ]] || ! git merge-base --is-ancestor "$BASE_SHA" HEAD 2>/dev/null; then
+            BASE_SHA=$(git merge-base HEAD origin/develop 2>/dev/null || echo "HEAD~1")
+            echo "Push pipeline: pre-push state is not an ancestor of HEAD (force-push or new branch), comparing against develop ($BASE_SHA)"
+          else
+            echo "Push pipeline: comparing against pre-push state ($BASE_SHA)"
+          fi
         else
           BASE_SHA=$(git merge-base HEAD origin/develop 2>/dev/null || echo "HEAD~1")
           echo "Other pipeline: comparing against develop"
@@ -350,6 +359,24 @@ detect_changes:
         ANY_SQL_CHANGED=$(echo "$CHANGED_FILES" | grep -E "$SQL_PATTERNS" || true)
         NON_SQL_SOURCE=$(echo "$NON_SKIP_FILES" | grep -vE "$SQL_PATTERNS" || true)
 
+        # SQL files listed under SCHEMA_SOURCES define the persistent hafd schema
+        # (tables). The thin overlay reuses cached replay data and updates the
+        # extension in place, which the schema-hash check refuses when tables
+        # changed - such changes need a full build and a fresh replay.
+        SCHEMA_SQL_CHANGED=""
+        if [[ -n "$SQL_CHANGED" ]]; then
+          SCHEMA_SOURCES=$(awk '
+            { sub(/#.*/, "") }
+            /ADD_PSQL_EXTENSION[[:space:]]*\(/ { in_macro = 1 }
+            in_macro && /^[[:space:]]*\)/ { in_macro = 0; mode = "" }
+            !in_macro { next }
+            { for (i = 1; i <= NF; i++) {
+                if ($i == "SCHEMA_SOURCES" || $i == "DEPLOY_SOURCES" || $i == "NAME") { mode = $i; continue }
+                if (mode == "SCHEMA_SOURCES" && $i ~ /\.sql$/) print "src/hive_fork_manager/" $i
+            } }' src/hive_fork_manager/CMakeLists.txt)
+          SCHEMA_SQL_CHANGED=$(grep -Fx -f <(echo "$SCHEMA_SOURCES") <<< "$SQL_CHANGED" || true)
+        fi
+
         # Determine build mode
         SQL_ONLY_CHANGE=false
         if [[ -z "$NON_SKIP_FILES" ]]; then
@@ -358,13 +385,18 @@ detect_changes:
           CAN_SKIP_REPLAY=true
           echo ""
           echo "=== Can skip build entirely (only tests/docs changed) ==="
-        elif [[ -z "$NON_SQL_SOURCE" && -n "$SQL_CHANGED" ]]; then
+        elif [[ -z "$NON_SQL_SOURCE" && -n "$SQL_CHANGED" && -z "$SCHEMA_SQL_CHANGED" ]]; then
           # Only SQL files changed (plus maybe tests/docs) - use thin overlay
           SQL_ONLY_CHANGE=true
           echo ""
           echo "=== SQL-only change detected - will use thin overlay build ==="
           echo "SQL files changed:"
           echo "$SQL_CHANGED" | head -10
+        elif [[ -n "$SCHEMA_SQL_CHANGED" ]]; then
+          echo ""
+          echo "=== Full build and replay required (hafd schema sources changed) ==="
+          echo "Schema source files changed:"
+          echo "$SCHEMA_SQL_CHANGED" | head -20
         else
           echo ""
           echo "=== Full build required (C++ source changed) ==="
