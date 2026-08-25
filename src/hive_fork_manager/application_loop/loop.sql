@@ -192,6 +192,50 @@ END;
 $body$;
 
 
+-- Periodic maintenance an application loop performs between transactions: VACUUM
+-- FULL of the shadow tables every 1200 blocks during live sync (the shadow tables
+-- see one row per changed row and are cleaned by hive.app_context_set_irreversible
+-- ... which leaves them bloated without this). Runs on its own connection, so it
+-- must be called outside the application's transaction: hive.app_next_iteration
+-- does this right after its COMMIT for the classic eternal CALL main() loops; a
+-- block-processing driver that owns the transaction (see Readme) calls it itself
+-- after committing an iteration. Returns TRUE when a vacuum was performed.
+CREATE OR REPLACE FUNCTION hive.app_perform_maintenance( _contexts hive.contexts_group )
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __lead_context_name hafd.context_name := _contexts[ 1 ];
+    __current_block_num INTEGER;
+    __last_shadow_vacuum_block INTEGER;
+BEGIN
+    SELECT current_block_num, (loop).last_shadow_vacuum_block
+    INTO __current_block_num, __last_shadow_vacuum_block
+    FROM hafd.contexts WHERE name = __lead_context_name;
+
+    IF hive.is_lite_schema() OR NOT hive.is_livesync( _contexts )
+       OR __current_block_num % 1200 != 0
+       OR ( __last_shadow_vacuum_block IS NOT NULL AND __current_block_num <= __last_shadow_vacuum_block )
+    THEN
+        RETURN FALSE;
+    END IF;
+
+    PERFORM hive.vacuum_shadow_table( rt.shadow_table_name )
+    FROM hafd.registered_tables AS rt
+    JOIN hafd.contexts AS c ON rt.context_id = c.id
+    WHERE c.name = __lead_context_name;
+
+    UPDATE hafd.contexts ctx
+    SET loop.last_shadow_vacuum_block = __current_block_num
+    WHERE ctx.name = ANY( _contexts );
+
+    RETURN TRUE;
+END;
+$BODY$
+;
+
 -- _wait: TRUE (default) waits inside the database for the next block when there
 --        is nothing to process, as the classic eternal CALL main() loops expect.
 --        FALSE returns NULL immediately; the caller then idles on its own
@@ -209,9 +253,6 @@ DECLARE
     __now TIMESTAMP := NOW();
     __previous_active_at_time TIMESTAMP;
     __hive_sync_state hafd.sync_state;
-    __current_block_num INTEGER;
-    __last_shadow_vacuum_block INTEGER;
-    __vacuum_performed BOOLEAN := FALSE;
     __had_prior_xact BOOLEAN;
     __block_limit INTEGER;
 BEGIN
@@ -238,19 +279,7 @@ BEGIN
     -- COMMIT follows the heartbeat UPDATE below, see issue #328.)
     IF __had_prior_xact THEN
         COMMIT;
-
-        SELECT current_block_num, (loop).last_shadow_vacuum_block
-        INTO __current_block_num, __last_shadow_vacuum_block
-        FROM hafd.contexts  WHERE name = __lead_context_name;
-
-        IF NOT hive.is_lite_schema() AND hive.is_livesync(_contexts) AND __current_block_num % 1200 = 0 AND (__last_shadow_vacuum_block IS NULL OR __current_block_num > __last_shadow_vacuum_block) THEN
-            PERFORM hive.vacuum_shadow_table(rt.shadow_table_name)
-            FROM hafd.registered_tables AS rt
-            JOIN hafd.contexts AS c ON rt.context_id = c.id
-            WHERE c.name = __lead_context_name;
-
-            __vacuum_performed := TRUE;
-        END IF;
+        PERFORM hive.app_perform_maintenance( _contexts );
     END IF;
 
     SELECT last_active_at INTO __previous_active_at_time
@@ -389,7 +418,6 @@ BEGIN
     SET
           loop.current_batch_end = _blocks_range.last_block
         , loop.end_block_range = __lead_context_state.end_block_range
-        , loop.last_shadow_vacuum_block = CASE WHEN __vacuum_performed THEN _blocks_range.last_block ELSE (ctx.loop).last_shadow_vacuum_block END
     WHERE ctx.name=ANY(_contexts);
 
     PERFORM hive.update_attachment( _contexts );
