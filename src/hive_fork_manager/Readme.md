@@ -115,6 +115,10 @@ ranges arrive, and otherwise idles on its connection until a notification (or a 
 `pg_stat_activity`, and no transaction is ever held open across a wait. `hive.push_block` notifies
 `haf_new_block`, `hive.set_irreversible` notifies `haf_new_irreversible`. The default
 `_wait => TRUE` keeps the classic eternal `CALL main()` loops working unchanged.
+A driver that owns the transaction (`BEGIN; CALL hive.app_next_iteration(...); CALL <process_procedure>(range);
+COMMIT`) must also call `hive.app_perform_maintenance( _contexts )` after committing: it performs the
+periodic shadow-table vacuum that `hive.app_next_iteration` can only do itself when it controls the
+transaction. A reference driver, `haf_app_driver.py`, ships with the `psql` client image.
 
 The registry lives in `hafd.applications` and `hafd.application_dependencies`.
 
