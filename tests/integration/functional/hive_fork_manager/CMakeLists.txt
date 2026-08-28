@@ -316,6 +316,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( application_loop/dependency_gating_massive.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/dependency_gating_live.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/pause_resume.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/dependency_completed_block_function.sql )
 SET_TESTS_PROPERTIES(
   test.functional.hive_fork_manager.application_loop.vacuum_shadow_tables
   test.functional.update.hive_fork_manager.application_loop.vacuum_shadow_tables

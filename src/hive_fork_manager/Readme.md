@@ -99,6 +99,11 @@ SELECT hive.app_add_dependency( 'hivesense', 'hivemind' );
   every block the dependent sees. Processing order and parallelism follow from this alone:
   independent applications run concurrently, dependent ones trail their dependencies by at most
   one iteration, and nobody has to sequence them.
+* An application whose loop does not commit its position together with its data (hivemind's
+  massive sync commits `current_block_num` before the batch, as a crash-recovery marker) passes
+  `_completed_block_function => '<schema>.<function>'` to `hive.app_register`: an INT function
+  returning the highest block whose data it has committed, used by the gating instead of its
+  contexts' `current_block_num`.
 * `hive.app_pause( _name )` / `hive.app_resume( _name )` stop and restart block delivery for an
   application without stopping its process: while paused, `hive.app_next_iteration` returns NULL.
   `haf_maintainer` may pause or resume any application; owners may pause their own.
