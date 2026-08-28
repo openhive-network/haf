@@ -18,6 +18,10 @@ CREATE TABLE IF NOT EXISTS hafd.applications(
     contexts TEXT[] NOT NULL,          -- contexts group; contexts[1] is the lead context
     process_procedure TEXT,            -- '<schema>.<procedure>' taking ( hive.blocks_range ), or NULL for
                                        -- self-driven applications that run their own loop
+    completed_block_function TEXT,     -- '<schema>.<function>' returning INT: the highest block whose data
+                                       -- this application has committed, for dependency gating; NULL means
+                                       -- the contexts' current_block_num (right for every loop that commits
+                                       -- the position together with the block's work)
     paused BOOL NOT NULL DEFAULT FALSE,
     owner NAME NOT NULL,
     CONSTRAINT pk_hive_applications PRIMARY KEY( name ),

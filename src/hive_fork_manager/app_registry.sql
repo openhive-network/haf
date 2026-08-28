@@ -3,7 +3,11 @@
 -- Registers (or re-registers, keeping the paused flag) an application: a group of
 -- contexts owned by the caller, and optionally the procedure a block-processing
 -- driver calls with each delivered range. Contexts may belong to one application only.
-CREATE OR REPLACE FUNCTION hive.app_register( _name TEXT, _contexts hive.contexts_group, _process_procedure TEXT = NULL )
+-- _completed_block_function: for applications whose committed position is not
+-- their contexts' current_block_num (e.g. a massive sync that commits the position
+-- before the batch's data), '<schema>.<function>' returning INT; see
+-- hive.app_dependencies_block_limit.
+CREATE OR REPLACE FUNCTION hive.app_register( _name TEXT, _contexts hive.contexts_group, _process_procedure TEXT = NULL, _completed_block_function TEXT = NULL )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -40,10 +44,14 @@ BEGIN
         RAISE EXCEPTION 'Cannot register application %: procedure %( hive.blocks_range ) does not exist', _name, _process_procedure;
     END IF;
 
-    INSERT INTO hafd.applications( name, contexts, process_procedure, owner )
-    VALUES ( _name, _contexts::TEXT[], _process_procedure, current_user )
+    IF _completed_block_function IS NOT NULL AND to_regprocedure( _completed_block_function || '()' ) IS NULL THEN
+        RAISE EXCEPTION 'Cannot register application %: function %() does not exist', _name, _completed_block_function;
+    END IF;
+
+    INSERT INTO hafd.applications( name, contexts, process_procedure, completed_block_function, owner )
+    VALUES ( _name, _contexts::TEXT[], _process_procedure, _completed_block_function, current_user )
     ON CONFLICT ( name ) DO UPDATE
-    SET contexts = EXCLUDED.contexts, process_procedure = EXCLUDED.process_procedure;
+    SET contexts = EXCLUDED.contexts, process_procedure = EXCLUDED.process_procedure, completed_block_function = EXCLUDED.completed_block_function;
 END;
 $BODY$
 ;
@@ -183,18 +191,39 @@ $BODY$
 -- application's work for that block (hive.app_next_iteration commits the previous
 -- iteration before advancing it), so other sessions observe it only once that work
 -- is committed: a value of N means "N is fully processed and visible".
+--
+-- A dependency whose loop does not commit its position together with its data
+-- registers a completed_block_function instead (e.g. hivemind's massive sync,
+-- which commits the position before the batch as a crash-recovery marker); its
+-- result is used in place of its contexts' current_block_num.
 CREATE OR REPLACE FUNCTION hive.app_dependencies_block_limit( _contexts hive.contexts_group )
     RETURNS INTEGER
-    LANGUAGE sql
+    LANGUAGE plpgsql
     STABLE
 AS
 $BODY$
-    SELECT MIN( dc.current_block_num )
-    FROM hafd.applications a
-    JOIN hafd.application_dependencies d ON d.application = a.name
-    JOIN hafd.applications dep ON dep.name = d.depends_on
-    JOIN hafd.contexts dc ON dc.name = ANY( dep.contexts )
-    WHERE a.contexts && _contexts::TEXT[];
+DECLARE
+    __dep RECORD;
+    __completed INTEGER;
+    __limit INTEGER;
+BEGIN
+    FOR __dep IN
+        SELECT dep.name, dep.contexts, dep.completed_block_function
+        FROM hafd.applications a
+        JOIN hafd.application_dependencies d ON d.application = a.name
+        JOIN hafd.applications dep ON dep.name = d.depends_on
+        WHERE a.contexts && _contexts::TEXT[]
+    LOOP
+        IF __dep.completed_block_function IS NOT NULL THEN
+            EXECUTE format( 'SELECT %s()', __dep.completed_block_function ) INTO __completed;
+        ELSE
+            SELECT MIN( dc.current_block_num ) INTO __completed
+            FROM hafd.contexts dc WHERE dc.name = ANY( __dep.contexts );
+        END IF;
+        __limit := LEAST( __limit, COALESCE( __completed, 0 ) );
+    END LOOP;
+    RETURN __limit;
+END;
 $BODY$
 ;
 
