@@ -336,7 +336,13 @@ BEGIN
     SELECT (hc.loop).* INTO __lead_context_state
     FROM hafd.contexts hc WHERE hc.name = __lead_context_name;
 
-    IF __lead_context_state IS NOT NULL
+    -- The alarm measures the time since the previous call, i.e. the previous
+    -- range's processing plus whatever the caller did in between. Loops that wait
+    -- for blocks inside the database (_wait) return here immediately, so that is
+    -- processing time; a driver that idles on its own connection between blocks
+    -- (_wait => FALSE) would trip it at every block interval, and measures the
+    -- processing time of each range itself instead.
+    IF _wait AND __lead_context_state IS NOT NULL
       AND ( __now - __previous_active_at_time ) >= (__lead_context_state).current_stage.processing_alarm_threshold
     THEN
         -- only lead context is reported

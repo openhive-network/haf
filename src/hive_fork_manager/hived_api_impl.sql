@@ -891,7 +891,9 @@ BEGIN
             AND table_name = _table_name
             AND last_vacuumed_time > NOW() - _min_interval
         ) THEN
-            RAISE NOTICE 'Vacuum request for table %.% ignored due to recent vacuum.', _schema_name, _table_name;
+            -- routine in live sync (applications ask after every block); keep it
+            -- out of application logs
+            RAISE DEBUG 'Vacuum request for table %.% ignored due to recent vacuum.', _schema_name, _table_name;
             RETURN;
         END IF;
     END IF;
