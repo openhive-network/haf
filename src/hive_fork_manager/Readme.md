@@ -86,7 +86,10 @@ SELECT hive.app_add_dependency( 'hivesense', 'hivemind' );
 
 * `hive.app_register( _name, _contexts, _process_procedure )` registers (or re-registers, which is
   safe to run from install scripts) an application owned by the caller. Contexts may belong to a
-  single application. `_process_procedure` names a procedure taking `( hive.blocks_range )` that a
+  single application. An application whose contexts are all already part of another application
+  (one embedded in it, like the balance tracker in haf_block_explorer, whose loop drives both) is
+  not registered: the call is a no-op, so the embedded application's install script can be re-run
+  on an installed database. `_process_procedure` names a procedure taking `( hive.blocks_range )` that a
   generic block-processing driver calls with every delivered range; leave it NULL for applications
   that drive their own loop (e.g. with several connections).
 * `hive.app_add_dependency( _name, _depends_on )` / `hive.app_remove_dependency` declare that
