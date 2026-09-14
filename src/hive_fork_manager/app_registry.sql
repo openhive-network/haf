@@ -32,6 +32,18 @@ BEGIN
         RAISE EXCEPTION 'Cannot register application %: role % does not own all of its contexts', _name, current_user;
     END IF;
 
+    -- An application embedded in another one (e.g. the balance tracker inside
+    -- haf_block_explorer, whose loop drives both contexts) has all of its contexts
+    -- registered as part of that application. Its install script re-run on an
+    -- installed database must not fail, and must not take the contexts back.
+    SELECT a.name INTO __taken_by
+    FROM hafd.applications a
+    WHERE a.name != _name AND a.contexts @> _contexts::TEXT[];
+    IF __taken_by IS NOT NULL THEN
+        RAISE NOTICE 'Application % is not registered: its contexts % are part of application %', _name, _contexts, __taken_by;
+        RETURN;
+    END IF;
+
     SELECT a.name, c INTO __taken_by, __taken
     FROM hafd.applications a, unnest( _contexts ) AS c
     WHERE a.name != _name AND a.contexts @> ARRAY[ c::TEXT ]
