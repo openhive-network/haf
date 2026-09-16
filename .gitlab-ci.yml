@@ -658,6 +658,23 @@ detect_changes:
         echo "CACHED_IMAGE_NAME=$CACHED_IMAGE" >> smart_build_decision.env
       fi
 
+      # Never reuse (skip / retag / overlay) a cached image built for another
+      # PostgreSQL major: hive_fork_manager.so and the cluster format are
+      # per-major, so a cached PG17 image must not become this job's
+      # PG${POSTGRES_VERSION} image. Relevant while a default swap (17 -> 18 in
+      # 1.29) or the pg17 variant's first build can find an older image at the
+      # same registry path.
+      if [[ "$BUILD_ACTION" != "build" && -n "${CACHED_IMAGE_NAME:-}" ]]; then
+        docker pull "${CACHED_IMAGE_NAME}" >/dev/null 2>&1 || true
+        CACHED_PG_VERSION=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${CACHED_IMAGE_NAME}" 2>/dev/null | grep '^POSTGRES_VERSION=' | cut -d= -f2 || true)
+        if [[ -n "$CACHED_PG_VERSION" && "$CACHED_PG_VERSION" != "${POSTGRES_VERSION}" ]]; then
+          echo "Cached image ${CACHED_IMAGE_NAME} runs PostgreSQL ${CACHED_PG_VERSION}; this job targets ${POSTGRES_VERSION}. Forcing a full build."
+          BUILD_ACTION="build"
+          SQL_OVERLAY_BUILD=false
+          echo "BUILD_ACTION=build" >> smart_build_decision.env
+        fi
+      fi
+
       echo ""
       echo "Build decision: BUILD_ACTION=${BUILD_ACTION}"
       echo -e "\e[0Ksection_end:$(date +%s):smart_build\r\e[0K"
@@ -743,7 +760,7 @@ detect_changes:
           echo "Detecting PostgreSQL version from base image..."
           docker pull "${CACHED_IMAGE_NAME}" >/dev/null 2>&1 || true
           BASE_PG_VERSION=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${CACHED_IMAGE_NAME}" 2>/dev/null | grep '^POSTGRES_VERSION=' | cut -d= -f2)
-          BASE_PG_VERSION="${BASE_PG_VERSION:-17}"
+          BASE_PG_VERSION="${BASE_PG_VERSION:-18}"
           echo "Base image PostgreSQL version: ${BASE_PG_VERSION}"
 
           # Generate extension SQL files using the local script
@@ -804,7 +821,9 @@ haf_image_build:
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
     HIVE_NETWORK_TYPE: mainnet
-    POSTGRES_VERSION: "17"
+    # The default image runs PostgreSQL 18 since 1.29; haf_image_build_pg17
+    # below publishes the previous major under hive/haf/pg17.
+    POSTGRES_VERSION: "18"
   tags:
     - bigjob
   after_script:
@@ -832,7 +851,7 @@ haf_image_build_testnet:
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
     HIVE_NETWORK_TYPE: testnet
-    POSTGRES_VERSION: "17"
+    POSTGRES_VERSION: "18"
   tags:
     - bigjob
   after_script:
@@ -861,7 +880,7 @@ haf_image_build_mirrornet:
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
     HIVE_NETWORK_TYPE: mirrornet
-    POSTGRES_VERSION: "17"
+    POSTGRES_VERSION: "18"
   tags:
     - bigjob
   # Tag mirrornet images for Denser's CI and external publishing
@@ -886,24 +905,26 @@ haf_image_build_mirrornet:
         docker push ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
       fi
 
-haf_image_build_pg18:
+# The previous PostgreSQL major, published under hive/haf/pg17 (and mirrored to
+# registry.hive.blog/haf/pg17) for nodes that want to stay on 17 for a while.
+# Expected to be dropped once 19 takes this slot as the non-default option.
+haf_image_build_pg17:
   extends: .haf_image_build
   variables:
-    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-pg18-binaries"
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-pg17-binaries"
     HIVE_NETWORK_TYPE: mainnet
-    POSTGRES_VERSION: "18"
-    PG_IMAGE_SUBPATH: "pg18"
+    POSTGRES_VERSION: "17"
+    PG_IMAGE_SUBPATH: "pg17"
   tags:
     - bigjob
   # Add latest/stable/version aliases like the testnet/mirrornet variants do --
-  # without this the pg18 image is only reachable by commit sha (release tags
-  # like 1.29.0-rc1 were never applied to hive/haf/pg18).
+  # without this the pg17 image is only reachable by commit sha.
   after_script:
     - |
       source docker_image_name.env
-      echo "Adding latest/stable/version tags for pg18 image..."
+      echo "Adding latest/stable/version tags for pg17 image..."
       timeout 300 docker pull $HAF_INSTANCE || echo "Warning: docker pull failed or timed out"
-      IMAGE_NAME_PREFIX="${CI_REGISTRY_IMAGE}/pg18:"
+      IMAGE_NAME_PREFIX="${CI_REGISTRY_IMAGE}/pg17:"
       if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
         docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}latest
         docker push ${IMAGE_NAME_PREFIX}latest
@@ -1676,10 +1697,10 @@ prepare_haf_data:
     - data-cache-storage
     - fastest
 
-prepare_haf_data_pg18:
+prepare_haf_data_pg17:
   extends: .prepare_haf_data_5m
   needs:
-    - job: haf_image_build_pg18
+    - job: haf_image_build_pg17
       artifacts: true
   stage: build_and_test_phase_1
   timeout: 80m
@@ -1687,9 +1708,9 @@ prepare_haf_data_pg18:
     HIVE_NETWORK_TYPE: mainnet
     BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
-    HAF_CACHE_TYPE: "haf18"
-    DATA_CACHE_HAF_PREFIX: "/cache/haf18"
-    DATA_CACHE_DIR: "/cache/haf18_${HAF_COMMIT}"
+    HAF_CACHE_TYPE: "haf17"
+    DATA_CACHE_HAF_PREFIX: "/cache/haf17"
+    DATA_CACHE_DIR: "/cache/haf17_${HAF_COMMIT}"
   after_script:
     - echo "Cleanup complete"
   tags:
@@ -1839,9 +1860,10 @@ cleanup_old_haf_cache:
 publish_images:
   extends: .docker_publish_job_template
   variables:
-    # Publish mainnet (root) and mirrornet images to registry.hive.blog
+    # Publish mainnet (root), mirrornet and the pg17 variant to registry.hive.blog
+    # (haf_api_node selects pg17 with HAF_IMAGE=.../haf/pg17).
     # Note: testnet is not published externally (internal use only)
-    PUBLISH_IMAGES: "haf mirrornet"
+    PUBLISH_IMAGES: "haf mirrornet pg17"
 
 double_haf_replay_tests:
   extends: .docker_image_builder_job
