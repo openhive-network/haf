@@ -20,7 +20,7 @@
 include:
   # All templates from common-ci-configuration
 - project: 'hive/common-ci-configuration'
-  ref: e2825f108f61a949862fb7f4d4793b78ecf712af
+  ref: 3839feb0c30846aa3ae262143f216a3c1a0fa20b
   file:
   - '/templates/base.gitlab-ci.yml'
   - '/templates/docker_image_jobs.gitlab-ci.yml'
