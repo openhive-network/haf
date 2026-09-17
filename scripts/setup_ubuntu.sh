@@ -47,6 +47,12 @@ install_ai_packages() {
   rm -rf /root/.cache ~/.cache /tmp/* /var/tmp/*
   find / -type d -name '__pycache__' -exec rm -rf {} +
 
+  # typing_extensions first, as a pip-managed copy under /usr/local that
+  # shadows Ubuntu's python3-typing-extensions (4.15.0, pulled in by apt
+  # above). tokenizers -> huggingface_hub -> anyio 4.15.1+ needs >= 4.16.0,
+  # and pip cannot replace the Debian package ("no RECORD file was found"),
+  # which failed every fresh image build once the layer cache expired.
+  pip3 install --break-system-packages --ignore-installed typing_extensions
   pip3 install --break-system-packages tokenizers base58
 
   mkdir -p /home/hived/tokenizer-files
