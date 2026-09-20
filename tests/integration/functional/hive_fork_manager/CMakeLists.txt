@@ -23,6 +23,7 @@ ADD_TEST( NAME test_update_script
 
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_edit_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_edit_populated_table_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_edit_negative_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_edit_negative_rowid_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/register_table_drop_test.sql )
@@ -96,6 +97,7 @@ ADD_TEST( NAME test_update_script
 
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/set_irreversible_block_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/set_irreversible_block_negative_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( context_rewind/remove_obsolete_operations_shrinks_shadow_table_test.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/performance_insert_rows_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( context_rewind/performance_back_from_insert_rows_test.sql )

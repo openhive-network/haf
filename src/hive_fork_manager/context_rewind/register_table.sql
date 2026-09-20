@@ -115,8 +115,12 @@ DECLARE
     __hive_rowid_column_name TEXT := 'hive_rowid';
     __operation_id_column_name TEXT :=  'hive_operation_id';
 BEGIN
-    EXECUTE format('CREATE TABLE hafd.%I AS TABLE %I.%I', __shadow_table_name, _table_schema, _table_name );
-    EXECUTE format('DELETE FROM hafd.%I', __shadow_table_name ); --empty shadow table if origin table is not empty
+    -- WITH NO DATA: only the origin's column layout is wanted. This used to copy every
+    -- row of the origin and DELETE them again, which is pure waste when the origin is
+    -- populated, i.e. when hive.on_edit_registered_tables recreates the shadow table
+    -- after a column change on a big table (the rewrite forced by the BIGSERIAL column
+    -- added below then had to discard those dead rows once more).
+    EXECUTE format('CREATE TABLE hafd.%I AS TABLE %I.%I WITH NO DATA', __shadow_table_name, _table_schema, _table_name );
     EXECUTE format('ALTER TABLE hafd.%I ADD COLUMN %I INTEGER NOT NULL', __shadow_table_name, __block_num_column_name );
     EXECUTE format('ALTER TABLE hafd.%I ADD COLUMN %I hafd.trigger_operation NOT NULL', __shadow_table_name, __operation_column_name );
     EXECUTE format('ALTER TABLE hafd.%I ADD COLUMN %I BIGSERIAL PRIMARY KEY', __shadow_table_name, __operation_id_column_name );
