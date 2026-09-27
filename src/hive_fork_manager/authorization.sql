@@ -56,7 +56,8 @@ ALTER TABLE hafd.write_ahead_log_state OWNER TO hived_group;
 -- generic protection for tables in hive schema
 -- 1. hived_group allow to edit every table in hive schema
 -- 2. hive_applications_group can ready every table in hive schema
--- 3. hive_applications_group can modify hafd.contexts, hafd.registered_tables, hafd.triggers, hafd.state_providers_registered
+-- 3. hive_applications_group can modify the control tables granted below (subject to their row-level security
+--    policies), but not TRUNCATE them or add foreign keys or triggers to them -- see the REVOKE after the grants
 GRANT ALL ON SCHEMA hive to hived_group, hive_applications_group;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA hive TO hived_group, hive_applications_group;
 GRANT ALL ON  ALL TABLES IN SCHEMA hive TO hived_group;
@@ -76,13 +77,15 @@ GRANT ALL ON hafd.application_dependencies TO hive_applications_group;
 
 -- ALL above includes three privileges that row-level security cannot limit (issue #348):
 -- TRUNCATE is not a row-level operation, so no policy below applies to it, and any
--- application role could empty hafd.contexts and unregister every application on the
--- instance; REFERENCES lets a role declare a foreign key that blocks other applications'
--- DELETEs; TRIGGER lets it attach a trigger whose function then runs with the privileges
--- of whichever role modifies the table. Applications need none of them -- they go through
--- the hive.app_* API, and every foreign key and trigger on these tables is created by the
--- extension itself. This file is part of the extension update script, so ALTER EXTENSION
--- ... UPDATE applies the revoke to existing instances too.
+-- application role could run TRUNCATE hafd.contexts CASCADE and destroy every
+-- application's contexts and registered tables on the instance; REFERENCES lets a role
+-- declare a foreign key that blocks other applications' DELETEs; TRIGGER lets it attach a
+-- trigger whose function then runs with the privileges of whichever role modifies the
+-- table. Applications need none of them -- they go through the hive.app_* API, and every
+-- foreign key and trigger on these tables is created by the extension itself. This file
+-- is part of the extension update script, so ALTER EXTENSION ... UPDATE applies the
+-- revoke to existing instances too. A revoke does not remove a foreign key or trigger
+-- that was already created with the old grant.
 REVOKE TRUNCATE, REFERENCES, TRIGGER ON
       hafd.contexts
     , hafd.contexts_attachment
