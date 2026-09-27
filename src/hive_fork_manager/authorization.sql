@@ -74,6 +74,26 @@ GRANT ALL ON hafd.vacuum_requests TO hive_applications_group;
 GRANT ALL ON hafd.applications TO hive_applications_group;
 GRANT ALL ON hafd.application_dependencies TO hive_applications_group;
 
+-- ALL above includes three privileges that row-level security cannot limit (issue #348):
+-- TRUNCATE is not a row-level operation, so no policy below applies to it, and any
+-- application role could empty hafd.contexts and unregister every application on the
+-- instance; REFERENCES lets a role declare a foreign key that blocks other applications'
+-- DELETEs; TRIGGER lets it attach a trigger whose function then runs with the privileges
+-- of whichever role modifies the table. Applications need none of them -- they go through
+-- the hive.app_* API, and every foreign key and trigger on these tables is created by the
+-- extension itself. This file is part of the extension update script, so ALTER EXTENSION
+-- ... UPDATE applies the revoke to existing instances too.
+REVOKE TRUNCATE, REFERENCES, TRIGGER ON
+      hafd.contexts
+    , hafd.contexts_attachment
+    , hafd.registered_tables
+    , hafd.triggers
+    , hafd.state_providers_registered
+    , hafd.vacuum_requests
+    , hafd.applications
+    , hafd.application_dependencies
+FROM hive_applications_group;
+
 -- protect an application rows aginst other applications
 REVOKE UPDATE( is_forking, owner ) ON hafd.contexts FROM GROUP hive_applications_group;
 ALTER TABLE hafd.contexts ENABLE ROW LEVEL SECURITY;

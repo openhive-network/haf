@@ -363,6 +363,7 @@ SET_TESTS_PROPERTIES(
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_access_to_bob.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/can_impersonate.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_impersonal_access_context.sql )
+ ADD_SQL_FUNCTIONAL_TEST( authorization/alice_cannot_truncate_control_tables.sql )
 
  ADD_EXAMPLES_FUNCTIONAL_TESTS( examples/forking_application.py )
  ADD_EXAMPLES_FUNCTIONAL_TESTS( examples/non_forking_application.py )
