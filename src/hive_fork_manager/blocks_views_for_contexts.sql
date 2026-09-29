@@ -445,7 +445,8 @@ BEGIN
                     t.timestamp,
                     t.body_value,
                     jsonb_build_object(''type'', replace(ot.name, ''hive::protocol::'', ''''), ''value'', t.body_value) AS body,
-                    t.custom_json_type_id
+                    t.custom_json_type_id,
+                    t.op_pos_real
                   FROM %s.context_data_view c,
                   LATERAL
                   (
@@ -456,7 +457,8 @@ BEGIN
                       ho.op_type_id,
                       b.created_at timestamp,
                       ho.body_value,
-                      ho.custom_json_type_id
+                      ho.custom_json_type_id,
+                      ho.op_pos_real
                       FROM hafd.operations ho
                       JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
                       WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
@@ -468,7 +470,8 @@ BEGIN
                         o.op_type_id,
                         visible_ops_timestamp.created_at timestamp,
                         o.body_value,
-                        o.custom_json_type_id
+                        o.custom_json_type_id,
+                        o.op_pos_real
                       FROM hafd.operations_reversible o
                       -- Reversible operations view must show ops comming from newest fork (specific to app-context)
                       -- and also hide ops present at earlier forks for given block
@@ -500,7 +503,8 @@ BEGIN
                         t.timestamp,
                         t.body_value,
                         jsonb_build_object(''type'', replace(ot.name, ''hive::protocol::'', ''''), ''value'', t.body_value) AS body,
-                        t.custom_json_type_id
+                        t.custom_json_type_id,
+                        t.op_pos_real
                     FROM %s.context_data_view c,
                     LATERAL
                     (
@@ -511,7 +515,8 @@ BEGIN
                           ho.op_type_id,
                           b.created_at timestamp,
                           ho.body_value,
-                          ho.custom_json_type_id
+                          ho.custom_json_type_id,
+                          ho.op_pos_real
                         FROM hafd.operations ho
                         JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
                         WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
@@ -550,7 +555,8 @@ BEGIN
                     t.op_type_id,
                     t.body_value,
                     jsonb_build_object(''type'', replace(ot.name, ''hive::protocol::'', ''''), ''value'', t.body_value) AS body,
-                    t.custom_json_type_id
+                    t.custom_json_type_id,
+                    t.op_pos_real
                   FROM %s.context_data_view c,
                   LATERAL
                   (
@@ -560,7 +566,8 @@ BEGIN
                       ho.op_pos,
                       ho.op_type_id,
                       ho.body_value,
-                      ho.custom_json_type_id
+                      ho.custom_json_type_id,
+                      ho.op_pos_real
                       FROM hafd.operations ho
                       WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
                     UNION ALL
@@ -570,7 +577,8 @@ BEGIN
                         o.op_pos,
                         o.op_type_id,
                         o.body_value,
-                        o.custom_json_type_id
+                        o.custom_json_type_id,
+                        o.op_pos_real
                       FROM hafd.operations_reversible o
                       -- Reversible operations view must show ops comming from newest fork (specific to app-context)
                       -- and also hide ops present at earlier forks for given block
@@ -596,7 +604,8 @@ BEGIN
                     t.op_type_id,
                     t.body_value,
                     jsonb_build_object(''type'', replace(ot.name, ''hive::protocol::'', ''''), ''value'', t.body_value) AS body,
-                    t.custom_json_type_id
+                    t.custom_json_type_id,
+                    t.op_pos_real
                   FROM %s.context_data_view c,
                   LATERAL
                   (
@@ -606,7 +615,8 @@ BEGIN
                       ho.op_pos,
                       ho.op_type_id,
                       ho.body_value,
-                      ho.custom_json_type_id
+                      ho.custom_json_type_id,
+                      ho.op_pos_real
                       FROM hafd.operations ho
                       WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block
                   ) t
@@ -643,7 +653,8 @@ EXECUTE format(
             b.created_at timestamp,
             ho.body_value,
             jsonb_build_object(''type'', replace(ot.name, ''hive::protocol::'', ''''), ''value'', ho.body_value) AS body,
-            ho.custom_json_type_id
+            ho.custom_json_type_id,
+            ho.op_pos_real
         FROM hafd.operations ho
         JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num(ho.id)
         JOIN hafd.operation_types ot ON ot.id = ho.op_type_id
@@ -677,7 +688,8 @@ EXECUTE format(
             ho.op_type_id,
             ho.body_value,
             jsonb_build_object(''type'', replace(ot.name, ''hive::protocol::'', ''''), ''value'', ho.body_value) AS body,
-            ho.custom_json_type_id
+            ho.custom_json_type_id,
+            ho.op_pos_real
         FROM hafd.operations ho
         JOIN hafd.operation_types ot ON ot.id = ho.op_type_id
         ;', __schema

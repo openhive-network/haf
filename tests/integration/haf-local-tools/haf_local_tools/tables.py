@@ -116,6 +116,7 @@ class Operations(HiveDataBase):
     op_type_id = Column(SmallInteger)
     op_pos = Column(Integer)
     body_value = Column(JSONB)
+    op_pos_real = Column(Integer)
 
 
 class OperationsReversible(HiveDataBase):
@@ -126,6 +127,7 @@ class OperationsReversible(HiveDataBase):
     op_type_id = Column(SmallInteger)
     op_pos = Column(Integer)
     body_value = Column(JSONB)
+    op_pos_real = Column(Integer)
     fork_id = Column(BigInteger, primary_key=True)
 
 class OperationsExtendedView(HiveBase):
@@ -138,6 +140,7 @@ class OperationsExtendedView(HiveBase):
     op_type_id = Column(SmallInteger)
     timestamp = Column(DateTime)
     body_value = Column(JSONB)
+    op_pos_real = Column(Integer)
 
 class OperationsView(HiveBase):
     __tablename__ = "operations_view"
@@ -148,6 +151,7 @@ class OperationsView(HiveBase):
     op_pos = Column(Integer)
     op_type_id = Column(SmallInteger)
     body_value = Column(JSONB)
+    op_pos_real = Column(Integer)
 
 class OperationsIrreversibleViewExtended(HiveBase):
     __tablename__ = "irreversible_operations_view_extended"
@@ -160,6 +164,7 @@ class OperationsIrreversibleViewExtended(HiveBase):
     timestamp = Column(DateTime)
     body_value = Column(JSONB)
     body = Column(JSONB)
+    op_pos_real = Column(Integer)
 
 class OperationsIrreversibleView(HiveBase):
     __tablename__ = "irreversible_operations_view"
@@ -171,6 +176,7 @@ class OperationsIrreversibleView(HiveBase):
     op_type_id = Column(SmallInteger)
     body_value = Column(JSONB)
     body = Column(JSONB)
+    op_pos_real = Column(Integer)
 
 class Transactions(HiveDataBase):
     __tablename__ = "transactions"

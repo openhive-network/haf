@@ -153,6 +153,9 @@ namespace hive
             int32_t op_in_trx = 0;
             operation op;
             fc::optional<int16_t> custom_json_type_id;
+            /// Position of the operation among real ( non-virtual ) operations of its transaction.
+            /// Unset for virtual operations - they are not counted at all ( unlike op_in_trx ).
+            fc::optional<int32_t> op_pos_real;
 
             process_operation_t(
                 int64_t _operation_id
@@ -162,12 +165,14 @@ namespace hive
               , const int32_t _op_in_trx
               , const operation &_op
               , fc::optional<int16_t> _custom_json_type_id = fc::optional<int16_t>()
+              , fc::optional<int32_t> _op_pos_real = fc::optional<int32_t>()
             )
             : block_data_base( _block_number )
             , operation_id{_operation_id }, trx_in_block{_trx_in_block}
             , op_type_id{_op_type_id}
             , op_in_trx{_op_in_trx}, op{_op}
             , custom_json_type_id{_custom_json_type_id}
+            , op_pos_real{_op_pos_real}
             {
             }
           };

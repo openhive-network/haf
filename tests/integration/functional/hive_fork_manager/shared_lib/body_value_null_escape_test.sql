@@ -69,19 +69,19 @@ BEGIN
 
   -- Op 1: clean custom_json (no NUL) — baseline
   __operation_clean = ( hafd.operation_id(101, 0), 0, 18, 0,
-                        '{"id":"follow","json":"{\"follower\":\"alice\"}"}'::jsonb, NULL );
+                        '{"id":"follow","json":"{\"follower\":\"alice\"}"}'::jsonb, NULL, NULL );
 
   -- Op 2: custom_json with \u0000 stripped — simulates what C++ strip_json_null_escapes() does
   __raw_json := '{"id":"sm_market_sell","json":"{\u0000\"items\":[\"abc\u0000\"]}"}';
   __stripped_json := hive.strip_json_null_escapes(__raw_json);
   __operation_nul = ( hafd.operation_id(101, 1), 0, 18, 1,
-                      __stripped_json::jsonb, NULL );
+                      __stripped_json::jsonb, NULL, NULL );
 
   -- Op 3: escaped backslash before u0000 — must be preserved (not a real NUL escape)
   __raw_json := '{"id":"regex_test","pattern":"[\\u0000-\\u001f]"}';
   __stripped_json := hive.strip_json_null_escapes(__raw_json);
   __operation_escaped_bs = ( hafd.operation_id(101, 2), 0, 18, 2,
-                             __stripped_json::jsonb, NULL );
+                             __stripped_json::jsonb, NULL, NULL );
 
   __account_op1 = ( 1, 1, 1, hafd.operation_id(101, 0), 18 );
   __account_op2 = ( 1, 1, 2, hafd.operation_id(101, 1), 18 );
