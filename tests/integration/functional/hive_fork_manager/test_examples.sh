@@ -28,11 +28,13 @@ python3 -mpip install --upgrade pip
 
 python3 -mpip install wheel==0.41.2
 
+# The examples connect through SQLAlchemy with postgresql:// URLs, which map to
+# the psycopg (v3) driver since SQLAlchemy 2.1.
 python3 -mpip install \
-  pexpect>=4.9 \
-  psycopg2-binary>=2.9.3 \
-  sqlalchemy>=1.4.52 \
-  jinja2>=2.10
+  'pexpect>=4.9' \
+  'psycopg[binary]>=3.1' \
+  'sqlalchemy>=2.1' \
+  'jinja2>=2.10'
 
 ( "$test_path" "$examples_folder" "$DB_NAME" "$postgres_port" )
 
