@@ -414,6 +414,21 @@ public:
 
   uint32_t op_in_block_number = 0;
 
+  // Counts real ( non-virtual ) operations of the transaction being currently collected.
+  // It is the source of the op_pos_real column - a counterpart of op_pos ( taken from op_in_trx ),
+  // which is also incremented by virtual operations and because of that has gaps between
+  // real operations belonging to the same transaction.
+  // The counter is restarted for every transaction and it must be reset at each block boundary
+  // ( see reset_op_pos_real_tracking ) to not leak its state into a re-applied block.
+  uint32_t real_ops_in_trx_number = 0;
+  int64_t  real_ops_trx_block_num = 0;
+  int64_t  real_ops_trx_in_block = -1;
+
+  void reset_op_pos_real_tracking()
+  {
+    real_ops_trx_in_block = -1;
+  }
+
   cached_containter_t currently_caching_data;
   std::unique_ptr<accounts_collector> collector;
   stats_group current_stats;
@@ -616,6 +631,7 @@ void sql_serializer_plugin_impl::connect_signals()
       }
       block_operation_handlers(note);
       currently_caching_data->revert_to_snapshot();
+      reset_op_pos_real_tracking();
     }, main_plugin );
 }
 
@@ -728,6 +744,26 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
   const bool is_virtual = hive::protocol::is_virtual_operation(note.op);
   FC_ASSERT( is_virtual || note.trx_in_block >= 0,  "Non is_producing real operation with trx_in_block = -1" );
 
+  // op_pos is filled with op_in_trx which counts every operation applied within the transaction,
+  // virtual ones included. op_pos_real counts only real operations of the transaction and is left
+  // unset ( NULL ) for virtual ones.
+  fc::optional<int32_t> op_pos_real;
+  if( !is_virtual )
+  {
+    if( note.block != real_ops_trx_block_num || note.trx_in_block != real_ops_trx_in_block )
+    {
+      real_ops_trx_block_num = note.block;
+      real_ops_trx_in_block = note.trx_in_block;
+      real_ops_in_trx_number = 0;
+    }
+    else
+    {
+      ++real_ops_in_trx_number;
+    }
+
+    op_pos_real = static_cast<int32_t>( real_ops_in_trx_number );
+  }
+
   const auto operation_id = PSQL::processing_objects::get_operation_id( note.block, op_in_block_number );
   collect_account_operations( operation_id, note.op, note.block );
 
@@ -761,7 +797,8 @@ void sql_serializer_plugin_impl::on_pre_apply_operation(const operation_notifica
       static_cast<int16_t>( note.op.which() ),
       note.op_in_trx,
       note.op,
-      cj_type_id
+      cj_type_id,
+      op_pos_real
     );
   }
   ++op_in_block_number;
@@ -773,6 +810,7 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
   {
     _last_block_num = note.block_num;
     _consecutive_block_failures = 0;
+    reset_op_pos_real_tracking();
     if(!can_collect_blocks())
       return;
     op_in_block_number = 0;

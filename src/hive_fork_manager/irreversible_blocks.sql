@@ -106,6 +106,9 @@ CREATE TABLE IF NOT EXISTS hafd.operations (
     op_pos integer NOT NULL,
     body_value JSONB DEFAULT NULL,
     custom_json_type_id SMALLINT DEFAULT NULL,
+    -- position of the operation among real ( non-virtual ) operations of its transaction,
+    -- NULL for virtual operations; op_pos counts virtual operations too, hence the gaps
+    op_pos_real integer DEFAULT NULL,
     CONSTRAINT pk_hive_operations PRIMARY KEY ( id )
 );
 

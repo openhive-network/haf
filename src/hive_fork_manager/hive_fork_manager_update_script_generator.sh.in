@@ -275,6 +275,22 @@ BEGIN
     -- Note: there is intentionally no migration for the rc_cost column of hafd.transactions
     -- and hafd.transactions_reversible - the values cannot be backfilled without a replay,
     -- so the schema hash mismatch reported by verify_table_schema forces one.
+
+    -- op_pos_real of hafd.operations and hafd.operations_reversible ( the values are backfilled
+    -- by op_pos_real_schema_update.sql applied later, with the extension update script )
+    IF to_regclass('hafd.operations') IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'hafd' AND table_name = 'operations' AND column_name = 'op_pos_real'
+    ) THEN
+        ALTER TABLE hafd.operations ADD COLUMN op_pos_real integer DEFAULT NULL;
+    END IF;
+
+    IF to_regclass('hafd.operations_reversible') IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'hafd' AND table_name = 'operations_reversible' AND column_name = 'op_pos_real'
+    ) THEN
+        ALTER TABLE hafd.operations_reversible ADD COLUMN op_pos_real integer DEFAULT NULL;
+    END IF;
 END \$\$;
 "
 

@@ -37,13 +37,13 @@ BEGIN
          , ( 5, 0::SMALLINT, '\xDEED50', 101, 100, '2016-06-22 19:10:25-07'::timestamp, '\xBEEF', 50 )
     ;
 
-    INSERT INTO hafd.operations
+    INSERT INTO hafd.operations( id, trx_in_block, op_type_id, op_pos, body_value, op_pos_real )
     VALUES
-          ( hafd.operation_id(1, 0), 0, 1, 0, '{"message":"ZERO OPERATION"}'::jsonb )
-        , ( hafd.operation_id(2, 0), 0, 1, 0, '{"message":"ONE OPERATION"}'::jsonb )
-        , ( hafd.operation_id(3, 0), 0, 1, 0, '{"message":"TWO OPERATION"}'::jsonb )
-        , ( hafd.operation_id(4, 0), 0, 1, 0, '{"message":"THREE OPERATION"}'::jsonb )
-        , ( hafd.operation_id(5, 0), 0, 1, 0, '{"message":"FIVE OPERATION"}'::jsonb )
+          ( hafd.operation_id(1, 0), 0, 1, 0, '{"message":"ZERO OPERATION"}'::jsonb, 0 )
+        , ( hafd.operation_id(2, 0), 0, 1, 0, '{"message":"ONE OPERATION"}'::jsonb, 0 )
+        , ( hafd.operation_id(3, 0), 0, 1, 0, '{"message":"TWO OPERATION"}'::jsonb, 0 )
+        , ( hafd.operation_id(4, 0), 0, 1, 0, '{"message":"THREE OPERATION"}'::jsonb, 0 )
+        , ( hafd.operation_id(5, 0), 0, 1, 0, '{"message":"FIVE OPERATION"}'::jsonb, 0 )
     ;
 
     INSERT INTO hafd.blocks_reversible
@@ -71,21 +71,21 @@ BEGIN
      , ( 10, 0::SMALLINT, '\xDEED11', 101, 100, '2016-06-22 19:10:30-07'::timestamp, '\xBEEF', 100, 3 )
     ;
 
-    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_type_id, op_pos, body_value, fork_id)
+    INSERT INTO hafd.operations_reversible(id, trx_in_block, op_type_id, op_pos, body_value, op_pos_real, fork_id)
     VALUES
-           ( hafd.operation_id(4, 0), 0, 1, 0, '{"message":"THREE OPERATION"}'::jsonb, 1 )
-         , ( hafd.operation_id(5, 0), 0, 1, 0, '{"message":"FIVE OPERATION"}'::jsonb, 1 )
-         , ( hafd.operation_id(6, 0), 0, 1, 0, '{"message":"SIX OPERATION"}'::jsonb, 1 )
-         , ( hafd.operation_id(7, 0), 0, 1, 0, '{"message":"SEVEN0 OPERATION"}'::jsonb, 1 ) -- must be abandon because of fork2
-         , ( hafd.operation_id(7, 1), 0, 1, 1, '{"message":"SEVEN01 OPERATION"}'::jsonb, 1 ) -- must be abandon because of fork2
-         , ( hafd.operation_id(7, 2), 0, 1, 2, '{"message":"SEVEN02 OPERATION"}'::jsonb, 1 ) -- must be abandon because of fork2
-         , ( hafd.operation_id(7, 0), 0, 1, 0, '{"message":"SEVEN2 OPERATION"}'::jsonb, 2 )
-         , ( hafd.operation_id(7, 1), 0, 1, 1, '{"message":"SEVEN21 OPERATION"}'::jsonb, 2 )
-         , ( hafd.operation_id(8, 0), 0, 1, 0, '{"message":"EAIGHT2 OPERATION"}'::jsonb, 2 )
-         , ( hafd.operation_id(9, 0), 0, 1, 0, '{"message":"NINE2 OPERATION"}'::jsonb, 2 )
-         , ( hafd.operation_id(8, 0), 0, 1, 0, '{"message":"EIGHT3 OPERATION"}'::jsonb, 3 )
-         , ( hafd.operation_id(9, 0), 0, 1, 0, '{"message":"NINE3 OPERATION"}'::jsonb, 3 )
-         , ( hafd.operation_id(10, 0), 0, 1, 0, '{"message":"TEN OPERATION"}'::jsonb, 3 )
+           ( hafd.operation_id(4, 0), 0, 1, 0, '{"message":"THREE OPERATION"}'::jsonb, 0, 1 )
+         , ( hafd.operation_id(5, 0), 0, 1, 0, '{"message":"FIVE OPERATION"}'::jsonb, 0, 1 )
+         , ( hafd.operation_id(6, 0), 0, 1, 0, '{"message":"SIX OPERATION"}'::jsonb, 0, 1 )
+         , ( hafd.operation_id(7, 0), 0, 1, 0, '{"message":"SEVEN0 OPERATION"}'::jsonb, 0, 1 ) -- must be abandon because of fork2
+         , ( hafd.operation_id(7, 1), 0, 1, 1, '{"message":"SEVEN01 OPERATION"}'::jsonb, 1, 1 ) -- must be abandon because of fork2
+         , ( hafd.operation_id(7, 2), 0, 1, 2, '{"message":"SEVEN02 OPERATION"}'::jsonb, 2, 1 ) -- must be abandon because of fork2
+         , ( hafd.operation_id(7, 0), 0, 1, 0, '{"message":"SEVEN2 OPERATION"}'::jsonb, 0, 2 )
+         , ( hafd.operation_id(7, 1), 0, 1, 1, '{"message":"SEVEN21 OPERATION"}'::jsonb, 1, 2 )
+         , ( hafd.operation_id(8, 0), 0, 1, 0, '{"message":"EAIGHT2 OPERATION"}'::jsonb, 0, 2 )
+         , ( hafd.operation_id(9, 0), 0, 1, 0, '{"message":"NINE2 OPERATION"}'::jsonb, 0, 2 )
+         , ( hafd.operation_id(8, 0), 0, 1, 0, '{"message":"EIGHT3 OPERATION"}'::jsonb, 0, 3 )
+         , ( hafd.operation_id(9, 0), 0, 1, 0, '{"message":"NINE3 OPERATION"}'::jsonb, 0, 3 )
+         , ( hafd.operation_id(10, 0), 0, 1, 0, '{"message":"TEN OPERATION"}'::jsonb, 0, 3 )
     ;
 
     UPDATE hafd.hive_state SET consistent_block = 5;
@@ -103,17 +103,17 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.operations_view
         EXCEPT SELECT * FROM ( VALUES
-              ( hafd.operation_id(1, 0), 1, 0, 0, 1::SMALLINT, '{"message":"ZERO OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"ZERO OPERATION"}}'::jsonb, NULL::SMALLINT )
-            , ( hafd.operation_id(2, 0), 2, 0, 0, 1::SMALLINT, '{"message":"ONE OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"ONE OPERATION"}}'::jsonb, NULL::SMALLINT )
-            , ( hafd.operation_id(3, 0), 3, 0, 0, 1::SMALLINT, '{"message":"TWO OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"TWO OPERATION"}}'::jsonb, NULL::SMALLINT )
-            , ( hafd.operation_id(4, 0), 4, 0, 0, 1::SMALLINT, '{"message":"THREE OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"THREE OPERATION"}}'::jsonb, NULL::SMALLINT )
-            , ( hafd.operation_id(5, 0), 5, 0, 0, 1::SMALLINT, '{"message":"FIVE OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"FIVE OPERATION"}}'::jsonb, NULL::SMALLINT )
-            , ( hafd.operation_id(6, 0), 6, 0, 0, 1::SMALLINT, '{"message":"SIX OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"SIX OPERATION"}}'::jsonb, NULL::SMALLINT )
-            , ( hafd.operation_id(7, 0), 7, 0, 0, 1::SMALLINT, '{"message":"SEVEN2 OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"SEVEN2 OPERATION"}}'::jsonb, NULL::SMALLINT )
-            , ( hafd.operation_id(7, 1), 7, 0, 1, 1::SMALLINT, '{"message":"SEVEN21 OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"SEVEN21 OPERATION"}}'::jsonb, NULL::SMALLINT )
-            , ( hafd.operation_id(8, 0), 8, 0, 0, 1::SMALLINT, '{"message":"EIGHT3 OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"EIGHT3 OPERATION"}}'::jsonb, NULL::SMALLINT )
-            , ( hafd.operation_id(9, 0), 9, 0, 0, 1::SMALLINT, '{"message":"NINE3 OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"NINE3 OPERATION"}}'::jsonb, NULL::SMALLINT )
-            , ( hafd.operation_id(10, 0), 10, 0, 0, 1::SMALLINT, '{"message":"TEN OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"TEN OPERATION"}}'::jsonb, NULL::SMALLINT )
+              ( hafd.operation_id(1, 0), 1, 0, 0, 1::SMALLINT, '{"message":"ZERO OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"ZERO OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
+            , ( hafd.operation_id(2, 0), 2, 0, 0, 1::SMALLINT, '{"message":"ONE OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"ONE OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
+            , ( hafd.operation_id(3, 0), 3, 0, 0, 1::SMALLINT, '{"message":"TWO OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"TWO OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
+            , ( hafd.operation_id(4, 0), 4, 0, 0, 1::SMALLINT, '{"message":"THREE OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"THREE OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
+            , ( hafd.operation_id(5, 0), 5, 0, 0, 1::SMALLINT, '{"message":"FIVE OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"FIVE OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
+            , ( hafd.operation_id(6, 0), 6, 0, 0, 1::SMALLINT, '{"message":"SIX OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"SIX OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
+            , ( hafd.operation_id(7, 0), 7, 0, 0, 1::SMALLINT, '{"message":"SEVEN2 OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"SEVEN2 OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
+            , ( hafd.operation_id(7, 1), 7, 0, 1, 1::SMALLINT, '{"message":"SEVEN21 OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"SEVEN21 OPERATION"}}'::jsonb, NULL::SMALLINT, 1 )
+            , ( hafd.operation_id(8, 0), 8, 0, 0, 1::SMALLINT, '{"message":"EIGHT3 OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"EIGHT3 OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
+            , ( hafd.operation_id(9, 0), 9, 0, 0, 1::SMALLINT, '{"message":"NINE3 OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"NINE3 OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
+            , ( hafd.operation_id(10, 0), 10, 0, 0, 1::SMALLINT, '{"message":"TEN OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"TEN OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
         ) as pattern
     ) , 'Unexpected rows in the view';
 
@@ -124,11 +124,11 @@ BEGIN
     ASSERT NOT EXISTS (
         SELECT * FROM hive.irreversible_operations_view
         EXCEPT SELECT * FROM ( VALUES
-                                  ( hafd.operation_id(1, 0), 1, 0, 0, 1::SMALLINT, '{"message":"ZERO OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"ZERO OPERATION"}}'::jsonb, NULL::SMALLINT )
-                                , ( hafd.operation_id(2, 0), 2, 0, 0, 1::SMALLINT, '{"message":"ONE OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"ONE OPERATION"}}'::jsonb, NULL::SMALLINT )
-                                , ( hafd.operation_id(3, 0), 3, 0, 0, 1::SMALLINT, '{"message":"TWO OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"TWO OPERATION"}}'::jsonb, NULL::SMALLINT )
-                                , ( hafd.operation_id(4, 0), 4, 0, 0, 1::SMALLINT, '{"message":"THREE OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"THREE OPERATION"}}'::jsonb, NULL::SMALLINT )
-                                , ( hafd.operation_id(5, 0), 5, 0, 0, 1::SMALLINT, '{"message":"FIVE OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"FIVE OPERATION"}}'::jsonb, NULL::SMALLINT )
+                                  ( hafd.operation_id(1, 0), 1, 0, 0, 1::SMALLINT, '{"message":"ZERO OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"ZERO OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
+                                , ( hafd.operation_id(2, 0), 2, 0, 0, 1::SMALLINT, '{"message":"ONE OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"ONE OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
+                                , ( hafd.operation_id(3, 0), 3, 0, 0, 1::SMALLINT, '{"message":"TWO OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"TWO OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
+                                , ( hafd.operation_id(4, 0), 4, 0, 0, 1::SMALLINT, '{"message":"THREE OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"THREE OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
+                                , ( hafd.operation_id(5, 0), 5, 0, 0, 1::SMALLINT, '{"message":"FIVE OPERATION"}'::jsonb, '{"type":"OP 1","value":{"message":"FIVE OPERATION"}}'::jsonb, NULL::SMALLINT, 0 )
 
                              ) as pattern
     ) , 'Unexpected rows in the irreversible view';

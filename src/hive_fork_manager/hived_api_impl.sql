@@ -92,6 +92,7 @@ BEGIN
          , hor.op_pos
          , hor.body_value
          , hor.custom_json_type_id
+         , hor.op_pos_real
     FROM
         hafd.operations_reversible hor
         JOIN (

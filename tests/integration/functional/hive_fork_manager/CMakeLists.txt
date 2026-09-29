@@ -120,6 +120,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( hived_api/copy_blocks_to_irreversible.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/copy_transactions_to_irreversible_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/copy_operations_to_irreversible_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/op_pos_real_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/copy_signatures_to_irreversible_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/copy_applied_hardforks_to_irreversible_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_blocks_with_set_irreversible.sql )

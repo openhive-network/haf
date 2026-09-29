@@ -162,6 +162,11 @@ namespace hive::plugins::sql_serializer {
           result += std::to_string( *data.custom_json_type_id );
         else
           result += "NULL";
+        result += ',';
+        if( data.op_pos_real.valid() )
+          result += std::to_string( *data.op_pos_real );
+        else
+          result += "NULL";
         return result;
       }
       };
