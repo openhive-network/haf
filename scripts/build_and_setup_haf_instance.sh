@@ -112,8 +112,8 @@ process_option_file() {
   IFS=
 
   mapfile -t <"$option_file" READ_OPTIONS
-  echo "Read options: ${READ_OPTIONS[@]}"
-  for o in ${READ_OPTIONS[@]}; do
+  echo "Read options:" "${READ_OPTIONS[@]}"
+  for o in "${READ_OPTIONS[@]}"; do
 #    echo "Processing a file option: $o"
     process_option "$o"
   done
@@ -169,5 +169,5 @@ SCRIPTPATH="$HAF_SOURCE_DIR/scripts"
 sudo -n "$SCRIPTPATH/setup_ubuntu.sh" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --hived-account="$HIVED_ACCOUNT"
 time "$SCRIPTPATH/build.sh" --haf-source-dir="$HAF_SOURCE_DIR" --haf-binaries-dir="$HAF_BINARY_DIR" "$@" hived extension.hive_fork_manager
 
-"$SCRIPTPATH/setup_haf_instance.sh" --haf-binaries-dir="$HAF_BINARY_DIR" ${FORWARDED_ARGS[@]} "${HIVED_ARGS[@]}"
+"$SCRIPTPATH/setup_haf_instance.sh" --haf-binaries-dir="$HAF_BINARY_DIR" "${FORWARDED_ARGS[@]}" "${HIVED_ARGS[@]}"
 

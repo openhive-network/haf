@@ -3,7 +3,7 @@
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 LOG_FILE=dump_instance.log
-source ${SCRIPTPATH}/dump_load_common.sh true "Dump hived and haf states." "  --override-existing-backup-dir   Erases backup directory and its contents." $@
+source ${SCRIPTPATH}/dump_load_common.sh true "Dump hived and haf states." "  --override-existing-backup-dir   Erases backup directory and its contents." "$@"
 
 validate_environment(){
 

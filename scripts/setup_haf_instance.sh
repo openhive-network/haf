@@ -124,8 +124,8 @@ process_option_file() {
   IFS=
 
   mapfile -t <"$option_file" READ_OPTIONS
-  echo "Read options: ${READ_OPTIONS[@]}"
-  for o in ${READ_OPTIONS[@]}; do
+  echo "Read options:" "${READ_OPTIONS[@]}"
+  for o in "${READ_OPTIONS[@]}"; do
 #    echo "Processing a file option: $o"
     process_option "$o"
   done
@@ -174,7 +174,7 @@ spawn_hived() {
   set -x # to allow logging of every spawned cmd
 
   # Use hived account for peer authentication.
-  sudo -HEnu $HIVED_ACCOUNT "$hived_binary_path" $data_dir --shared-file-size=$HIVED_SHARED_MEM_FILE_SIZE --plugin=sql_serializer --psql-url="dbname=$db_name host=$pg_host port=$pg_port" --replay ${HIVED_ARGS[@]}
+  sudo -HEnu $HIVED_ACCOUNT "$hived_binary_path" $data_dir --shared-file-size=$HIVED_SHARED_MEM_FILE_SIZE --plugin=sql_serializer --psql-url="dbname=$db_name host=$pg_host port=$pg_port" --replay "${HIVED_ARGS[@]}"
 
   set -x
 }
