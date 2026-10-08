@@ -300,6 +300,13 @@ if [[ "$DATADIR" != "/home/hived/datadir" ]]; then
   sudo -n --user=hived ln -sf "$DATADIR" /home/hived/datadir # Add symbolic link to the new data directory in its place
 fi
 
+# Changes only entries not already owned by postgres: a plain chown -R also rewrites
+# correctly-owned files, and when the database ships in an image layer (overlayfs)
+# that copies every file of it up into the container layer on each start.
+fix_haf_db_store_ownership() {
+  sudo -n find "$HAF_DB_STORE" \( ! -user postgres -o ! -group postgres \) -exec chown -ch postgres:postgres {} + 2>/dev/null || true
+}
+
 # Directory haf_db_store has to be world readable to avoid the following error:
 # Error: /home/hived/datadir/haf_db_store/pgdata is not accessible; please fix the directory permissions (/home/hived/datadir/haf_db_store/ should be world readable)
 sudo -n --user=hived mkdir -p -m 755 "$HAF_DB_STORE"
@@ -313,7 +320,7 @@ sudo -n --user=hived mkdir -p -m 755 "$HAF_DB_STORE"
 # Only fix ownership if PGDATA already exists (cached data scenario).
 # If PGDATA doesn't exist, leave ownership for the mkdir commands below.
 if [[ -d "$PGDATA" ]]; then
-  sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE" 2>/dev/null || true
+  fix_haf_db_store_ownership
 fi
 
 # Check if correct PostgreSQL version is installed
@@ -368,7 +375,7 @@ else
   # Fix ownership of existing database files - required when cache was created in a different
   # container where postgres user had different uid/gid. Without this, PostgreSQL fails with:
   # "Error: The cluster is owned by group id NNN which does not exist"
-  sudo -n chown -Rc postgres:postgres "$HAF_DB_STORE" 2>/dev/null || true
+  fix_haf_db_store_ownership
   # Fix pgdata permissions - PostgreSQL requires mode 700 or 750
   # Cached data may have relaxed permissions (a+rX) for NFS copying
   sudo -n chmod 700 "$PGDATA" 2>/dev/null || true
