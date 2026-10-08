@@ -1,0 +1,79 @@
+# Profile for hive/haf, written by `aidev project scaffold` (#13561).
+#
+# Schema reference: docs/architecture/project-profile.md
+# Onboarding procedure: the `onboard-external-project` skill.
+# Guide: docs/operations/onboarding-an-external-project.md
+#
+# The generator writes a starting point, not a governed answer: every
+# binding below is the command a maintainer said this project runs, and it
+# is reviewed and edited like any other declaration.
+version: 2
+project: haf
+
+gitlab:
+  host: "gitlab.syncad.com"
+  path: "hive/haf"
+  id: 323
+
+# AIDEV integrates into its own branch; people merge it into develop through
+# merge requests (as in hive/HAfAH and hive/haf_api_node), so `stable` is
+# omitted and `aidev release` never moves develop or master.
+branches:
+  integration: "aidev/integration"
+
+# How this project's suites execute (#13892): one kind, stated once.
+environment:
+  kind: "container"
+  # The HAF image itself with its entrypoint cleared: built by
+  # .aidev/runtime/build.sh from .aidev/runtime/Dockerfile (its only input).
+  image: "registry.gitlab.syncad.com/hive/haf/aidev-tests@sha256:42ea3e76c1b50341263bdc869baa9f498ce8fdca42eaf3a19345d0125add9cf8"
+  inputs: [".aidev/runtime/Dockerfile"]
+
+issues:
+  intake_label: todo
+  taxonomy: ".aidev/labels.yaml"
+  decompose:
+    # `never` is where an external project starts: nothing marks work
+    # approved on this project's behalf until there is a track record.
+    auto_todo: never
+  # Reports about this project's work are filed against this project.
+  watcher_reports: self
+
+# Verification slots. Each binding is what this project genuinely runs for
+# that slot — never one selection repeated under seven names, which makes
+# seven gates report on the same evidence while claiming to check seven
+# different things.
+#
+# SQL path first: the candidate's hive_fork_manager SQL is installed into the
+# pinned HAF image (as CI's Dockerfile.sql-overlay does) and the SQL functional
+# tests ctest registers run against it (.aidev/hfm-functional.sh). The image's
+# C++ (libhfm, hived) is the base commit's, so `cxx-scope` reports a candidate's
+# C++/CMake/hive changes as a skipped, unverified case. Unbound for now: the C++
+# build and unit tests, replay and system tests (CI keeps them), and `static`
+# (scripts/ has shellcheck errors today) and `system`, which AIDEV runs for no
+# project. See .aidev/README.md.
+verification:
+  quick:
+    adapter: command
+    args: [".aidev/run-checks.sh", "quick", "hfm-smoke", "cxx-scope"]
+    artifacts: ["test-results/quick/"]
+  full:
+    adapter: command
+    args: [".aidev/run-checks.sh", "full", "hfm-functional", "cxx-scope"]
+    artifacts: ["test-results/full/"]
+  baseline:
+    adapter: command
+    args: [".aidev/run-checks.sh", "baseline", "hfm-functional"]
+    artifacts: ["test-results/baseline/"]
+  canary:
+    adapter: command
+    args: [".aidev/run-checks.sh", "canary", "hfm-functional", "cxx-scope"]
+    artifacts: ["test-results/canary/"]
+  # No coverage measurement for SQL; AIDEV runs `coverage` only in the
+  # post-implementation scan.
+  coverage:
+    adapter: command
+    args: [".aidev/run-checks.sh", "coverage", "hfm-smoke"]
+    artifacts: ["test-results/coverage/"]
+
+capabilities: []
