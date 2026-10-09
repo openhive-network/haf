@@ -15,9 +15,12 @@ cat <<-EOF
 
   Builds and pushes a HAF fixture image: the given HAF image with the PostgreSQL
   cluster of a replay cache baked into a layer (see Dockerfile.fixture).
-  Pushes <repository>:<commit, 8 chars> and <repository>:<full commit>; does
-  nothing but report the existing image when the full-commit tag is already
-  in the registry. Requires a buildx builder and a registry login.
+  Pushes <repository>:<commit, 8 chars>, starts it once and, only when
+  PostgreSQL comes up on the baked cluster, tags it <repository>:<full commit>;
+  does nothing but report the existing image when the full-commit tag is
+  already in the registry. Makes the local replay cache world-readable (the
+  image restores postgres ownership and the entrypoint the pgdata mode).
+  Requires passwordless sudo, a buildx builder and a registry login.
   OPTIONS:
       --haf-image=IMAGE           HAF image that produced the replay cache (fixture base)
       --data-cache=PATH           Replay cache directory (containing datadir/haf_db_store)
@@ -91,23 +94,38 @@ if docker buildx imagetools inspect "$FULL_TAG" >/dev/null 2>&1; then
   exit 0
 fi
 
-if [[ ! -f "${HAF_DB_STORE}/pgdata/PG_VERSION" ]]; then
-  echo "ERROR: ${HAF_DB_STORE}/pgdata/PG_VERSION not found or not readable - no replayed database to package"
+# The replayed cluster is postgres-owned with pgdata 0700, so probe it as root
+# to tell a missing database from one the job user cannot read
+if ! sudo -n test -f "${HAF_DB_STORE}/pgdata/PG_VERSION"; then
+  echo "ERROR: ${HAF_DB_STORE}/pgdata/PG_VERSION not found - no replayed database to package"
   exit 1
 fi
-if [[ -f "${HAF_DB_STORE}/pgdata/postmaster.pid" ]]; then
+if sudo -n test -f "${HAF_DB_STORE}/pgdata/postmaster.pid"; then
   echo "ERROR: ${HAF_DB_STORE}/pgdata/postmaster.pid exists - the replay cache was not shut down cleanly"
   exit 1
 fi
 
+# The build context is read as the job user. Only this local extraction is
+# relaxed: COPY --chown sets postgres ownership in the image and
+# docker_entrypoint.sh restores pgdata to 0700 before starting PostgreSQL.
+sudo -n chmod -R a+rX "$HAF_DB_STORE"
+
 EMPTY_CONTEXT=$(mktemp -d)
-trap 'rm -rf "$EMPTY_CONTEXT"' EXIT
+CHECK_CONTAINER="haf-fixture-check-${HAF_COMMIT:0:8}-$$"
+cleanup () {
+  rm -rf "$EMPTY_CONTEXT"
+  docker rm -f "$CHECK_CONTAINER" >/dev/null 2>&1 || true
+  docker image rm "$SHORT_TAG" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
 
 echo "Building ${SHORT_TAG} from ${HAF_IMAGE} with database ${HAF_DB_STORE}"
 du -sh "$HAF_DB_STORE" || true
 
 # zstd: the database layer is tens of GB, gzip compresses it single-threaded.
 # No provenance attestation, so the tag resolves to a plain image manifest.
+# Only the short tag is pushed here: the full-commit tag marks a fixture that
+# has been started successfully, and its presence makes later runs skip the build.
 docker buildx build \
   --file "${SRCROOTDIR}/Dockerfile.fixture" \
   --build-arg BASE_IMAGE="$HAF_IMAGE" \
@@ -116,8 +134,32 @@ docker buildx build \
   --label io.hive.image.fixture.base="$HAF_IMAGE" \
   --provenance=false \
   --tag "$SHORT_TAG" \
-  --tag "$FULL_TAG" \
   --output type=image,push=true,compression=zstd,oci-mediatypes=true \
   "$EMPTY_CONTEXT"
+
+echo "Starting ${SHORT_TAG} to check that PostgreSQL comes up on the baked cluster"
+docker run --detach --name "$CHECK_CONTAINER" "$SHORT_TAG" >/dev/null
+
+START_TIMEOUT=600
+head_block=""
+for (( waited = 0; waited < START_TIMEOUT; waited += 5 )); do
+  if [[ "$(docker inspect --format '{{.State.Running}}' "$CHECK_CONTAINER")" != "true" ]]; then
+    break
+  fi
+  if head_block=$(docker exec "$CHECK_CONTAINER" psql -h localhost -U haf_admin -d haf_block_log -Atc 'select max(num) from hafd.blocks' 2>/dev/null); then
+    break
+  fi
+  head_block=""
+  sleep 5
+done
+
+if [[ -z "$head_block" ]]; then
+  echo "ERROR: PostgreSQL did not come up on the baked cluster of ${SHORT_TAG} within ${START_TIMEOUT}s; ${FULL_TAG} not tagged"
+  docker logs --tail 100 "$CHECK_CONTAINER" 2>&1 || true
+  exit 1
+fi
+echo "Fixture started: haf_block_log head block ${head_block}"
+
+docker buildx imagetools create --tag "$FULL_TAG" "$SHORT_TAG"
 
 report_fixture "$FULL_TAG"
