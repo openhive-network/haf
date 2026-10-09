@@ -1732,6 +1732,47 @@ prepare_haf_data_pg17:
     - data-cache-storage
     - fastest
 
+# Publishes the 5M replay cache of $HAF_COMMIT as hive/haf/fixture-5m:<commit>:
+# the HAF image with the replayed database in an image layer, serving it without
+# hived (see Dockerfile.fixture). Built once per commit; later pipelines for the
+# same commit only report the existing image.
+build_haf_fixture_image:
+  extends: .docker_image_builder_job
+  stage: build_and_test_phase_2
+  needs:
+    - job: prepare_haf_data
+      artifacts: true
+    - job: haf_image_build
+      artifacts: true
+      optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
+    - job: detect_changes
+      artifacts: true
+      optional: true  # Skipped for tagged builds
+  timeout: 2h
+  variables:
+    FIXTURE_REPOSITORY: "${CI_REGISTRY_IMAGE}/fixture-5m"
+  script:
+    # The fixture is FROM $HAF_IMAGE_NAME, so it must be the image that wrote the
+    # cache. A SQL-only overlay or a QUICK_TEST image runs over another commit's cache.
+    - |
+      if [[ "${SQL_ONLY_CHANGE:-false}" == "true" || "${QUICK_TEST}" == "true" ]]; then
+        echo "Skipping fixture build: $HAF_IMAGE_NAME did not produce the replay cache of $HAF_COMMIT"
+        exit 0
+      fi
+      export HAF_DATA_CACHE_LOCAL="/cache/haf_${HAF_COMMIT}"
+    - *fetch_haf_cache
+    - !reference [.script_registry_login_gitlab, script]
+    - |
+      "$CI_PROJECT_DIR/scripts/ci-helpers/build_haf_fixture_image.sh" \
+        --haf-image="$HAF_IMAGE_NAME" \
+        --data-cache="$HAF_DATA_CACHE_LOCAL" \
+        --fixture-repository="$FIXTURE_REPOSITORY" \
+        --haf-commit="$HAF_COMMIT"
+  tags:
+    - public-runner-docker
+    - data-cache-storage
+    - fast
+
 dead_app_auto_detach:
   extends: .job-defaults
   stage: build_and_test_phase_2

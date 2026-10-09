@@ -1,0 +1,29 @@
+# HAF fixture image: a HAF image with a replayed database baked into a layer
+#
+# Takes the PostgreSQL cluster (haf_db_store: pgdata + tablespace) of a CI
+# replay cache and adds it on top of the HAF image that produced it. Only the
+# database is included - no block_log, shared memory file or other hived state -
+# and the container runs PostgreSQL alone, never hived.
+#
+# No VOLUME is declared over the data: each container gets a copy-on-write view
+# of the layer, so starting one copies nothing and containers stay isolated.
+#
+# Usage (see scripts/ci-helpers/build_haf_fixture_image.sh):
+#   docker buildx build -f Dockerfile.fixture \
+#     --build-arg BASE_IMAGE=registry.gitlab.syncad.com/hive/haf:abc12345 \
+#     --build-context haf_db_store=/cache/haf_<commit>/datadir/haf_db_store \
+#     <empty dir>
+
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+# Literal path: postgresql.conf hardcodes data_directory under /home/hived/datadir
+COPY --from=haf_db_store --chown=postgres:postgres . /home/hived/datadir/haf_db_store/
+
+# Test fixture holding public chain data only: accept any client without a password
+ENV PG_ACCESS="host    all     all     0.0.0.0/0    trust\nhost    all     all     ::/0    trust"
+
+LABEL io.hive.image.fixture="haf-5m"
+
+# Resolved at runtime by docker_entrypoint.sh
+CMD ["--execute-maintenance-script=${HAF_SOURCE_DIR}/scripts/maintenance-scripts/sleep_infinity.sh"]

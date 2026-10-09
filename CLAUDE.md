@@ -48,7 +48,8 @@ Phase 2: Tests (parallel, depend on Phase 1)
 ├── applications_system_tests
 ├── replay_* jobs (various filter configurations)
 ├── dead_app_auto_detach
-└── start_haf_as_service
+├── start_haf_as_service
+└── build_haf_fixture_image (pushes hive/haf/fixture-5m:<commit>)
 ```
 
 ### Key CI Files
