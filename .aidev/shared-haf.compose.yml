@@ -48,8 +48,11 @@ services:
       <<: *shared-haf-env
       HAF_SHARED_RUN_TTL: "${HAF_SHARED_RUN_TTL:-6 hours}"
       # Over TCP only the consumer role, only to the clone API and its own
-      # clones, with a password; the image's trust rule is replaced.
-      PG_ACCESS: 'host haf_shared haf_shared_consumer 0.0.0.0/0 scram-sha-256\nhost haf_shared haf_shared_consumer ::/0 scram-sha-256\nhost /^run_[a-z0-9_-]+$$ haf_shared_consumer 0.0.0.0/0 scram-sha-256\nhost /^run_[a-z0-9_-]+$$ haf_shared_consumer ::/0 scram-sha-256'
+      # clones, and only from the fleet's LAN, without a password: the data is
+      # public chain data. 172.16.0.0/12 admits the provider host itself, whose
+      # connections arrive through docker's NAT. The image's trust rule is
+      # replaced.
+      PG_ACCESS: 'host haf_shared haf_shared_consumer 192.168.3.0/24 trust\nhost /^run_[a-z0-9_-]+$$ haf_shared_consumer 192.168.3.0/24 trust\nhost haf_shared haf_shared_consumer 192.168.5.0/24 trust\nhost /^run_[a-z0-9_-]+$$ haf_shared_consumer 192.168.5.0/24 trust\nhost haf_shared haf_shared_consumer 192.168.6.0/24 trust\nhost /^run_[a-z0-9_-]+$$ haf_shared_consumer 192.168.6.0/24 trust\nhost haf_shared haf_shared_consumer 172.16.0.0/12 trust\nhost /^run_[a-z0-9_-]+$$ haf_shared_consumer 172.16.0.0/12 trust'
     ports:
       - "0.0.0.0:${AIDEV_PORT_PG:?}:5432"
     volumes:

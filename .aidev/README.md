@@ -77,9 +77,9 @@ aidev session create haf-shared --host steem-13 --remote git@gitlab.syncad.com:h
     --target-branch aidev/integration --shared-service haf
 ```
 
-Consumers declare `sandbox.external: [{name: haf, provider: "haf/haf"}]` and the
-`HAF_PG_PASSWORD` secret, connect to `$AIDEV_EXTERNAL_HAF_HOST:$AIDEV_EXTERNAL_HAF_PORT`
-as `haf_shared_consumer`, and per run:
+Consumers declare `sandbox.external: [{name: haf, provider: "haf/haf"}]`, connect
+to `$AIDEV_EXTERNAL_HAF_HOST:$AIDEV_EXTERNAL_HAF_PORT` as `haf_shared_consumer`
+(no password, no secret), and per run:
 
 ```sql
 -- in database haf_shared
@@ -89,9 +89,35 @@ select * from haf_shared.health();                  -- HAF commit, template head
 ```
 
 A run id is 1-48 of `[a-z0-9_-]`. The clone is owned by the consumer, who is a
-`hive_applications_owner_group` member inside it. Over TCP that role can reach
-only `haf_shared` and `run_*` databases, with a password; no other role can log
-in over TCP.
+`hive_applications_owner_group` member inside it.
+
+**Access.** Over TCP only `haf_shared_consumer` can log in, only to `haf_shared`
+and `run_*` databases, and only from the fleet's LAN, where it is trusted without
+a password: `192.168.3.0/24`, `192.168.5.0/24` and `192.168.6.0/24` (the source
+addresses of every pull host and session host), and `172.16.0.0/12` (connections
+from the provider host itself arrive through docker's NAT). The data is public
+chain data; what the LAN can do is create and drop clones. The rules are the
+`haf` service's `PG_ACCESS`, which replaces the image's own trust rule.
+
+**App roles.** Installing a HAF app creates cluster-wide roles, which the
+consumer may not do (PostgreSQL checks `CREATEROLE` before noticing the role
+exists). The provider creates them instead: `shared-haf/app-roles/` holds one
+SQL file per consumer app, which `serve.sh` applies as `postgres` on every start,
+before serving. Each creates the app's roles idempotently and makes
+`haf_shared_consumer` (and `haf_admin`) a member of the app's owner role, so they
+survive a reseed or a new version. Every run shares them; an app's roles are the
+same across its versions. `app-roles/hafah.sql` creates HAfAH's `hafah_owner` and
+`hafah_user`. To install an app in its clone, the consumer (the clone's owner)
+first grants the app's roles the database:
+
+```sql
+-- in run_<run id>, as haf_shared_consumer
+grant create, connect on database run_<run id> to hafah_owner, hafah_user;
+```
+
+then runs the app's install as the consumer, skipping its own role-creation step
+(HAfAH: `scripts/install_app.sh` without `db/builtin_roles.sql`). A new consumer
+app adds its file to `app-roles/` and restarts the service.
 
 **How it works.** Both services run the `hive/haf/fixture-5m:<commit>` image
 CI's `build_haf_fixture_image` publishes. The one-shot `seed` service
@@ -105,7 +131,7 @@ not be a symlink: the cluster's tablespace link is relative, and the image's
 path, aborting when they differ. `start.sh` (the `haf` entrypoint) checks the
 mount, sets `file_copy_method = clone` and runs the HAF entrypoint with
 `serve.sh` as its maintenance script. `serve.sh` installs
-`admin.sql` into the `haf_shared` database, and once per version freezes
+`admin.sql` into the `haf_shared` database, applies `app-roles/`, and once per version freezes
 `haf_template`, a clone of `haf_block_log` with its head block recorded, that
 no one may connect to. `haf_block_log` itself stays connectable because the
 entrypoint checks and updates the extension in it on every start. Clones are
@@ -122,14 +148,11 @@ worker-side path the daemon would create as an empty directory. With
 `AIDEV_HOST_CHECKOUT` unset the compose file refuses to resolve.
 
 **Host setup (once, on steem-13).** The data root must be a dataset on a pool
-with `feature@block_cloning` (ZFS 2.4+; steem-9/steem-17's 2.2.2 cannot clone),
-and must hold the consumer password: the value of the fleet's `HAF_PG_PASSWORD`
-secret, 16-128 characters of `[A-Za-z0-9._~+/=-]`. The service exits without it.
+with `feature@block_cloning` (ZFS 2.4+; steem-9/steem-17's 2.2.2 cannot clone).
+No credential is provisioned: consumers are trusted by source address (above).
 
 ```bash
 sudo zfs create haf-pool/aidev-shared-haf            # mounted at /haf-pool/aidev-shared-haf
-sudo install -m 600 /dev/null /haf-pool/aidev-shared-haf/consumer.password
-echo -n "$HAF_PG_PASSWORD" | sudo tee /haf-pool/aidev-shared-haf/consumer.password >/dev/null
 ```
 
 **Changing the served version.** Set `HAF_FIXTURE_COMMIT` and `HAF_FIXTURE_DIGEST`
