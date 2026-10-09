@@ -2,8 +2,9 @@
 # Maintenance script of the shared HAF service, run by the HAF entrypoint once
 # PostgreSQL is up (start.sh hands it over):
 #
-# 1. installs the clone API (admin.sql) into the haf_shared database and sets
-#    the consumer role's password from <root>/consumer.password;
+# 1. installs the clone API (admin.sql) into the haf_shared database, and the
+#    cluster-wide roles of every consumer app (app-roles/*.sql), which the
+#    consumer cannot create itself;
 # 2. once per seeded version, freezes haf_template: a clone of haf_block_log
 #    that no one may connect to, with its head block recorded. haf_block_log
 #    itself stays connectable, because the entrypoint checks and updates the
@@ -11,12 +12,11 @@
 # 3. reaps run databases every HAF_SHARED_REAP_INTERVAL seconds, then serves
 #    as the image's sleep_infinity.sh does.
 #
-# Environment: HAF_FIXTURE_COMMIT, HAF_SHARED_ROOT (as start.sh),
+# Environment: HAF_FIXTURE_COMMIT (as start.sh),
 # HAF_SHARED_RUN_TTL (default '6 hours'), HAF_SHARED_REAP_INTERVAL (default 300).
 set -euo pipefail
 
 commit="${HAF_FIXTURE_COMMIT:?}"
-root="${HAF_SHARED_ROOT:?}"
 ttl="${HAF_SHARED_RUN_TTL:-6 hours}"
 interval="${HAF_SHARED_REAP_INTERVAL:-300}"
 here="$(cd "$(dirname "$0")" && pwd -P)"
@@ -25,26 +25,14 @@ psql_pg() {
     sudo -nu postgres psql -X -q -v ON_ERROR_STOP=1 "$@"
 }
 
-password_file="$root/consumer.password"
-if ! password="$(sudo -n cat "$password_file" 2>/dev/null)"; then
-    echo "no consumer password at $password_file: write the HAF_PG_PASSWORD secret consumers are given there (root, 0600)" >&2
-    exit 1
-fi
-if [[ ! "$password" =~ ^[A-Za-z0-9._~+/=-]{16,128}$ ]]; then
-    echo "$password_file must hold 16-128 characters of [A-Za-z0-9._~+/=-]" >&2
-    exit 1
-fi
-
 psql_pg -d postgres <<'EOF'
 select 'create database haf_shared' where not exists (select 1 from pg_database where datname = 'haf_shared')
 \gexec
 EOF
 psql_pg -d haf_shared -f "$here/admin.sql"
-# On stdin, never argv; the charset checked above holds no quote.
-psql_pg -d postgres <<EOF
-set log_statement = 'none';
-alter role haf_shared_consumer password '$password';
-EOF
+for app_roles in "$here"/app-roles/*.sql; do
+    psql_pg -d postgres -f "$app_roles"
+done
 
 if [ "$(psql_pg -d haf_shared -Atc "select count(*) from haf_shared.template")" != 1 ]; then
     echo "freezing haf_template from haf_block_log of $commit"

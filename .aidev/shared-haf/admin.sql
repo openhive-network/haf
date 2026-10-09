@@ -15,8 +15,9 @@ create extension if not exists dblink with schema dblink;
 
 create schema if not exists haf_shared;
 
--- The role consumers log in as (serve.sh sets its password): it may create and
--- drop run databases, and inside its own clones it is a HAF application owner.
+-- The role consumers log in as, without a password (the compose file trusts
+-- the fleet's LAN): it may create and drop run databases, and inside its own
+-- clones it is a HAF application owner.
 do $$
 begin
     create role haf_shared_consumer login inherit in role hive_applications_owner_group;
