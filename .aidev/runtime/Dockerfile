@@ -7,7 +7,7 @@
 # Base: hive/haf:8de693b2 — the HAF commit at develop/aidev/integration when this
 # was pinned. Re-pin when the base should follow develop (a C++ change only reaches
 # these checks through a new base). Build with .aidev/runtime/build.sh.
-FROM registry.gitlab.syncad.com/hive/haf@sha256:4948ddfd4c5e4bca1d312361a2124ac616db15811d03bce94ba3f0151b440b38
+FROM registry.gitlab.syncad.com/hive/haf@sha256:a1223baaa1d5aefbbb5f95719da04194f58daa669869c0b856a544a32795d475
 
 ENTRYPOINT []
 CMD ["bash"]
