@@ -76,4 +76,22 @@ verification:
     args: [".aidev/run-checks.sh", "coverage", "hfm-smoke"]
     artifacts: ["test-results/coverage/"]
 
+# The shared HAF service (#353): a dedicated session on steem-13 (ZFS with
+# block cloning) runs it, and other projects' suites reach it as
+# `sandbox.external: [{name: haf, provider: "haf/haf"}]`, each run cloning the
+# replayed 5M database. See .aidev/README.md.
+sandbox:
+  shared:
+    haf:
+      compose: ".aidev/shared-haf.compose.yml"
+      services: [haf]
+      ports: [pg]
+      # The first start of a version copies its replayed cluster onto the dataset.
+      readiness_timeout: 1800
+      env:
+        # Fixture image hive/haf/fixture-5m:<commit> (CI's build_haf_fixture_image).
+        HAF_FIXTURE_COMMIT: "e2237bea170e6aea9fc327fb1b1e34b5237d219d"
+        HAF_FIXTURE_DIGEST: "sha256:6f0d0f435b829b47379b80dbba8f2602d8ce558cedd941d1cb1b427985c8c020"
+        HAF_SHARED_DATA_ROOT: "/haf-pool/aidev-shared-haf"
+
 capabilities: []
