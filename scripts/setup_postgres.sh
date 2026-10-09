@@ -77,7 +77,8 @@ EOF
       fi
     done
   fi
-  if [ "$TABLESPACE_PATH" = "$haf_tablespace_abs_path" ]; then
+  # Compare canonical forms: the data directory (and so the tablespace) may be reached through a symlink
+  if [ "$(realpath -m "$TABLESPACE_PATH")" = "$(realpath -m "$haf_tablespace_abs_path")" ]; then
       if [[ ! -d "$haf_tablespace_abs_path" || -z $(ls -A "$haf_tablespace_abs_path") ]]; then
         echo "WARNING: The tablespace $haf_tablespace_name already points to the specified location, but the target directory does not exists or is empty. Creating a new tablespace there."
         sudo -nu postgres psql --dbname=postgres --echo-all --no-password "${pg_access[@]}" --variable=ON_ERROR_STOP=on --file=- <<EOF
