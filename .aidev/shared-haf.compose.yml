@@ -27,8 +27,10 @@ services:
       - type: bind
         source: "${HAF_SHARED_DATA_ROOT:?}"
         target: /haf-shared
+      # Compose runs in the session worker, but the host's daemon resolves bind
+      # sources on the host: a relative path would name a worker-side directory.
       - type: bind
-        source: ./shared-haf
+        source: "${AIDEV_HOST_CHECKOUT:?AIDEV_HOST_CHECKOUT must name the checkout as the docker daemon sees it}/.aidev/shared-haf"
         target: /aidev/shared-haf
         read_only: true
     entrypoint: ["/aidev/shared-haf/start.sh"]
