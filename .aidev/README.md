@@ -93,12 +93,18 @@ A run id is 1-48 of `[a-z0-9_-]`. The clone is owned by the consumer, who is a
 only `haf_shared` and `run_*` databases, with a password; no other role can log
 in over TCP.
 
-**How it works.** `start.sh` (the container entrypoint, in the
-`hive/haf/fixture-5m:<commit>` image CI's `build_haf_fixture_image` publishes)
-refuses a data root that is not ZFS, copies the image's replayed cluster to
-`$HAF_SHARED_DATA_ROOT/<commit>/haf_db_store` on the first start of a version,
-points the image's `haf_db_store` at it, sets `file_copy_method = clone` and runs
-the HAF entrypoint with `serve.sh` as its maintenance script. `serve.sh` installs
+**How it works.** Both services run the `hive/haf/fixture-5m:<commit>` image
+CI's `build_haf_fixture_image` publishes. The one-shot `seed` service
+(`seed.sh`) refuses a data root that is not ZFS and, on the first start of a
+version, copies the image's replayed cluster to
+`$HAF_SHARED_DATA_ROOT/<commit>/haf_db_store`; later starts find it there and
+exit at once. `haf` starts only once `seed` has succeeded, with that directory
+bind-mounted directly at the image's `/home/hived/datadir/haf_db_store`. It must
+not be a symlink: the cluster's tablespace link is relative, and the image's
+`setup_postgres.sh` compares its resolved location with the unresolved expected
+path, aborting when they differ. `start.sh` (the `haf` entrypoint) checks the
+mount, sets `file_copy_method = clone` and runs the HAF entrypoint with
+`serve.sh` as its maintenance script. `serve.sh` installs
 `admin.sql` into the `haf_shared` database, and once per version freezes
 `haf_template`, a clone of `haf_block_log` with its head block recorded, that
 no one may connect to. `haf_block_log` itself stays connectable because the
