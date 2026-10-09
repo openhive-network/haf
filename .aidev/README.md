@@ -64,3 +64,64 @@ the same commit**:
 `AIDEV_IMAGE_CACHE_BY_REGION` (`region=host:port` pairs) builds through a pull-through
 registry cache near the build host; unset, it builds straight from
 `registry.gitlab.syncad.com`.
+
+## The shared HAF service (`sandbox.shared.haf`)
+
+A persistent PostgreSQL that holds the 5M replay of a HAF version and gives each
+test run, from any session, its own copy-on-write clone of it. It is declared
+under `sandbox.shared.haf` in `project.yaml`, defined in `shared-haf.compose.yml`
+and implemented in `shared-haf/`. A dedicated session hosts it:
+
+```bash
+aidev session create haf-shared --host steem-13 --remote git@gitlab.syncad.com:hive/haf.git \
+    --target-branch aidev/integration --shared-service haf
+```
+
+Consumers declare `sandbox.external: [{name: haf, provider: "haf/haf"}]` and the
+`HAF_PG_PASSWORD` secret, connect to `$AIDEV_EXTERNAL_HAF_HOST:$AIDEV_EXTERNAL_HAF_PORT`
+as `haf_shared_consumer`, and per run:
+
+```sql
+-- in database haf_shared
+select haf_shared.clone_run_database('<run id>');   -- returns run_<run id>; connect to it
+select haf_shared.drop_run_database('<run id>');    -- when done
+select * from haf_shared.health();                  -- HAF commit, template head block, live clones
+```
+
+A run id is 1-48 of `[a-z0-9_-]`. The clone is owned by the consumer, who is a
+`hive_applications_owner_group` member inside it. Over TCP that role can reach
+only `haf_shared` and `run_*` databases, with a password; no other role can log
+in over TCP.
+
+**How it works.** `start.sh` (the container entrypoint, in the
+`hive/haf/fixture-5m:<commit>` image CI's `build_haf_fixture_image` publishes)
+refuses a data root that is not ZFS, copies the image's replayed cluster to
+`$HAF_SHARED_DATA_ROOT/<commit>/haf_db_store` on the first start of a version,
+points the image's `haf_db_store` at it, sets `file_copy_method = clone` and runs
+the HAF entrypoint with `serve.sh` as its maintenance script. `serve.sh` installs
+`admin.sql` into the `haf_shared` database, and once per version freezes
+`haf_template`, a clone of `haf_block_log` with its head block recorded, that
+no one may connect to. `haf_block_log` itself stays connectable because the
+entrypoint checks and updates the extension in it on every start. Clones are
+`CREATE DATABASE run_<id> TEMPLATE haf_template STRATEGY FILE_COPY` through a
+`dblink` loopback (CREATE/DROP DATABASE cannot run in a function). Every 5 minutes
+a reaper drops clones older than `HAF_SHARED_RUN_TTL` (6 hours), and `run_*`
+databases no run is registered for.
+
+**Host setup (once, on steem-13).** The data root must be a dataset on a pool
+with `feature@block_cloning` (ZFS 2.4+; steem-9/steem-17's 2.2.2 cannot clone),
+and must hold the consumer password: the value of the fleet's `HAF_PG_PASSWORD`
+secret, 16-128 characters of `[A-Za-z0-9._~+/=-]`. The service exits without it.
+
+```bash
+sudo zfs create haf-pool/aidev-shared-haf            # mounted at /haf-pool/aidev-shared-haf
+sudo install -m 600 /dev/null /haf-pool/aidev-shared-haf/consumer.password
+echo -n "$HAF_PG_PASSWORD" | sudo tee /haf-pool/aidev-shared-haf/consumer.password >/dev/null
+```
+
+**Changing the served version.** Set `HAF_FIXTURE_COMMIT` and `HAF_FIXTURE_DIGEST`
+in `project.yaml` to a `fixture-5m` image whose full-commit tag exists (the tag
+means CI started it). AIDEV keeps the hosting session's service checkout fixed,
+so a push does not restart a running service: restart it to switch. The new version is seeded beside the old one, whose
+directory can be destroyed once nothing uses it. To serve two versions at once,
+add a second service of the same shape with its own port name.
