@@ -4,19 +4,48 @@
 # (.aidev/shared-haf/, see .aidev/README.md).
 #
 # Hosted by a dedicated AIDEV session on a host whose HAF_SHARED_DATA_ROOT is a
-# ZFS dataset with block cloning (steem-13); start.sh refuses anything else.
+# ZFS dataset with block cloning (steem-13); seed.sh refuses anything else.
 # The port is published on every interface: consumers reach it through relays
 # on other hosts.
 #
 # A second version is a second service of this shape — its own fixture commit
 # and digest, its own port name in project.yaml — over the same data root.
 
+x-shared-haf: &shared-haf
+  image: "registry.gitlab.syncad.com/hive/haf/fixture-5m:${HAF_FIXTURE_COMMIT:?}@${HAF_FIXTURE_DIGEST:?}"
+  environment: &shared-haf-env
+    HAF_FIXTURE_COMMIT: "${HAF_FIXTURE_COMMIT:?}"
+    HAF_SHARED_ROOT: /haf-shared
+
+# Compose runs in the session worker, but the host's daemon resolves bind
+# sources on the host: a relative path would name a worker-side directory.
+x-data-root: &data-root
+  type: bind
+  source: "${HAF_SHARED_DATA_ROOT:?}"
+  target: /haf-shared
+x-scripts: &scripts
+  type: bind
+  source: "${AIDEV_HOST_CHECKOUT:?AIDEV_HOST_CHECKOUT must name the checkout as the docker daemon sees it}/.aidev/shared-haf"
+  target: /aidev/shared-haf
+  read_only: true
+
 services:
+  # Copies the image's replayed cluster onto the dataset on the first start of
+  # a version; a no-op afterwards.
+  seed:
+    <<: *shared-haf
+    volumes: [*data-root, *scripts]
+    entrypoint: ["/aidev/shared-haf/seed.sh"]
+    command: []
+    restart: "no"
+
   haf:
-    image: "registry.gitlab.syncad.com/hive/haf/fixture-5m:${HAF_FIXTURE_COMMIT:?}@${HAF_FIXTURE_DIGEST:?}"
+    <<: *shared-haf
+    depends_on:
+      seed:
+        condition: service_completed_successfully
     environment:
-      HAF_FIXTURE_COMMIT: "${HAF_FIXTURE_COMMIT:?}"
-      HAF_SHARED_ROOT: /haf-shared
+      <<: *shared-haf-env
       HAF_SHARED_RUN_TTL: "${HAF_SHARED_RUN_TTL:-6 hours}"
       # Over TCP only the consumer role, only to the clone API and its own
       # clones, with a password; the image's trust rule is replaced.
@@ -24,15 +53,19 @@ services:
     ports:
       - "0.0.0.0:${AIDEV_PORT_PG:?}:5432"
     volumes:
+      - *data-root
+      - *scripts
+      # The version's cluster, mounted at the very path the image's tablespace
+      # and postgresql.conf name: a symlink there makes setup_postgres.sh see the
+      # tablespace at a different location and abort. Compose creates this
+      # container before seed runs, and the daemon refuses a missing source
+      # unless allowed to create it; seed.sh removes such an empty directory
+      # before seeding.
       - type: bind
-        source: "${HAF_SHARED_DATA_ROOT:?}"
-        target: /haf-shared
-      # Compose runs in the session worker, but the host's daemon resolves bind
-      # sources on the host: a relative path would name a worker-side directory.
-      - type: bind
-        source: "${AIDEV_HOST_CHECKOUT:?AIDEV_HOST_CHECKOUT must name the checkout as the docker daemon sees it}/.aidev/shared-haf"
-        target: /aidev/shared-haf
-        read_only: true
+        source: "${HAF_SHARED_DATA_ROOT:?}/${HAF_FIXTURE_COMMIT:?}/haf_db_store"
+        target: /home/hived/datadir/haf_db_store
+        bind:
+          create_host_path: true
     entrypoint: ["/aidev/shared-haf/start.sh"]
     command: []
     stop_grace_period: 2m
@@ -41,5 +74,5 @@ services:
       interval: 15s
       timeout: 10s
       retries: 3
-      # The first start of a version copies its cluster onto the dataset.
+      # The first start of a version freezes its template.
       start_period: 30m
