@@ -475,7 +475,7 @@ DECLARE
     __max_block INTEGER;
     __already_lite BOOLEAN;
 BEGIN
-    SELECT COALESCE( lite_schema, FALSE ) INTO __already_lite FROM hafd.hive_state;
+    __already_lite := COALESCE( ( SELECT lite_schema FROM hafd.hive_state ), FALSE );
     IF __already_lite THEN
         RETURN; -- idempotent
     END IF;
@@ -515,7 +515,7 @@ DECLARE
     __existing_lite_schema boolean;
 BEGIN
     -- Handle lite_schema: permanent, set once on fresh DB
-    SELECT COALESCE( lite_schema, FALSE ) INTO __existing_lite_schema FROM hafd.hive_state;
+    __existing_lite_schema := COALESCE( ( SELECT lite_schema FROM hafd.hive_state ), FALSE );
     SELECT COALESCE( MAX(num), 0 ) INTO __max_block FROM hafd.blocks;
 
     IF _lite_schema AND NOT __existing_lite_schema AND __max_block = 0 THEN

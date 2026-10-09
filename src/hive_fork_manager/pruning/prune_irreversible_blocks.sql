@@ -7,7 +7,7 @@ $BODY$
 DECLARE
     __pruning_is_enabled BOOLEAN := FALSE;
 BEGIN
-    SELECT COALESCE( pruning > 0, FALSE) INTO __pruning_is_enabled FROM hafd.hive_state;
+    __pruning_is_enabled := COALESCE( ( SELECT pruning > 0 FROM hafd.hive_state ), FALSE );
     RETURN __pruning_is_enabled;
 END;
 $BODY$;
@@ -21,7 +21,7 @@ $BODY$
 DECLARE
     __lite_mode BOOLEAN := FALSE;
 BEGIN
-    SELECT COALESCE( lite_mode, FALSE ) INTO __lite_mode FROM hafd.hive_state;
+    __lite_mode := COALESCE( ( SELECT lite_mode FROM hafd.hive_state ), FALSE );
     RETURN __lite_mode;
 END;
 $BODY$;
@@ -35,7 +35,7 @@ $BODY$
 DECLARE
     __lite_schema BOOLEAN := FALSE;
 BEGIN
-    SELECT COALESCE( lite_schema, FALSE ) INTO __lite_schema FROM hafd.hive_state;
+    __lite_schema := COALESCE( ( SELECT lite_schema FROM hafd.hive_state ), FALSE );
     RETURN __lite_schema;
 END;
 $BODY$;

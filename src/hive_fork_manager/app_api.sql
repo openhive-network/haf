@@ -544,7 +544,7 @@ $BODY$
 DECLARE
     __result hafd.contexts.irreversible_block%TYPE;
 BEGIN
-    SELECT COALESCE( consistent_block, 0 ) INTO __result FROM hafd.hive_state;
+    __result := COALESCE( ( SELECT consistent_block FROM hafd.hive_state ), 0 );
     RETURN __result;
 END;
 $BODY$;
