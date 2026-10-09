@@ -108,6 +108,13 @@ entrypoint checks and updates the extension in it on every start. Clones are
 a reaper drops clones older than `HAF_SHARED_RUN_TTL` (6 hours), and `run_*`
 databases no run is registered for.
 
+AIDEV runs `docker compose` inside the session's worker container against the
+host's docker daemon, which resolves bind sources on the host. The `shared-haf/`
+bind therefore reads the checkout through `${AIDEV_HOST_CHECKOUT}` (the checkout's
+path as the daemon sees it), not a relative `./shared-haf`, which would name a
+worker-side path the daemon would create as an empty directory. With
+`AIDEV_HOST_CHECKOUT` unset the compose file refuses to resolve.
+
 **Host setup (once, on steem-13).** The data root must be a dataset on a pool
 with `feature@block_cloning` (ZFS 2.4+; steem-9/steem-17's 2.2.2 cannot clone),
 and must hold the consumer password: the value of the fleet's `HAF_PG_PASSWORD`
