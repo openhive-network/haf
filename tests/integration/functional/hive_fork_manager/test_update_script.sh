@@ -38,7 +38,9 @@ prepare_database() {
 
 update_database() {
     exec_sql "UPDATE pg_extension SET extversion = '1.0' WHERE extname = 'hive_fork_manager';"
-    sudo "$HAF_DIR/extensions/hive_fork_manager/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
+    # The installed generator, not the one cmake configured in $HAF_DIR: a reused image carries
+    # only the update script of the commit it was built from, which can differ from HEAD.
+    sudo "/usr/share/postgresql/$POSTGRES_VERSION/extension/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME"
 }
 
 failswith() {(
