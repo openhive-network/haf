@@ -664,6 +664,23 @@ detect_changes:
         echo "FORCE_BUILD: Overriding BUILD_ACTION to 'build'"
       fi
 
+      # A release tag names a commit its branch pipeline already published as
+      # <path>:<short sha>, the digest downstream stacks pin. Tag pipelines skip
+      # detect_changes, so without this they always rebuild and the protected
+      # release name lands on a new digest that no pinned stack references.
+      # Reuse the published image so after_script adds the release name to it.
+      if [[ -n "${CI_COMMIT_TAG:-}" && "${FORCE_BUILD:-}" != "true" && "$BUILD_ACTION" == "build" ]]; then
+        if docker manifest inspect "${IMAGE_NAME}" >/dev/null 2>&1; then
+          echo "Release tag ${CI_COMMIT_TAG}: reusing published ${IMAGE_NAME} instead of rebuilding"
+          BUILD_ACTION="skip"
+          CACHED_IMAGE_NAME="${IMAGE_NAME}"
+          echo "BUILD_ACTION=skip" >> smart_build_decision.env
+          echo "CACHED_IMAGE_NAME=${IMAGE_NAME}" >> smart_build_decision.env
+        else
+          echo "Release tag ${CI_COMMIT_TAG}: ${IMAGE_NAME} is not published - building"
+        fi
+      fi
+
       # Override BUILD_ACTION if SQL-only change detected
       if [[ "$SQL_OVERLAY_BUILD" == "true" && -n "$CACHED_COMMIT" && -n "$CACHED_IMAGE" ]]; then
         BUILD_ACTION="sql_overlay"
