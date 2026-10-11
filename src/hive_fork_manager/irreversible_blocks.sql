@@ -151,6 +151,10 @@ ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_1 
 ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_2 FOREIGN KEY (operation_id) REFERENCES hafd.operations(id) NOT VALID;
 ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_fk_3 FOREIGN KEY (transacting_account_id) REFERENCES hafd.accounts(id) NOT VALID;
 SELECT pg_catalog.pg_extension_config_dump('hafd.account_operations', '');
+--The table is insert-only, so autovacuum reaches it only through the insert threshold.
+--At the default scale factor (0.2) that is billions of rows between vacuums on mainnet,
+--leaving newly inserted pages out of the visibility map and forcing heap fetches in index-only scans.
+ALTER TABLE hafd.account_operations SET (autovacuum_vacuum_insert_scale_factor = 0.005);
 
 
 CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hafd.applied_hardforks ( block_num );

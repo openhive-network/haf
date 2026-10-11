@@ -545,8 +545,6 @@ BEGIN
     EXECUTE __command;
     RAISE NOTICE 'Clustering hafd.account_operations, this takes a while...';
     CLUSTER hafd.account_operations using hive_account_operations_uq1;
-    RAISE NOTICE 'Analyzing hafd.account_operations after clustering to update statistics';
-    ANALYZE hafd.account_operations;
     UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
   END IF;
 END;
