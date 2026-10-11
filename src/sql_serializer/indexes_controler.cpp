@@ -160,7 +160,8 @@ indexes_controler::vacuum_account_operations() {
   // CLUSTER rewrites hafd.account_operations without a visibility map and the table is insert-only,
   // so autovacuum would not build one for weeks; until then every index-only scan fetches heap rows.
   // VACUUM cannot run inside a transaction, hence it is issued here instead of in hive.restore_indexes.
-  const std::string vacuum_command = "VACUUM (FREEZE) hafd.account_operations";
+  // ANALYZE rides along: it replaces the one hive.recluster_account_operations_if_index_dropped ran after CLUSTER.
+  const std::string vacuum_command = "VACUUM (FREEZE, ANALYZE) hafd.account_operations";
   ilog("Performing vacuum: ${vacuum_command}", (vacuum_command));
   pqxx::connection conn(db_url_with_hived_app(_db_url));
   pqxx::nontransaction tx(conn);
