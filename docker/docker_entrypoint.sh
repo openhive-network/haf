@@ -236,17 +236,20 @@ cleanup () {
 }
 
 prepare_pg_hba_file() {
-  sudo -En /bin/bash << EOF
-  echo -e "${PG_ACCESS}" > "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf"
+  # Assembled as the current user and only written as root: sudo-rs ignores -E, so the
+  # PG_ACCESS* variables would not reach a root shell.
+  local hba_file="/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf"
+  {
+    echo -e "${PG_ACCESS}"
 
-  # Append any PG_ACCESS_* environment variables
-  for var in \$(compgen -e | grep '^PG_ACCESS_' | sort); do
-    echo -e "\${!var}" >> "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf"
-  done
+    # Append any PG_ACCESS_* environment variables
+    local var
+    for var in $(compgen -e | grep '^PG_ACCESS_' | sort); do
+      echo -e "${!var}"
+    done
 
-  cat "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf.default" >> "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf"
-  #cat "/etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf"
-EOF
+    cat "${hba_file}.default"
+  } | sudo -n tee "${hba_file}" > /dev/null
 }
 
 create_conf_d_directory_if_necessary() {

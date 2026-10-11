@@ -11,6 +11,18 @@ log_exec_params() {
 }
 
 
+# run_as_user USER COMMAND [ARG]...
+# Runs COMMAND as USER, passing only the environment hived reads (sudo-rs has no -E).
+run_as_user() {
+  local user="$1"
+  shift
+  if [ "$(id -un)" = "${user}" ]; then
+    "$@"
+  else
+    sudo -n --preserve-env=HIVE_HF28_TIME,HIVE_TEMPDIR,PGPASSWORD,PGSSLMODE -u "${user}" "$@"
+  fi
+}
+
 IS_ERASE_CURRENT_BACKUP_DIRECTORY_OPTION=$1
 shift
 GENERAL_HELP_DESCRIPTION=$1

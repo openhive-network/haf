@@ -72,7 +72,7 @@ load_snapshot_and_run(){
   then
     echo "Using HIVED_DB_ROLE: '${HIVED_DB_ROLE}', POSTGRES_USER: '${POSTGRES_USER}'"
     echo "Switching to separate Hived role..."
-    sudo -Enu ${HIVED_DB_ROLE} "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}"
+    run_as_user "${HIVED_DB_ROLE}" "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}"
   else
     "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}"
   fi
