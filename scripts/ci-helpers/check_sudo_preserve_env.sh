@@ -5,8 +5,9 @@
 #
 #   scripts/ci-helpers/check_sudo_preserve_env.sh [FILE]...
 #
-# Without arguments it checks every tracked file except Markdown. Only sudo's own options
-# are inspected, so the -E in `sudo sed -E ...` (an option of sed) is not reported.
+# Without arguments it checks every tracked file except Markdown. Comment lines are skipped,
+# and only sudo's own options are inspected, so the -E in `sudo sed -E ...` (an option of
+# sed) is not reported.
 set -euo pipefail
 
 # sudo options that consume a value: as the rest of a short-flag cluster or the next word.
@@ -49,6 +50,8 @@ check_file() {
   local file="$1" lineno line rest option found=0
   local -a words
   while IFS=: read -r lineno line; do
+    # Comments may explain the pitfall itself (e.g. the job's own description in .gitlab-ci.yml).
+    [[ "$line" =~ ^[[:space:]]*# ]] && continue
     rest="$line"
     while [[ "$rest" =~ (^|[^[:alnum:]_.-])sudo([[:space:]]+(.*))?$ ]]; do
       rest="${BASH_REMATCH[3]}"
