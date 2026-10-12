@@ -174,7 +174,7 @@ spawn_hived() {
   set -x # to allow logging of every spawned cmd
 
   # Use hived account for peer authentication.
-  sudo -HEnu $HIVED_ACCOUNT "$hived_binary_path" $data_dir --shared-file-size=$HIVED_SHARED_MEM_FILE_SIZE --plugin=sql_serializer --psql-url="dbname=$db_name host=$pg_host port=$pg_port" --replay "${HIVED_ARGS[@]}"
+  sudo -Hn --preserve-env=HIVE_HF28_TIME,HIVE_TEMPDIR,PGPASSWORD,PGSSLMODE -u $HIVED_ACCOUNT "$hived_binary_path" $data_dir --shared-file-size=$HIVED_SHARED_MEM_FILE_SIZE --plugin=sql_serializer --psql-url="dbname=$db_name host=$pg_host port=$pg_port" --replay "${HIVED_ARGS[@]}"
 
   set -x
 }
@@ -186,7 +186,7 @@ fi
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
-sudo -En "$SCRIPTPATH/setup_postgres.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --haf-binaries-dir="$HAF_BINARY_DIR" --haf-database-store="$HAF_TABLESPACE_LOCATION"
+sudo -n "$SCRIPTPATH/setup_postgres.sh" --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-admin-account="$HAF_ADMIN_ACCOUNT" --haf-binaries-dir="$HAF_BINARY_DIR" --haf-database-store="$HAF_TABLESPACE_LOCATION"
 
 "$SCRIPTPATH"/setup_db.sh --host="$POSTGRES_HOST" --port="$POSTGRES_PORT" --haf-db-admin="$HAF_ADMIN_ACCOUNT" --haf-db-name="$HAF_DB_NAME"
 

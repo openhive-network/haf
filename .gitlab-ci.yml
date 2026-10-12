@@ -263,6 +263,18 @@ verify_poetry_lock_stability:
   tags:
     - public-runner-docker
 
+# sudo-rs (Ubuntu 26.04, the HAF image) ignores `sudo -E`; require explicit --preserve-env=VAR,...
+verify_sudo_preserve_env:
+  extends: .job-defaults
+  stage: build_and_test_phase_1
+  image: "$HIVE_CI_BASE_IMAGE"
+  needs: []
+  script:
+    - git config --global --add safe.directory '*'
+    - scripts/ci-helpers/check_sudo_preserve_env.sh
+  tags:
+    - public-runner-docker
+
 # =============================================================================
 # Change Detection & Quick Test Setup
 # =============================================================================
@@ -974,8 +986,8 @@ haf_image_build_pg17:
   variables:
     # Allow access from any network (IPv4 and IPv6) to eliminate CI IP addressing problems when hfm runs as service
     PG_ACCESS: |
-                "host    all              haf_admin        0.0.0.0/0    trust"
-                "host    all              haf_admin        ::/0         trust"
+                host    all              haf_admin        0.0.0.0/0    trust
+                host    all              haf_admin        ::/0         trust
 
     # Use direct path (avoids nested variable expansion failure in API-triggered pipelines)
     DATA_SOURCE: "/cache/haf_${HAF_COMMIT}"
@@ -991,16 +1003,16 @@ haf_image_build_pg17:
     HAF_CI_MODE: "1"
     # Allow access from any network (IPv4 and IPv6) to eliminate CI IP addressing problems when hfm runs as service
     PG_ACCESS: |
-                "host    all              haf_admin        0.0.0.0/0    trust"
-                "host    all              haf_admin        ::/0         trust"
-                "host    all              test_app_owner   0.0.0.0/0    trust"
-                "host    all              test_app_owner   ::/0         trust"
-                "host    all              hived            0.0.0.0/0    trust"
-                "host    all              hived            ::/0         trust"
-                "host    all              haf_maintainer   0.0.0.0/0    trust"
-                "host    all              haf_maintainer   ::/0         trust"
-                "host    all              all              0.0.0.0/0    scram-sha-256"
-                "host    all              all              ::/0         scram-sha-256"
+                host    all              haf_admin        0.0.0.0/0    trust
+                host    all              haf_admin        ::/0         trust
+                host    all              test_app_owner   0.0.0.0/0    trust
+                host    all              test_app_owner   ::/0         trust
+                host    all              hived            0.0.0.0/0    trust
+                host    all              hived            ::/0         trust
+                host    all              haf_maintainer   0.0.0.0/0    trust
+                host    all              haf_maintainer   ::/0         trust
+                host    all              all              0.0.0.0/0    scram-sha-256
+                host    all              all              ::/0         scram-sha-256
   command: [ "--execute-maintenance-script=${HAF_SOURCE_DIR:?}/scripts/maintenance-scripts/sleep_infinity.sh" ]
 
 .hfm_functional_tests:
@@ -1623,14 +1635,14 @@ block_api_tests:
     BENCHMARK_DIR: "$CI_PROJECT_DIR/hive/tests/python/hive-local-tools/tests_api/benchmarks"
     # Allow access from any network (IPv4 and IPv6) to eliminate CI IP addressing problems
     HAF_DB_ACCESS: |
-      "host    all              haf_admin        0.0.0.0/0    trust"
-      "host    all              haf_admin        ::/0         trust"
-      "host    all              hived            0.0.0.0/0    trust"
-      "host    all              hived            ::/0         trust"
-      "host    all              hafah_user       0.0.0.0/0    trust"
-      "host    all              hafah_user       ::/0         trust"
-      "host    all              all              0.0.0.0/0    scram-sha-256"
-      "host    all              all              ::/0         scram-sha-256"
+      host    all              haf_admin        0.0.0.0/0    trust
+      host    all              haf_admin        ::/0         trust
+      host    all              hived            0.0.0.0/0    trust
+      host    all              hived            ::/0         trust
+      host    all              hafah_user       0.0.0.0/0    trust
+      host    all              hafah_user       ::/0         trust
+      host    all              all              0.0.0.0/0    scram-sha-256
+      host    all              all              ::/0         scram-sha-256
 
     BENCHMARK_DB_URL: "postgresql://hived@haf-instance:5432/haf_block_log"
     # Local path for filtered replay data (service's copy_datadir.sh handles NFS fallback)
@@ -1809,12 +1821,12 @@ dead_app_auto_detach:
       variables:
         # Allow access from any network (IPv4 and IPv6) to eliminate CI IP addressing problems when hfm runs as service
         PG_ACCESS: |
-                    "host    all              haf_admin        0.0.0.0/0    trust"
-                    "host    all              haf_admin        ::/0         trust"
-                    "host    all              hived            0.0.0.0/0    trust"
-                    "host    all              hived            ::/0         trust"
-                    "host    all              test_app_owner   0.0.0.0/0    trust"
-                    "host    all              test_app_owner   ::/0         trust"
+                    host    all              haf_admin        0.0.0.0/0    trust
+                    host    all              haf_admin        ::/0         trust
+                    host    all              hived            0.0.0.0/0    trust
+                    host    all              hived            ::/0         trust
+                    host    all              test_app_owner   0.0.0.0/0    trust
+                    host    all              test_app_owner   ::/0         trust
 
         # Use direct path (avoids nested variable expansion failure in API-triggered pipelines)
         DATA_SOURCE: "/cache/haf_${HAF_COMMIT}"

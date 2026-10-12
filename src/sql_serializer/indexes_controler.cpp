@@ -145,9 +145,30 @@ indexes_controler::enable_indexes() {
     *restore_applied_hardforks_idxs
   );
 
+  vacuum_account_operations();
+
   fc::time_point cluster_start_time = fc::time_point::now();
   fc::microseconds restore_indexes_time = cluster_start_time - restore_indexes_start_time;
   ilog( "PROFILE: Restored HAF table indexes: ${t}s", ("t",restore_indexes_time.to_seconds()) );
+}
+
+void
+indexes_controler::vacuum_account_operations() {
+  if (theApp.is_interrupt_request())
+    return;
+
+  // CLUSTER rewrites hafd.account_operations without a visibility map and the table is insert-only,
+  // so autovacuum would not build one for weeks; until then every index-only scan fetches heap rows.
+  // VACUUM cannot run inside a transaction, hence it is issued here instead of in hive.restore_indexes.
+  // ANALYZE rides along: it replaces the one hive.recluster_account_operations_if_index_dropped ran after CLUSTER.
+  const std::string vacuum_command = "VACUUM (FREEZE, ANALYZE) hafd.account_operations";
+  ilog("Performing vacuum: ${vacuum_command}", (vacuum_command));
+  pqxx::connection conn(db_url_with_hived_app(_db_url));
+  pqxx::nontransaction tx(conn);
+  const auto start_time = fc::time_point::now();
+  tx.exec(vacuum_command);
+  fc::microseconds vacuum_duration = fc::time_point::now() - start_time;
+  ilog("PROFILE: Vacuumed hafd.account_operations: ${t}s", ("t", vacuum_duration.to_seconds()));
 }
 
 bool

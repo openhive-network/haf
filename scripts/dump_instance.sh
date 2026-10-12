@@ -12,7 +12,7 @@ validate_environment(){
     if [ "${HIVED_DB_ROLE}" != "${POSTGRES_USER}" ];
     then
       echo "Switching to a separate hived role to erase previously generated snapshot..."
-      sudo -Enu ${HIVED_DB_ROLE} rm -rf ${HIVED_SNAPSHOT_DIR}
+      run_as_user "${HIVED_DB_ROLE}" rm -rf "${HIVED_SNAPSHOT_DIR}"
     else
       rm -rf ${HIVED_SNAPSHOT_DIR}
     fi
@@ -51,7 +51,7 @@ dump_snapshot(){
   if [ "${HIVED_DB_ROLE}" != "${POSTGRES_USER}" ];
   then
     echo "Switching to a separate hived role..."
-    sudo -Enu ${HIVED_DB_ROLE} "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}"
+    run_as_user "${HIVED_DB_ROLE}" "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}"
   else
     "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}"
   fi

@@ -27,6 +27,7 @@ namespace hive::plugins::sql_serializer {
     start_commit_sql( bool mode, const std::string& sql_function_call, std::string objects_name );
 
     bool are_any_indexes_missing() const;
+    void vacuum_account_operations();
   private:
     const std::string _db_url;
     const uint32_t _psql_index_threshold;
