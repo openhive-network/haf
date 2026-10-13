@@ -92,11 +92,13 @@ A run id is 1-48 of `[a-z0-9_-]`. The clone is owned by the consumer, who is a
 `hive_applications_owner_group` member inside it.
 
 **Access.** Over TCP only `haf_shared_consumer` can log in, only to `haf_shared`
-and `run_*` databases, and only from the fleet's LAN, where it is trusted without
-a password: `192.168.3.0/24`, `192.168.5.0/24` and `192.168.6.0/24` (the source
-addresses of every pull host and session host), and `172.16.0.0/12` (connections
-from the provider host itself arrive through docker's NAT). The data is public
-chain data; what the LAN can do is create and drop clones. The rules are the
+and `run_*` databases, and only from the fleet's LAN or tailnet, where it is
+trusted without a password: `192.168.3.0/24`, `192.168.5.0/24` and
+`192.168.6.0/24` (the fleet's LAN), `100.64.0.0/10` (pull hosts that reach the
+provider over Tailscale), and `172.16.0.0/12`
+(connections from the provider host itself arrive through docker's NAT). The
+data is public chain data, so the tailnet is trusted like the LAN; what either
+can do is create and drop clones. The rules are the
 `haf` service's `PG_ACCESS`, which replaces the image's own trust rule.
 
 **App roles.** Installing a HAF app creates cluster-wide roles, which the
