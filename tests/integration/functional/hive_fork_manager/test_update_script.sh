@@ -93,6 +93,15 @@ check_table_is_empty() {
     fi
 }
 
+check_account_operations_uq1() {
+    expected="UNIQUE (account_id, account_op_seq_no) INCLUDE (op_type_id)"
+    actual=$(exec_sql "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'hafd.account_operations'::regclass AND conname = 'hive_account_operations_uq1'")
+    if [ "$expected" != "$actual" ]; then
+        echo "TEST FAILED: hive_account_operations_uq1 expected to be '$expected', but is '$actual'"
+        return 6
+    fi
+}
+
 HAF_DIR=""
 
 while [ $# -gt 0 ]; do
@@ -286,5 +295,27 @@ exec_sql "CREATE SCHEMA workaround;
           SELECT hive.app_state_provider_import( 'KEYAUTH', 'workaround' );
           "
 update_database
+
+printf "\nTEST: Upgrade a database whose hive_account_operations_uq1 lacks INCLUDE (op_type_id). The index should be rebuilt in place.\n"
+prepare_database
+exec_sql "ALTER TABLE hafd.account_operations DROP CONSTRAINT hive_account_operations_uq1;
+          ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_uq1 UNIQUE (account_id, account_op_seq_no);
+          ALTER TABLE hafd.account_operations CLUSTER ON hive_account_operations_uq1;"
+update_database
+check_account_operations_uq1
+[ "$(exec_sql "SELECT indisclustered FROM pg_index WHERE indexrelid = 'hafd.hive_account_operations_uq1'::regclass")" = "t" ] \
+    || { echo "TEST FAILED: hafd.account_operations is no longer clustered on hive_account_operations_uq1"; exit 7; }
+[ "$(exec_sql "SELECT count(*) FROM pg_indexes WHERE schemaname = 'hafd' AND indexname LIKE 'hive_account_operations_uq1%'")" = "1" ] \
+    || { echo "TEST FAILED: a leftover hive_account_operations_uq1 index remains"; exit 8; }
+
+printf "\nTEST: Upgrade a database whose hive_account_operations_uq1 is dropped for a massive sync. Its restore command should be updated.\n"
+prepare_database
+exec_sql "SELECT hive.save_and_drop_indexes_constraints('hafd', 'account_operations');
+          UPDATE hafd.indexes_constraints
+          SET command = 'ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_uq1 UNIQUE (account_id, account_op_seq_no)'
+          WHERE index_constraint_name = 'hive_account_operations_uq1';"
+update_database
+exec_sql "SELECT hive.restore_indexes('hafd.account_operations');"
+check_account_operations_uq1
 
 echo "Succeeded"

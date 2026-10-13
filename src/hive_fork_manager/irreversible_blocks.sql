@@ -143,7 +143,8 @@ CREATE TABLE IF NOT EXISTS hafd.account_operations
     , account_op_seq_no INTEGER NOT NULL --- Operation sequence number specific to given account.
     , operation_id BIGINT NOT NULL --- Id of operation held in hive_opreations table.
     , op_type_id SMALLINT NOT NULL --- Operation type identifier.
-    , CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, account_op_seq_no )
+    -- op_type_id is included so a type-filtered, newest-first walk of an account's history is an index-only scan
+    , CONSTRAINT hive_account_operations_uq1 UNIQUE( account_id, account_op_seq_no ) INCLUDE( op_type_id )
     -- Hopefully not needed anymore, let's find out
     --, CONSTRAINT hive_account_operations_uq2 UNIQUE ( account,operation_id )
 );
