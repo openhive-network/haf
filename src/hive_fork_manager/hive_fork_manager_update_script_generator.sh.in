@@ -264,20 +264,41 @@ migrate_account_operations_uq1() {
 
   if [ "$uq1_state" = "outdated" ]; then
     echo "Rebuilding hafd.hive_account_operations_uq1 as ${uq1_definition}, this takes a while..."
-    # an interrupted earlier run leaves an invalid index behind
-    psql_do -d "$DB_NAME" -c "DROP INDEX CONCURRENTLY IF EXISTS hafd.hive_account_operations_uq1_new"
-    psql_do -d "$DB_NAME" -c "CREATE UNIQUE INDEX CONCURRENTLY hive_account_operations_uq1_new ON hafd.account_operations (account_id, account_op_seq_no) INCLUDE (op_type_id)"
+    # An interrupted earlier run leaves hive_account_operations_uq1_new behind: invalid when the
+    # build itself was interrupted (drop and rebuild it), valid when the swap below failed (reuse it).
+    local uq1_new_state
+    uq1_new_state=$(psql_do -d "$DB_NAME" -t -A -c "
+      SELECT COALESCE(
+        (SELECT CASE WHEN i.indisvalid THEN 'valid' ELSE 'invalid' END
+         FROM pg_index i
+         JOIN pg_class c ON c.oid = i.indexrelid
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'hafd' AND c.relname = 'hive_account_operations_uq1_new'),
+        'absent')")
+    if [ "$uq1_new_state" = "invalid" ]; then
+      psql_do -d "$DB_NAME" -c "DROP INDEX CONCURRENTLY hafd.hive_account_operations_uq1_new"
+    fi
+    if [ "$uq1_new_state" = "valid" ]; then
+      echo "Reusing the valid hafd.hive_account_operations_uq1_new left by an earlier run"
+    else
+      psql_do -d "$DB_NAME" -c "CREATE UNIQUE INDEX CONCURRENTLY hive_account_operations_uq1_new ON hafd.account_operations (account_id, account_op_seq_no) INCLUDE (op_type_id)"
+    fi
+    # This runs before ALTER EXTENSION UPDATE, so the ALTER TABLE event trigger still calls C
+    # functions of the deployed version's libhfm, which the new image does not ship. The trigger
+    # is disabled for the swap; the DISABLE rolls back with the swap if the block fails.
     psql_do -d "$DB_NAME" -c "
     DO \$\$
     DECLARE
       __clustered BOOLEAN;
     BEGIN
       SELECT indisclustered INTO __clustered FROM pg_index WHERE indexrelid = 'hafd.hive_account_operations_uq1'::regclass;
+      ALTER EVENT TRIGGER hive_block_edit_registered_tables_trigger DISABLE;
       ALTER TABLE hafd.account_operations DROP CONSTRAINT hive_account_operations_uq1;
       ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_uq1 UNIQUE USING INDEX hive_account_operations_uq1_new;
       IF __clustered THEN
         ALTER TABLE hafd.account_operations CLUSTER ON hive_account_operations_uq1;
       END IF;
+      ALTER EVENT TRIGGER hive_block_edit_registered_tables_trigger ENABLE;
     END \$\$;
     "
   fi
