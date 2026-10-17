@@ -865,16 +865,25 @@ END;
 $BODY$
 ;
 
+-- _kind: 'full' (VACUUM FULL ANALYZE), 'vacuum' (VACUUM (ANALYZE)), 'analyze' (ANALYZE)
+-- or 'freeze' (VACUUM (FREEZE, ANALYZE)). Requests of different kinds for one table are
+-- kept separately and hived runs 'full' before the others.
 CREATE OR REPLACE FUNCTION hive.app_request_table_vacuum(
     _schema_name TEXT,
     _table_name TEXT,
-    _min_interval INTERVAL DEFAULT NULL
+    _min_interval INTERVAL DEFAULT NULL,
+    _kind TEXT DEFAULT 'full'
 )
 RETURNS void
 LANGUAGE plpgsql
 AS
 $BODY$
 BEGIN
+    IF _kind IS NULL OR _kind NOT IN ('full', 'vacuum', 'analyze', 'freeze') THEN
+        RAISE EXCEPTION 'Invalid vacuum kind %, expected one of: full, vacuum, analyze, freeze', quote_nullable(_kind)
+            USING ERRCODE = '22023';
+    END IF;
+
     IF to_regclass(format('%I.%I', _schema_name, _table_name)) IS NULL THEN
         RAISE EXCEPTION 'Table %.% does not exist', _schema_name, _table_name
             USING ERRCODE = '42P01';
@@ -887,30 +896,32 @@ BEGIN
             FROM hafd.vacuum_requests
             WHERE schema_name = _schema_name
             AND table_name = _table_name
+            AND kind = _kind
             AND last_vacuumed_time > NOW() - _min_interval
         ) THEN
             -- routine in live sync (applications ask after every block); keep it
             -- out of application logs
-            RAISE DEBUG 'Vacuum request for table %.% ignored due to recent vacuum.', _schema_name, _table_name;
+            RAISE DEBUG 'Vacuum (%) request for table %.% ignored due to recent vacuum.', _kind, _schema_name, _table_name;
             RETURN;
         END IF;
     END IF;
 
     -- Insert or update the vacuum request
-    INSERT INTO hafd.vacuum_requests (schema_name, table_name, status)
-    VALUES (_schema_name, _table_name, 'requested')
-    ON CONFLICT (schema_name, table_name) DO UPDATE
+    INSERT INTO hafd.vacuum_requests (schema_name, table_name, kind, status)
+    VALUES (_schema_name, _table_name, _kind, 'requested')
+    ON CONFLICT (schema_name, table_name, kind) DO UPDATE
     SET status = 'requested',
         error_message = NULL;
 
-    RAISE NOTICE 'Vacuum request for table %.% submitted.', _schema_name, _table_name;
+    RAISE NOTICE 'Vacuum (%) request for table %.% submitted.', _kind, _schema_name, _table_name;
 END;
 $BODY$
 ;
 
 CREATE OR REPLACE FUNCTION hive.app_request_table_vacuum(
     _qualified_table_name TEXT,
-    _min_interval INTERVAL DEFAULT NULL
+    _min_interval INTERVAL DEFAULT NULL,
+    _kind TEXT DEFAULT 'full'
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -945,7 +956,7 @@ BEGIN
         RAISE EXCEPTION 'Invalid table name: %', _qualified_table_name;
     END IF;
 
-    PERFORM hive.app_request_table_vacuum(_schema_name, _table_name, _min_interval);
+    PERFORM hive.app_request_table_vacuum(_schema_name, _table_name, _min_interval, _kind);
 END;
 $BODY$
 ;
