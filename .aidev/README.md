@@ -51,7 +51,7 @@ docker run --rm --network none --user 1000:1000 -v "$PWD:/work" -w /work \
 
 ## The test runtime image (`runtime/`)
 
-The HAF image `hive/haf:8de693b2` with its entrypoint cleared, pinned by digest. A C++
+The HAF image `hive/haf:6f476cfd` (develop 46558ea2e) with its entrypoint cleared, pinned by digest. A C++
 change reaches these checks only through a new base: when one lands on `develop`,
 re-pin the `FROM` to that commit's `hive/haf:<commit>` image, rebuild and re-pin **in
 the same commit**:

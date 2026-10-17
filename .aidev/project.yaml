@@ -26,7 +26,7 @@ environment:
   kind: "container"
   # The HAF image itself with its entrypoint cleared: built by
   # .aidev/runtime/build.sh from .aidev/runtime/Dockerfile (its only input).
-  image: "registry.gitlab.syncad.com/hive/haf/aidev-tests@sha256:42ea3e76c1b50341263bdc869baa9f498ce8fdca42eaf3a19345d0125add9cf8"
+  image: "registry.gitlab.syncad.com/hive/haf/aidev-tests@sha256:7fbd227a73fa8b180389312f9f8e80d7497b3513b50bc4bc9ac7c69ce343771b"
   inputs: [".aidev/runtime/Dockerfile"]
 
 issues:
