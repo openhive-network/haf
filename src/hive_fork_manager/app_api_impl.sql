@@ -820,6 +820,8 @@ $$;
 -- Restore all indexes registered by the given context that have
 -- status = 'missing'. Runs the stored CREATE INDEX commands and updates
 -- status through 'creating' -> 'created'. Runs ANALYZE on affected tables.
+-- Requests a 'freeze' vacuum of every table registered in the context; hived
+-- runs it after the caller's transaction commits.
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION hive.app_restore_indexes(
     _context_name TEXT
@@ -882,6 +884,12 @@ BEGIN
         RAISE NOTICE 'Analyzing %', __r.tbl;
         EXECUTE format('ANALYZE %s', __r.tbl);
     END LOOP;
+
+    -- Rewrites during massive sync (VACUUM FULL, SET LOGGED) leave insert-only tables
+    -- without a visibility map, and autovacuum's insert threshold would not rebuild it for months.
+    PERFORM hive.app_request_table_vacuum(rt.origin_table_schema, rt.origin_table_name, _kind => 'freeze')
+    FROM hafd.registered_tables rt
+    WHERE rt.context_id = __context_id;
 END;
 $$;
 
@@ -895,6 +903,8 @@ $$;
 -- Usage pattern for parallel restore:
 --   Thread 1: SELECT hive.app_restore_indexes('myapp', 'myapp.table_a');
 --   Thread 2: SELECT hive.app_restore_indexes('myapp', 'myapp.table_b');
+--
+-- Requests a 'freeze' vacuum of the table, as the per-context variant does.
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION hive.app_restore_indexes(
     _context_name TEXT,
@@ -947,6 +957,8 @@ BEGIN
     END LOOP;
 
     EXECUTE format('ANALYZE %s', _table_name);
+
+    PERFORM hive.app_request_table_vacuum(_table_name, _kind => 'freeze');
 END;
 $$;
 

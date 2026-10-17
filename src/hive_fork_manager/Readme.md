@@ -297,6 +297,47 @@ within a given interval. If the table was vacuumed recently, the request will be
 SELECT hive.app_request_table_vacuum('my_schema', 'my_table', INTERVAL '1 hour');
 ```
 
+###### Vacuum kinds
+Both forms, `hive.app_request_table_vacuum(schema, table[, min_interval[, kind]])` and
+`hive.app_request_table_vacuum(qualified_name[, min_interval[, kind]])`, take an optional `kind`.
+`hived` runs each request outside a transaction and records its outcome (`vacuumed` or `failed`)
+in `hafd.vacuum_requests`:
+
+| kind | command run by `hived` |
+|---|---|
+| `'full'` (default) | `VACUUM FULL ANALYZE` |
+| `'vacuum'` | `VACUUM (ANALYZE)` |
+| `'analyze'` | `ANALYZE` |
+| `'freeze'` | `VACUUM (FREEZE, ANALYZE)` |
+
+`'full'` rewrites the whole table under an ACCESS EXCLUSIVE lock, so the application's own queries on
+that table wait until it ends, and the new table has no visibility map. Do not use it on insert-only
+tables, which have nothing to reclaim: autovacuum would not rebuild their visibility map for months,
+and until then every index-only scan reads the heap. For periodic maintenance during massive sync use
+`'vacuum'` or `'analyze'`, which run online.
+
+Requests of different kinds for the same table are kept separately, and `min_interval` is checked
+per kind, so a recent `'full'` does not suppress a `'freeze'`. When a `'full'` and another kind are
+pending for one table, `hived` runs `'full'` first.
+
+```sql
+-- Refresh planner statistics without rewriting the table
+SELECT hive.app_request_table_vacuum('my_schema', 'my_table', INTERVAL '10 minutes', 'analyze');
+```
+
+###### Freezing tables after massive sync
+`hive.app_restore_indexes(context)` requests a `'freeze'` vacuum of every table registered in the
+context, and `hive.app_restore_indexes(context, table)` requests one for that table. `hived` runs
+them after the transaction that called `hive.app_restore_indexes` commits, so applications which drop
+and restore their indexes get all-visible tables without doing anything else.
+
+An application that never drops its indexes does not call `hive.app_restore_indexes`, and must
+request the freeze itself once its initial sync is done:
+
+```sql
+SELECT hive.app_request_table_vacuum('my_schema', 'my_table', _kind => 'freeze');
+```
+
 #### Using HAF built-in roles
 Based on extensive experience with a diverse range of applications, it is recommended to configure Postgres roles
 in accordance with the guidelines depicted in the image below. This illustration provides a comprehensive overview

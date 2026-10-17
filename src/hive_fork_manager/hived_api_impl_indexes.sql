@@ -13,7 +13,12 @@ CREATE TABLE IF NOT EXISTS hafd.indexes_constraints (
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.indexes_constraints', '');
 
--- Only one vacuum request per table, and this is only for 'vacuum full analyze' requests
+-- One vacuum request per table and kind:
+--   'full'    - VACUUM FULL ANALYZE (rewrites the table and drops its visibility map)
+--   'vacuum'  - VACUUM (ANALYZE)
+--   'analyze' - ANALYZE
+--   'freeze'  - VACUUM (FREEZE, ANALYZE)
+-- Existing installs get the kind column from hive_fork_manager_update_script_generator.sh
 CREATE TYPE hafd.vacuum_status AS ENUM ('requested', 'vacuumed', 'failed');
 CREATE TABLE IF NOT EXISTS hafd.vacuum_requests (
     schema_name text NOT NULL,
@@ -21,6 +26,8 @@ CREATE TABLE IF NOT EXISTS hafd.vacuum_requests (
     status hafd.vacuum_status NOT NULL DEFAULT 'requested',
     last_vacuumed_time timestamp,
     error_message text,
-    CONSTRAINT pk_hive_vacuum_requests UNIQUE( schema_name, table_name )
+    kind text NOT NULL DEFAULT 'full',
+    CONSTRAINT pk_hive_vacuum_requests UNIQUE( schema_name, table_name, kind ),
+    CONSTRAINT vacuum_requests_kind_check CHECK ( kind IN ('full', 'vacuum', 'analyze', 'freeze') )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.vacuum_requests', '');

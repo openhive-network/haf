@@ -17,6 +17,7 @@ BEGIN
     CREATE SCHEMA test_app;
     PERFORM hive.app_create_context( _name => 'test_ctx', _schema => 'test_app' );
     CREATE TABLE test_app.test_table( id INTEGER, val TEXT ) INHERITS( test_app.test_ctx );
+    CREATE TABLE test_app.untouched_table( id INTEGER ) INHERITS( test_app.test_ctx );
     CREATE INDEX test_app_test_table_val_idx ON test_app.test_table( val );
 
     PERFORM hive.app_register_index_dependency(
@@ -63,6 +64,22 @@ BEGIN
         WHERE schemaname = 'test_app'
           AND indexname = 'test_app_test_table_val_idx'
     ), 'Index test_app_test_table_val_idx was NOT restored';
+
+    ASSERT (
+        SELECT array_agg(format('%s.%s:%s:%s', schema_name, table_name, kind, status) ORDER BY schema_name, table_name)
+        FROM hafd.vacuum_requests
+    ) = ARRAY['test_app.test_table:freeze:requested', 'test_app.untouched_table:freeze:requested']
+    , 'app_restore_indexes(context) should request a freeze vacuum of every registered table of the context';
+
+    DELETE FROM hafd.vacuum_requests;
+    PERFORM hive.app_save_and_drop_indexes( 'test_ctx' );
+    PERFORM hive.app_restore_indexes( 'test_ctx', 'test_app.test_table' );
+
+    ASSERT (
+        SELECT array_agg(format('%s.%s:%s:%s', schema_name, table_name, kind, status))
+        FROM hafd.vacuum_requests
+    ) = ARRAY['test_app.test_table:freeze:requested']
+    , 'app_restore_indexes(context, table) should request a freeze vacuum of that table';
 END;
 $BODY$
 ;

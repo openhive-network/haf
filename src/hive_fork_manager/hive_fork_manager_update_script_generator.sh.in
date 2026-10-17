@@ -319,6 +319,18 @@ BEGIN
         ALTER TABLE hafd.hive_state ADD COLUMN lite_mode boolean NOT NULL DEFAULT FALSE;
     END IF;
 
+    -- Pending requests keep their meaning: they become 'full' requests.
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'hafd' AND table_name = 'vacuum_requests' AND column_name = 'kind'
+    ) THEN
+        ALTER TABLE hafd.vacuum_requests ADD COLUMN kind text NOT NULL DEFAULT 'full';
+        ALTER TABLE hafd.vacuum_requests
+            ADD CONSTRAINT vacuum_requests_kind_check CHECK ( kind IN ('full', 'vacuum', 'analyze', 'freeze') );
+        ALTER TABLE hafd.vacuum_requests DROP CONSTRAINT pk_hive_vacuum_requests;
+        ALTER TABLE hafd.vacuum_requests ADD CONSTRAINT pk_hive_vacuum_requests UNIQUE( schema_name, table_name, kind );
+    END IF;
+
     -- Note: there is intentionally no migration for the rc_cost column of hafd.transactions
     -- and hafd.transactions_reversible - the values cannot be backfilled without a replay,
     -- so the schema hash mismatch reported by verify_table_schema forces one.
