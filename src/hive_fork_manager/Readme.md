@@ -213,13 +213,16 @@ SELECT hive.check_if_registered_indexes_created('my_app_context');
 ##### - Removing Index Dependencies
 
 When an application no longer needs its registered indexes, it should call
-**`hive.remove_index_dependencies`** to clean up the dependency records. However, indexes
+**`hive.app_remove_index_dependencies`** to clean up the dependency records (`hive.app_remove_context`
+does this automatically). It is callable by the context's owner (or a role that can impersonate it);
+`hive.remove_index_dependencies` does the same without the ownership check but requires write access
+to `hafd.indexes_constraints`. However, indexes
 are **not removed if other application contexts depend on them**. The system ensures that
 indexes remain available until all dependent applications have deregistered their use.
 
 ##### Example Usage:
 ```sql
-SELECT hive.remove_index_dependencies('my_app_context');
+SELECT hive.app_remove_index_dependencies('my_app_context');
 ```
 - This removes the application context from the index dependency list.
 - If no other application contexts rely on the index, the index will be **dropped**.
