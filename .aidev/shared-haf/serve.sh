@@ -3,8 +3,8 @@
 # PostgreSQL is up (start.sh hands it over):
 #
 # 1. installs the clone API (admin.sql) into the haf_shared database, and the
-#    cluster-wide roles of every consumer app (app-roles/*.sql), which the
-#    consumer cannot create itself;
+#    cluster-wide roles of every consumer app (app-roles/<app>.sql, in the
+#    order of app_roles below), which the consumer cannot create itself;
 # 2. once per seeded version, freezes haf_template: a clone of haf_block_log
 #    that no one may connect to, with its head block recorded. haf_block_log
 #    itself stays connectable, because the entrypoint checks and updates the
@@ -30,8 +30,18 @@ select 'create database haf_shared' where not exists (select 1 from pg_database 
 \gexec
 EOF
 psql_pg -d haf_shared -f "$here/admin.sql"
-for app_roles in "$here"/app-roles/*.sql; do
-    psql_pg -d postgres -f "$app_roles"
+# An app's roles may be members of another app's, so they are applied after
+# those: hafbe's roles are members of btracker's, reptracker's and hafah's.
+app_roles=(hafah btracker reptracker hafbe)
+for file in "$here"/app-roles/*.sql; do
+    app="$(basename "$file" .sql)"
+    if [[ " ${app_roles[*]} " != *" $app "* ]]; then
+        echo "app-roles/$app.sql is not listed in serve.sh's app_roles; refusing to serve" >&2
+        exit 1
+    fi
+done
+for app in "${app_roles[@]}"; do
+    psql_pg -d postgres -f "$here/app-roles/$app.sql"
 done
 
 if [ "$(psql_pg -d haf_shared -Atc "select count(*) from haf_shared.template")" != 1 ]; then
