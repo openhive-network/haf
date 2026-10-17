@@ -24,7 +24,10 @@ maintenance script of `/home/hived/docker_entrypoint.sh` (which starts PostgreSQ
 way CI's `hfm_functional_tests` runs `scripts/maintenance-scripts/run_hfm_functional_tests.sh`.
 It installs the candidate's extension SQL as `Dockerfile.sql-overlay` does
 (`scripts/generate_extension_sql.sh`, then `libhfm-<version>.so` pointed at the image's own
-`libhfm`), reads the test list from the `ADD_SQL_FUNCTIONAL_TEST` lines and `RUN_SERIAL`
+`libhfm`). If that SQL declares a C function the image's `libhfm` does not export
+(`.aidev/missing_c_symbols.py`), it records a single failing case `hfm/libhfm-symbols`
+naming the symbols and runs no test: the image is stale, see *The test runtime image*.
+Otherwise it reads the test list from the `ADD_SQL_FUNCTIONAL_TEST` lines and `RUN_SERIAL`
 properties of `tests/integration/functional/{hive_fork_manager,query_supervisor}/CMakeLists.txt`,
 and runs each through `tools/test.sh` (8 at a time; `HFM_TEST_JOBS`), so no CMake configure
 and no `hive` submodule checkout is needed. The entrypoint needs the image's
