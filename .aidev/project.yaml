@@ -102,8 +102,8 @@ sandbox:
       readiness_timeout: 1800
       env:
         # Fixture image hive/haf/fixture-5m:<commit> (CI's build_haf_fixture_image).
-        HAF_FIXTURE_COMMIT: "e2237bea170e6aea9fc327fb1b1e34b5237d219d"
-        HAF_FIXTURE_DIGEST: "sha256:6f0d0f435b829b47379b80dbba8f2602d8ce558cedd941d1cb1b427985c8c020"
+        HAF_FIXTURE_COMMIT: "54a35dbc06b3befaa4be2861d3487359a2bd2f46"
+        HAF_FIXTURE_DIGEST: "sha256:a82e29099c8316deb958f49ec914d5628f994f545a00d6e9ee574675c75edf54"
         HAF_SHARED_DATA_ROOT: "/haf-pool/aidev-shared-haf"
 
 capabilities: []
