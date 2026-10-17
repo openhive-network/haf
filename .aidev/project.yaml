@@ -28,6 +28,18 @@ environment:
   # .aidev/runtime/build.sh from .aidev/runtime/Dockerfile (its only input).
   image: "registry.gitlab.syncad.com/hive/haf/aidev-tests@sha256:7fbd227a73fa8b180389312f9f8e80d7497b3513b50bc4bc9ac7c69ce343771b"
   inputs: [".aidev/runtime/Dockerfile"]
+  # Run each tree in the CI image built from its own native sources, so a new
+  # libhfm C function needs no hand re-pin once CI has published its image. The
+  # pinned image above remains the fallback for a tree CI never built (any ai/ or
+  # session/ branch that changes these sources, since CI skips those branches).
+  source_image:
+    repository: "registry.gitlab.syncad.com/hive/haf"
+    # Must match scripts/ci-helpers/source-patterns.sh (CI's rebuild patterns).
+    paths: ["src/", "hive/", "cmake/", "CMakeLists.txt", "Dockerfile", "Dockerfile.sql-overlay",
+            "docker/", "scripts/haf/", "scripts/maintenance-scripts/", "scripts/setup_ubuntu.sh",
+            "scripts/generate_extension_sql.sh", "common_includes/", ".gitmodules"]
+    # The suites install these themselves, so they need no new image.
+    exclude: ["*.sql", "*.md"]
 
 issues:
   intake_label: todo
