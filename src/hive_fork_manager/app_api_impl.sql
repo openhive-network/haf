@@ -722,6 +722,50 @@ END;
 $$;
 
 -- -----------------------------------------------------------------------------
+-- hive.app_remove_index_dependencies(context)
+--
+-- Remove the given context from every index dependency it registered, dropping
+-- indexes no other context (including HAF itself, context 0) still depends on.
+--
+-- Wrapper around hive.remove_index_dependencies that uses SECURITY DEFINER
+-- to allow app roles to write to hafd.indexes_constraints. Raises an
+-- insufficient_privilege error unless the caller can impersonate the
+-- context's owner (or already holds write access to hafd.indexes_constraints).
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION hive.app_remove_index_dependencies(
+    _context_name TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = hive, hafd, pg_catalog
+AS $$
+DECLARE
+    __owner NAME;
+BEGIN
+    SELECT owner INTO __owner
+    FROM hafd.contexts
+    WHERE name = _context_name;
+
+    IF __owner IS NULL THEN
+        RAISE EXCEPTION 'Context "%" not found in hafd.contexts', _context_name;
+    END IF;
+
+    -- Under SECURITY DEFINER current_user is the function owner, so the
+    -- caller is identified by session_user. That is never weaker than the
+    -- caller's effective role: a non-superuser session can only SET ROLE to
+    -- roles session_user is a member of.
+    IF NOT hive.can_impersonate( session_user, __owner )
+       AND NOT has_table_privilege( session_user, 'hafd.indexes_constraints', 'UPDATE, DELETE' ) THEN
+        RAISE EXCEPTION 'User % is not an owner of context % and cannot remove its index dependencies', session_user, _context_name
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
+    PERFORM hive.remove_index_dependencies(_context_name);
+END;
+$$;
+
+-- -----------------------------------------------------------------------------
 -- hive.app_save_and_drop_indexes(context)
 --
 -- Drop all indexes registered by the given context.
