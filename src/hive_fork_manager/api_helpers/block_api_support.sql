@@ -83,7 +83,15 @@ BEGIN
                 htv.ref_block_num,
                 htv.ref_block_prefix,
                 htv.trx_hash,
-                htv.signature
+                htv.signature,
+                -- A per-transaction index lookup instead of a join: neither this CTE's output
+                -- nor the UNION ALL view has statistics on trx_hash, so a join estimate is
+                -- off by orders of magnitude and may flip to a full scan of the multisig table.
+                ARRAY(
+                    SELECT htmv.signature
+                    FROM hive.transactions_multisig_view htmv
+                    WHERE htmv.trx_hash = htv.trx_hash
+                ) AS multisig_signatures
             FROM hive.transactions_view htv
             WHERE htv.block_num BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
             ORDER BY htv.block_num ASC, htv.trx_in_block ASC
@@ -100,23 +108,6 @@ BEGIN
                 GROUP BY hafd.operation_id_to_block_num(ho.id), ho.trx_in_block
                 ORDER BY hafd.operation_id_to_block_num(ho.id) ASC, trx_in_block ASC
         ),
-        -- Combine transaction details with multisig signatures in one step to avoid
-        -- expensive cartesian product from self-join (was causing 33M+ row intermediate results)
-        trx_with_multisig AS MATERIALIZED (
-            SELECT
-                htv.block_num,
-                htv.trx_in_block,
-                htv.ref_block_num,
-                htv.ref_block_prefix,
-                htv.expiration,
-                htv.trx_hash,
-                htv.signature,
-                ARRAY_AGG(htmv.signature) AS multisig_signatures
-            FROM trx_details htv
-            LEFT JOIN hive.transactions_multisig_view htmv ON htv.trx_hash = htmv.trx_hash
-            GROUP BY htv.block_num, htv.trx_in_block, htv.ref_block_num, htv.ref_block_prefix,
-                     htv.expiration, htv.trx_hash, htv.signature
-        ),
         full_transactions_with_signatures AS MATERIALIZED (
                 SELECT
                     htv.block_num,
@@ -128,16 +119,11 @@ BEGIN
                             htv.expiration,
                             ops.bodies,
                             array_to_json(ARRAY[] :: INT[]) :: JSONB,
-                            (
-                                CASE
-                                    WHEN htv.multisig_signatures = ARRAY[NULL]::BYTEA[] THEN ARRAY[ htv.signature ]::BYTEA[]
-                                    ELSE htv.signature || htv.multisig_signatures
-                                END
-                            )
+                            htv.signature || htv.multisig_signatures
                         ) :: hive.transaction_type
                         ORDER BY htv.trx_in_block ASC
                     ) AS transactions
-                FROM trx_with_multisig htv
+                FROM trx_details htv
                 JOIN operations ops ON ops.block_num = htv.block_num AND htv.trx_in_block = ops.trx_in_block
                 WHERE ops.block_num BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
                 GROUP BY htv.block_num
