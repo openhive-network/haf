@@ -29,6 +29,7 @@ namespace hive::plugins::sql_serializer {
       static constexpr auto NO_IRREVERSIBLE_BLOCK = std::numeric_limits< int32_t >::max();
 
       static constexpr uint32_t DEFAULT_WAL_QUEUE_DEPTH = 200;
+      static constexpr uint32_t DEFAULT_INDEX_MONITOR_RETRY_BUDGET = 900;
 
       indexation_state(
           const sql_serializer_plugin& main_plugin
@@ -45,6 +46,7 @@ namespace hive::plugins::sql_serializer {
         , write_ahead_log_manager& write_ahead_log
         , uint32_t wal_queue_depth = DEFAULT_WAL_QUEUE_DEPTH
         , bool lite_mode = false
+        , uint32_t index_monitor_retry_budget_seconds = DEFAULT_INDEX_MONITOR_RETRY_BUDGET
       );
       ~indexation_state() = default;
       indexation_state& operator=( indexation_state& ) = delete;

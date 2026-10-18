@@ -310,6 +310,7 @@ public:
     , uint32_t _psql_wal_queue_depth
     , bool     _psql_lite_mode
     , bool     _psql_lite_schema
+    , uint32_t _psql_index_monitor_retry_budget
   )
   :   db_url{url},
       chain_db{_chain_db},
@@ -333,7 +334,8 @@ public:
                          _pruning_tail_size,
                          write_ahead_log,
                          _psql_wal_queue_depth,
-                         _psql_lite_mode),
+                         _psql_lite_mode,
+                         _psql_index_monitor_retry_budget),
       _vacuum_cleaner( db_url )
   {
     HIVE_ADD_PLUGIN_INDEX(chain_db, account_ops_seq_index);
@@ -973,6 +975,7 @@ void sql_serializer_plugin::set_program_options(appbase::options_description &cl
 {
   cfg.add_options()("psql-url", boost::program_options::value<string>(), "postgres connection string")
                     ("psql-index-threshold", appbase::bpo::value<uint32_t>()->default_value( 20'000'000 ), "indexes/constraints will be recreated if `psql_block_number + psql_index_threshold >= head_block_number`")
+                    ("psql-index-monitor-retry-budget", appbase::bpo::value<uint32_t>()->default_value( indexation_state::DEFAULT_INDEX_MONITOR_RETRY_BUDGET ), "seconds the live-sync index monitor keeps reconnecting after losing its database connection before hived shuts down")
                     ("psql-operations-threads-number", appbase::bpo::value<uint32_t>()->default_value( 5 ), "number of threads which dump operations to database during reindexing")
                     ("psql-transactions-threads-number", appbase::bpo::value<uint32_t>()->default_value( 2 ), "number of threads which dump transactions to database during reindexing")
                     ("psql-account-operations-threads-number", appbase::bpo::value<uint32_t>()->default_value( 2 ), "number of threads which dump account operations to database during reindexing")
@@ -1025,6 +1028,7 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     , options["psql-wal-queue-depth"].as<uint32_t>()
     , options["psql-lite-mode"].as<bool>() || options["psql-lite-schema"].as<bool>()
     , options["psql-lite-schema"].as<bool>()
+    , options["psql-index-monitor-retry-budget"].as<uint32_t>()
   );
 
   // settings
