@@ -627,6 +627,7 @@ void indexes_controler::poll_and_create_indexes()
 
   while (!theApp.is_interrupt_request())
   {
+    bool connection_lost = false;
     try
     {
       if (!conn)
@@ -649,7 +650,6 @@ void indexes_controler::poll_and_create_indexes()
         failing_since.reset();
         reconnect_delay = MIN_RECONNECT_DELAY;
       }
-      sleep_unless_interrupted(theApp, POLL_INTERVAL);
     }
     catch (const pqxx::broken_connection& e)
     {
@@ -666,9 +666,17 @@ void indexes_controler::poll_and_create_indexes()
 
       wlog("Index monitor has no usable database connection: ${e}. Reconnecting in ${d} seconds (failing for ${f} of ${b} seconds allowed).",
         ("e", e.what())("d", reconnect_delay.to_seconds())("f", failing_for.to_seconds())("b", retry_budget.to_seconds()));
+      connection_lost = true;
+    }
+
+    // fc refuses to yield the fiber while an exception is being handled, so never sleep inside a catch.
+    if (connection_lost)
+    {
       sleep_unless_interrupted(theApp, reconnect_delay);
       reconnect_delay = std::min(reconnect_delay + reconnect_delay, MAX_RECONNECT_DELAY);
     }
+    else
+      sleep_unless_interrupted(theApp, POLL_INTERVAL);
 
     builds.join_finished();
   }
