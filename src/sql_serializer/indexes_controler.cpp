@@ -10,7 +10,12 @@
 #include <fc/log/logger.hpp>
 #include <fc/thread/thread.hpp>
 
+#include <algorithm>
+#include <exception>
+#include <memory>
 #include <mutex>
+#include <optional>
+#include <thread>
 #include <set>
 #include <map>
 #include <regex>
@@ -74,11 +79,355 @@ std::string vacuum_command_prefix(const std::string& kind)
   return it->second;
 }
 
+const fc::microseconds POLL_INTERVAL = fc::seconds(10);
+const fc::microseconds MIN_RECONNECT_DELAY = fc::seconds(1);
+const fc::microseconds MAX_RECONNECT_DELAY = fc::seconds(60);
+
+void sleep_unless_interrupted(appbase::application& app, fc::microseconds duration)
+{
+  const fc::time_point wake_up = fc::time_point::now() + duration;
+  while (!app.is_interrupt_request() && fc::time_point::now() < wake_up)
+    fc::usleep(std::min(fc::microseconds(fc::seconds(1)), wake_up - fc::time_point::now()));
 }
 
-indexes_controler::indexes_controler( std::string db_url, uint32_t psql_index_threshold, appbase::application& app )
+// libpqxx reports most lost connections as broken_connection, but a query cut off
+// mid-flight can surface as another pqxx error with the connection already closed.
+bool is_connection_lost(const pqxx::connection& conn, const std::exception& e)
+{
+  return dynamic_cast<const pqxx::broken_connection*>(&e) != nullptr || !conn.is_open();
+}
+
+// Must be called from a catch block; reports a lost connection as broken_connection.
+void rethrow_if_connection_lost(const pqxx::connection& conn, const std::exception& e)
+{
+  if (dynamic_cast<const pqxx::broken_connection*>(&e) != nullptr)
+    throw;
+  if (!conn.is_open())
+    throw pqxx::broken_connection(e.what());
+}
+
+// A failed CREATE INDEX CONCURRENTLY leaves behind an invalid index.
+// Drop it and reset status so the poller retries on the next cycle.
+void reset_failed_index(pqxx::nontransaction& tx, const std::string& table_name, const std::string& index_constraint_name)
+{
+  std::string schema = table_name.substr(0, table_name.find('.'));
+  std::string drop_cmd = "DROP INDEX IF EXISTS " + schema + "." + index_constraint_name + ";";
+  wlog("Dropping invalid index after failed creation: ${cmd}", ("cmd", drop_cmd));
+  tx.exec(drop_cmd);
+  std::string reset_status =
+    "UPDATE hafd.indexes_constraints SET status = 'missing' WHERE index_constraint_name ='" + index_constraint_name + "';";
+  wlog("Resetting index status to missing for retry: ${index}", ("index", index_constraint_name));
+  tx.exec(reset_status);
+}
+
+struct index_builds_state
+{
+  std::mutex mtx;
+  std::set<std::string> finished_tables;
+  // index_constraint_name -> table_name of builds whose connection was lost before
+  // their 'creating' status could be reset; the monitor resets them once it can.
+  std::map<std::string, std::string> indexes_to_reset;
+};
+
+void build_missing_indexes(const std::string& db_url, const std::string& table_name, index_builds_state& state)
+{
+  std::string thread_name = table_name;
+  if (thread_name.size() > 16)
+    thread_name.resize(16);
+  fc::set_thread_name(thread_name.c_str());
+  fc::thread::current().set_name(thread_name);
+
+  try
+  {
+    pqxx::connection conn(db_url);
+    pqxx::nontransaction tx(conn);
+    pqxx::result data = tx.exec("SELECT index_constraint_name, command FROM hafd.indexes_constraints WHERE status = 'missing' AND table_name = '" + table_name + "';");
+    for (const auto& index : data) //iterate over missing indexes and create them concurrently
+    {
+      std::string index_constraint_name = index["index_constraint_name"].as<std::string>();
+      try
+      {
+        std::string original_command = index["command"].as<std::string>();
+        std::regex create_index_regex(R"((CREATE\s+UNIQUE\s+INDEX|CREATE\s+INDEX))", std::regex::icase);
+        std::string command = std::regex_replace(original_command, create_index_regex, "$& CONCURRENTLY");
+        std::string update_table =
+          "UPDATE hafd.indexes_constraints SET status = 'creating' WHERE index_constraint_name ='" + index_constraint_name + "';";
+        ilog("SQL: ${update_table}",(update_table));
+        tx.exec(update_table);
+        ilog("Creating index: ${command}", (command));
+        auto start_time = fc::time_point::now();
+        tx.exec(command);
+        auto end_time = fc::time_point::now();
+        fc::microseconds index_creation_duration = end_time - start_time;
+        ilog("Finished creating index for table: ${table_name} in ${duration} seconds", (table_name)("duration", index_creation_duration.to_seconds()));
+        tx.exec("UPDATE hafd.indexes_constraints SET status = 'created' WHERE index_constraint_name ='"+index_constraint_name+"';");
+      }
+      catch (const std::exception& e)
+      {
+        elog("Error while creating index: ${e}", ("e", e.what()));
+        if (is_connection_lost(conn, e))
+        {
+          std::lock_guard g(state.mtx);
+          state.indexes_to_reset[index_constraint_name] = table_name;
+          throw;
+        }
+        try
+        {
+          reset_failed_index(tx, table_name, index_constraint_name);
+        }
+        catch (const std::exception& cleanup_error)
+        {
+          elog("Error during index cleanup after failed creation: ${e}", ("e", cleanup_error.what()));
+        }
+      }
+    }
+    ilog("Finished creating all indexes for table: ${table_name}", (table_name));
+    try
+    {
+      ilog("Analyzing table: ${table_name}", (table_name) );
+      std::string analyze_table = "ANALYZE " + table_name + ";";
+      tx.exec(analyze_table);
+    }
+    catch (const std::exception& e)
+    {
+       elog("Error while analyzing table: ${e}", ("e", e.what()));
+    }
+  }
+  catch (const std::exception& e)
+  {
+    wlog("Index creation for table ${table_name} stopped: ${e}. Its remaining indexes will be retried on a later poll.", (table_name)("e", e.what()));
+  }
+
+  std::lock_guard g(state.mtx);
+  state.finished_tables.insert(table_name);
+  ilog("Thread for table: ${table_name} has been marked for deletion", (table_name));
+}
+
+// Owns the index build threads started by the monitor. Builds share their state
+// by shared_ptr, so when the monitor exits by exception they are detached rather
+// than joined: a long CREATE INDEX CONCURRENTLY must not delay the shutdown request.
+class index_build_threads
+{
+public:
+  index_build_threads() : _state(std::make_shared<index_builds_state>()) {}
+  index_build_threads(const index_build_threads&) = delete;
+  index_build_threads& operator=(const index_build_threads&) = delete;
+
+  ~index_build_threads()
+  {
+    const bool unwinding = std::uncaught_exceptions() > 0;
+    for (auto& [table_name, thread] : _threads)
+    {
+      if (!thread.joinable())
+        continue;
+      if (unwinding)
+      {
+        wlog("Leaving index creation for table ${table_name} running in the background.", (table_name));
+        thread.detach();
+      }
+      else
+      {
+        ilog("Joining thread for table: ${table_name}", ("table_name", table_name));
+        thread.join();
+      }
+    }
+  }
+
+  bool is_running(const std::string& table_name) const
+  {
+    const auto it = _threads.find(table_name);
+    return it != _threads.end() && it->second.joinable();
+  }
+
+  void start(std::string db_url, const std::string& table_name)
+  {
+    _threads[table_name] = std::thread([state = _state, db_url = std::move(db_url), table_name]()
+    {
+      build_missing_indexes(db_url, table_name, *state);
+    });
+  }
+
+  void join_finished()
+  {
+    std::lock_guard g(_state->mtx);
+    for (const auto& table_name : _state->finished_tables)
+    {
+      if (_threads[table_name].joinable())
+      {
+        ilog("Joining thread for table: ${table_name}", ("table_name", table_name));
+        _threads[table_name].join();
+      }
+      _threads.erase(table_name);
+    }
+    _state->finished_tables.clear();
+  }
+
+  std::map<std::string, std::string> indexes_to_reset() const
+  {
+    std::lock_guard g(_state->mtx);
+    return _state->indexes_to_reset;
+  }
+
+  void index_was_reset(const std::string& index_constraint_name)
+  {
+    std::lock_guard g(_state->mtx);
+    _state->indexes_to_reset.erase(index_constraint_name);
+  }
+
+private:
+  std::shared_ptr<index_builds_state> _state;
+  std::map<std::string, std::thread> _threads; // Used only by the monitor thread
+};
+
+void reset_interrupted_index_builds(pqxx::connection& conn, pqxx::nontransaction& tx)
+{
+  try
+  {
+    dlog("Resetting indexes creation states before polling loop...");
+    tx.exec("UPDATE hafd.indexes_constraints SET status = 'missing' WHERE status = 'creating';");
+  }
+  catch (const std::exception& e)
+  {
+    rethrow_if_connection_lost(conn, e);
+    elog("Error while resetting indexes creation states: ${e}", ("e", e.what()));
+  }
+}
+
+void reset_indexes_of_lost_builds(pqxx::connection& conn, pqxx::nontransaction& tx, index_build_threads& builds)
+{
+  for (const auto& [index_constraint_name, table_name] : builds.indexes_to_reset())
+  {
+    try
+    {
+      reset_failed_index(tx, table_name, index_constraint_name);
+      builds.index_was_reset(index_constraint_name);
+    }
+    catch (const std::exception& e)
+    {
+      rethrow_if_connection_lost(conn, e);
+      elog("Error while resetting index ${index} after its build lost the database connection: ${e}", ("index", index_constraint_name)("e", e.what()));
+    }
+  }
+}
+
+void process_vacuum_requests(pqxx::connection& conn, pqxx::nontransaction& tx)
+{
+  dlog("Checking for table vacuum requests...");
+  try
+  {
+    // 'full' rewrites the table and drops its visibility map, so it must precede any other kind on the same table.
+    pqxx::result data = tx.exec(
+      "SELECT schema_name, table_name, kind FROM hafd.vacuum_requests WHERE status = 'requested' "
+      "ORDER BY schema_name, table_name, kind <> 'full', kind;"
+    );
+    dlog("Found ${count} tables with vacuum requests.", ("count", data.size()));
+
+    for (const auto& record : data)
+    {
+      std::string schema_name;
+      std::string table_name;
+      std::string kind;
+      try
+      {
+        schema_name = record["schema_name"].as<std::string>();
+        table_name = record["table_name"].as<std::string>();
+        kind = record["kind"].as<std::string>();
+        std::string qualified_table_name = tx.quote_name(schema_name) + "." + tx.quote_name(table_name);
+        std::string vacuum_command = vacuum_command_prefix(kind) + qualified_table_name;
+
+        ilog("Performing vacuum: ${vacuum_command}", (vacuum_command));
+        auto start_time = fc::time_point::now();
+        tx.exec(vacuum_command);
+        auto end_time = fc::time_point::now();
+        fc::microseconds vacuum_duration = end_time - start_time;
+        ilog("Vacuumed table: ${schema}.${table} in ${duration} seconds", ("schema", schema_name)("table", table_name)("duration", vacuum_duration.to_seconds()));
+
+        tx.exec_params(
+          "UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW(), error_message = NULL WHERE schema_name = $1 AND table_name = $2 AND kind = $3",
+          schema_name,
+          table_name,
+          kind
+        );
+        ilog("Updated vacuum status for table: ${schema}.${table}", ("schema", schema_name)("table", table_name));
+      }
+      catch (const std::exception& e)
+      {
+        rethrow_if_connection_lost(conn, e);
+        elog("Error while vacuuming table: ${schema}.${table}: ${e}", ("schema", schema_name)("table", table_name)("e", e.what()));
+
+        try
+        {
+          std::string error_msg = e.what();
+
+          tx.exec_params(
+            "UPDATE hafd.vacuum_requests SET status = 'failed', error_message = $1 WHERE schema_name = $2 AND table_name = $3 AND kind = $4",
+            error_msg,
+            schema_name,
+            table_name,
+            kind
+          );
+        }
+        catch (const std::exception& update_error)
+        {
+          rethrow_if_connection_lost(conn, update_error);
+          elog("Error while updating vacuum failure status for table ${schema}.${table}: ${e}", ("schema", schema_name)("table", table_name)("e", update_error.what()));
+        }
+      }
+    }
+  }
+  catch (const std::exception& e)
+  {
+    rethrow_if_connection_lost(conn, e);
+    elog("Error while checking for vacuum requests: ${e}", ("e", e.what()));
+  }
+}
+
+// Check for tables with missing indexes that are not currently being created
+void start_missing_index_builds(pqxx::connection& conn, pqxx::nontransaction& tx, index_build_threads& builds, const std::string& db_url)
+{
+  try
+  {
+    dlog("Executing query to find tables with missing indexes...");
+    pqxx::result data = tx.exec(
+          "SELECT DISTINCT table_name "
+          "FROM hafd.indexes_constraints "
+          "WHERE status = 'missing' "
+          "AND table_name LIKE 'hafd.%' "
+          "AND table_name NOT IN ("
+          "  SELECT DISTINCT table_name "
+          "  FROM hafd.indexes_constraints "
+          "  WHERE status = 'creating'"
+          ");"
+      );
+    dlog("Query executed. Found ${count} tables with missing indexes.", ("count", data.size()));
+    for (const auto& record : data) //iterate over tables with missing indexes
+    {
+      std::string table_name = record["table_name"].as<std::string>();
+      dlog("Processing table: ${table_name}", ("table_name", table_name));
+      if (builds.is_running(table_name))
+      {
+        ilog("A thread is already running for table: ${table_name}", ("table_name", table_name));
+        continue; //check the next table
+      }
+
+      ilog("NOTE: Starting a new thread to create indexes for table: ${table_name}", ("table_name", table_name));
+      builds.start(db_url, table_name);
+    } //end for tables with missing indexes
+    dlog("Finished polling for tables with missing indexes, sleep for 10s.");
+  }
+  catch (const std::exception& e)
+  {
+    rethrow_if_connection_lost(conn, e);
+    elog("Error while checking for missing indexes: ${e}", ("e", e.what()));
+  }
+}
+
+}
+
+indexes_controler::indexes_controler( std::string db_url, uint32_t psql_index_threshold, uint32_t monitor_retry_budget_seconds, appbase::application& app )
 : _db_url( std::move(db_url) )
 , _psql_index_threshold( psql_index_threshold )
+, _monitor_retry_budget_seconds( monitor_retry_budget_seconds )
 , _interruptor(_db_url, app)
 , theApp( app )
 {
@@ -264,232 +613,66 @@ indexes_controler::start_commit_sql( bool mode, const std::string& sql_function_
 
 void indexes_controler::poll_and_create_indexes() 
 {
-  std::map<std::string, std::thread> active_threads; // Doesn't need mutex, because it's modified by one thread at a time
-  std::set<std::string> threads_to_delete;
-  std::mutex mtx; // Protects threads_to_delete
-
   const std::string thread_name = "haf_monitor";
   fc::set_thread_name(thread_name.c_str());
   fc::thread::current().set_name(thread_name);
 
-
-  {
-    pqxx::connection conn(db_url_with_hived_app_as_haf_maintainer(_db_url));
-    pqxx::nontransaction tx(conn);
-    try
-    {
-      dlog("Resetting indexes creation states before polling loop...");
-      tx.exec("UPDATE hafd.indexes_constraints SET status = 'missing' WHERE status = 'creating';");
-    }
-    catch (const std::exception& e)
-    {
-      elog("Error while resetting indexes creation states: ${e}", ("e", e.what()));
-    }
-  }
+  const std::string db_url = db_url_with_hived_app_as_haf_maintainer(_db_url);
+  const fc::microseconds retry_budget = fc::seconds(_monitor_retry_budget_seconds);
+  index_build_threads builds;
+  std::unique_ptr<pqxx::connection> conn;
+  bool interrupted_builds_reset = false;
+  std::optional<fc::time_point> failing_since;
+  fc::microseconds reconnect_delay = MIN_RECONNECT_DELAY;
 
   while (!theApp.is_interrupt_request())
   {
-    dlog("Checking for table vacuum requests...");
-    pqxx::connection conn(db_url_with_hived_app_as_haf_maintainer(_db_url));
-    pqxx::nontransaction tx(conn);
     try
     {
-      // 'full' rewrites the table and drops its visibility map, so it must precede any other kind on the same table.
-      pqxx::result data = tx.exec(
-        "SELECT schema_name, table_name, kind FROM hafd.vacuum_requests WHERE status = 'requested' "
-        "ORDER BY schema_name, table_name, kind <> 'full', kind;"
-      );
-      dlog("Found ${count} tables with vacuum requests.", ("count", data.size()));
-
-      for (const auto& record : data)
+      if (!conn)
+        conn = std::make_unique<pqxx::connection>(db_url);
       {
-        std::string schema_name;
-        std::string table_name;
-        std::string kind;
-        try
+        pqxx::nontransaction tx(*conn);
+        if (!interrupted_builds_reset)
         {
-          schema_name = record["schema_name"].as<std::string>();
-          table_name = record["table_name"].as<std::string>();
-          kind = record["kind"].as<std::string>();
-          std::string qualified_table_name = tx.quote_name(schema_name) + "." + tx.quote_name(table_name);
-          std::string vacuum_command = vacuum_command_prefix(kind) + qualified_table_name;
-
-          ilog("Performing vacuum: ${vacuum_command}", (vacuum_command));
-          auto start_time = fc::time_point::now();
-          tx.exec(vacuum_command);
-          auto end_time = fc::time_point::now();
-          fc::microseconds vacuum_duration = end_time - start_time;
-          ilog("Vacuumed table: ${schema}.${table} in ${duration} seconds", ("schema", schema_name)("table", table_name)("duration", vacuum_duration.to_seconds()));
-
-          tx.exec_params(
-            "UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW(), error_message = NULL WHERE schema_name = $1 AND table_name = $2 AND kind = $3",
-            schema_name,
-            table_name,
-            kind
-          );
-          ilog("Updated vacuum status for table: ${schema}.${table}", ("schema", schema_name)("table", table_name));
+          reset_interrupted_index_builds(*conn, tx);
+          interrupted_builds_reset = true;
         }
-        catch (const std::exception& e)
-        {
-          elog("Error while vacuuming table: ${schema}.${table}: ${e}", ("schema", schema_name)("table", table_name)("e", e.what()));
-
-          try
-          {
-            std::string error_msg = e.what();
-
-            tx.exec_params(
-              "UPDATE hafd.vacuum_requests SET status = 'failed', error_message = $1 WHERE schema_name = $2 AND table_name = $3 AND kind = $4",
-              error_msg,
-              schema_name,
-              table_name,
-              kind
-            );
-          }
-          catch (const std::exception& update_error)
-          {
-            elog("Error while updating vacuum failure status for table ${schema}.${table}: ${e}", ("schema", schema_name)("table", table_name)("e", update_error.what()));
-          }
-        }
+        reset_indexes_of_lost_builds(*conn, tx, builds);
+        process_vacuum_requests(*conn, tx);
+        start_missing_index_builds(*conn, tx, builds, db_url);
       }
-    }
-    catch (const std::exception& e)
-    {
-      elog("Error while checking for vacuum requests: ${e}", ("e", e.what()));
-    }
 
-    // Check for tables with missing indexes that are not currently being created
-    try 
-    { 
-      dlog("Executing query to find tables with missing indexes...");
-      pqxx::result data = tx.exec(
-            "SELECT DISTINCT table_name "
-            "FROM hafd.indexes_constraints "
-            "WHERE status = 'missing' "
-            "AND table_name LIKE 'hafd.%' "
-            "AND table_name NOT IN ("
-            "  SELECT DISTINCT table_name "
-            "  FROM hafd.indexes_constraints "
-            "  WHERE status = 'creating'"
-            ");"
-        );
-      dlog("Query executed. Found ${count} tables with missing indexes.", ("count", data.size()));
-      for (const auto& record : data) //iterate over tables with missing indexes
+      if (failing_since)
       {
-        std::string table_name = record["table_name"].as<std::string>();
-        dlog("Processing table: ${table_name}", ("table_name", table_name));
-        // Check if a thread is already running for this table
-        if (active_threads.find(table_name) != active_threads.end() && active_threads[table_name].joinable()) 
-        {
-          ilog("A thread is already running for table: ${table_name}", ("table_name", table_name));
-          continue; //check the next table
-        }
-
-        ilog("NOTE: Starting a new thread to create indexes for table: ${table_name}", ("table_name", table_name));
-        active_threads[table_name] = std::thread([this, table_name, &threads_to_delete, &mtx]() 
-        {
-          std::string thread_name = table_name;
-          if (thread_name.size() > 16)
-            thread_name.resize(16);
-          fc::set_thread_name(thread_name.c_str());
-          fc::thread::current().set_name(thread_name);
-
-          pqxx::connection conn(db_url_with_hived_app_as_haf_maintainer(_db_url));
-          pqxx::nontransaction tx(conn);
-          pqxx::result data = tx.exec("SELECT index_constraint_name, command FROM hafd.indexes_constraints WHERE status = 'missing' AND table_name = '" + table_name + "';");
-          for (const auto& index : data) //iterate over missing indexes and create them concurrently
-          {
-            std::string index_constraint_name = index["index_constraint_name"].as<std::string>();
-            try
-            {
-              std::string original_command = index["command"].as<std::string>();
-              std::regex create_index_regex(R"((CREATE\s+UNIQUE\s+INDEX|CREATE\s+INDEX))", std::regex::icase);
-              std::string command = std::regex_replace(original_command, create_index_regex, "$& CONCURRENTLY");
-              std::string update_table = 
-                "UPDATE hafd.indexes_constraints SET status = 'creating' WHERE index_constraint_name ='" + index_constraint_name + "';";
-              ilog("SQL: ${update_table}",(update_table));
-              tx.exec(update_table);
-              ilog("Creating index: ${command}", (command));
-              auto start_time = fc::time_point::now();
-              tx.exec(command);
-              auto end_time = fc::time_point::now();
-              fc::microseconds index_creation_duration = end_time - start_time;
-              ilog("Finished creating index for table: ${table_name} in ${duration} seconds", (table_name)("duration", index_creation_duration.to_seconds()));
-              tx.exec("UPDATE hafd.indexes_constraints SET status = 'created' WHERE index_constraint_name ='"+index_constraint_name+"';");
-            }
-            catch (const std::exception& e)
-            {
-               elog("Error while creating index: ${e}", ("e", e.what()));
-               try
-               {
-                 // A failed CREATE INDEX CONCURRENTLY leaves behind an invalid index.
-                 // Drop it and reset status so the poller retries on the next cycle.
-                 std::string schema = table_name.substr(0, table_name.find('.'));
-                 std::string drop_cmd = "DROP INDEX IF EXISTS " + schema + "." + index_constraint_name + ";";
-                 wlog("Dropping invalid index after failed creation: ${cmd}", ("cmd", drop_cmd));
-                 tx.exec(drop_cmd);
-                 std::string reset_status =
-                   "UPDATE hafd.indexes_constraints SET status = 'missing' WHERE index_constraint_name ='" + index_constraint_name + "';";
-                 wlog("Resetting index status to missing for retry: ${index}", ("index", index_constraint_name));
-                 tx.exec(reset_status);
-               }
-               catch (const std::exception& cleanup_error)
-               {
-                 elog("Error during index cleanup after failed creation: ${e}", ("e", cleanup_error.what()));
-               }
-            }
-          }
-          ilog("Finished creating all indexes for table: ${table_name}", (table_name));
-          try
-          {
-            ilog("Analyzing table: ${table_name}", (table_name) );
-            std::string analyze_table = "ANALYZE " + table_name + ";";
-            tx.exec(analyze_table);
-          }
-          catch (const std::exception& e)
-          {
-             elog("Error while analyzing table: ${e}", ("e", e.what()));
-          }
-
-          std::lock_guard g(mtx);
-          threads_to_delete.insert(table_name); // Mark the thread for deletion
-          ilog("Thread for table: ${table_name} has been marked for deletion", (table_name));
-        });
-      } //end for tables with missing indexes
-      dlog("Finished polling for tables with missing indexes, sleep for 10s.");
-    }
-    catch (const std::exception& e)
-    {
-      elog("Error while checking for missing indexes: ${e}", ("e", e.what()));
-    }
-
-    // Sleep for 10 seconds before polling again
-    fc::usleep(fc::seconds(10));
-
-    // Delete threads marked for deletion
-    {
-      std::lock_guard g(mtx);
-      for (const auto& table_name : threads_to_delete) 
-      {
-        if (active_threads[table_name].joinable()) 
-        {
-          ilog("Joining thread for table: ${table_name}", ("table_name", table_name));
-          active_threads[table_name].join();
-        }
-        active_threads.erase(table_name);
+        ilog("Index monitor reconnected to the database after ${s} seconds; polling resumed.", ("s", (fc::time_point::now() - *failing_since).to_seconds()));
+        failing_since.reset();
+        reconnect_delay = MIN_RECONNECT_DELAY;
       }
-      threads_to_delete.clear();
+      sleep_unless_interrupted(theApp, POLL_INTERVAL);
     }
+    catch (const pqxx::broken_connection& e)
+    {
+      conn.reset();
+      const fc::time_point now = fc::time_point::now();
+      if (!failing_since)
+        failing_since = now;
+      const fc::microseconds failing_for = now - *failing_since;
+      if (failing_for >= retry_budget)
+        throw std::runtime_error(
+          "Index monitor could not use its database connection for " + std::to_string(failing_for.to_seconds()) +
+          " seconds, exhausting its retry budget of " + std::to_string(retry_budget.to_seconds()) +
+          " seconds (psql-index-monitor-retry-budget); last error: " + e.what());
+
+      wlog("Index monitor has no usable database connection: ${e}. Reconnecting in ${d} seconds (failing for ${f} of ${b} seconds allowed).",
+        ("e", e.what())("d", reconnect_delay.to_seconds())("f", failing_for.to_seconds())("b", retry_budget.to_seconds()));
+      sleep_unless_interrupted(theApp, reconnect_delay);
+      reconnect_delay = std::min(reconnect_delay + reconnect_delay, MAX_RECONNECT_DELAY);
+    }
+
+    builds.join_finished();
   }
   ilog("Interrupt request received, stopping polling for tables with missing indexes.");
-  // Join all remaining threads before exiting
-  for (auto& [table_name, thread] : active_threads) 
-  {
-    if (thread.joinable()) 
-    {
-      ilog("Joining thread for table: ${table_name}", ("table_name", table_name));
-      thread.join();
-    }
-  }
 } //end poll_and_create_indexes
 
 }}} // namespace hive{ plugins { sql_serializer
