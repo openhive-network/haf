@@ -496,6 +496,12 @@ indexation_state::update_state(
         {
           _indexes_controler.poll_and_create_indexes();
         }
+        catch (const fc::exception& e)
+        {
+          elog("Fatal error in poll_and_create_indexes thread: ${e}.", ("e", e.to_detail_string()));
+          elog("Requesting graceful shutdown.");
+          theApp.generate_interrupt_request();
+        }
         catch (const std::exception& e)
         {
           elog("Fatal error in poll_and_create_indexes thread: ${e}.", ("e", e.what()));
