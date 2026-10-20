@@ -93,6 +93,22 @@ check_table_is_empty() {
     fi
 }
 
+make_account_operations_uq1_outdated() {
+    exec_sql "ALTER TABLE hafd.account_operations DROP CONSTRAINT hive_account_operations_uq1;
+              ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_uq1 UNIQUE (account_id, account_op_seq_no);
+              ALTER TABLE hafd.account_operations CLUSTER ON hive_account_operations_uq1;"
+}
+
+# A HAF image ships only its own libhfm, so on a real upgrade the C functions of the deployed
+# extension (version 1.0, see update_database) point at a library that does not exist.
+unship_deployed_libhfm() {
+    exec_sql "UPDATE pg_proc SET probin = '\$libdir/libhfm-1.0.so' WHERE probin LIKE '%/libhfm-%'"
+}
+
+index_oid() {
+    exec_sql "SELECT 'hafd.$1'::regclass::oid"
+}
+
 check_account_operations_uq1() {
     expected="UNIQUE (account_id, account_op_seq_no) INCLUDE (op_type_id)"
     actual=$(exec_sql "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'hafd.account_operations'::regclass AND conname = 'hive_account_operations_uq1'")
@@ -296,17 +312,41 @@ exec_sql "CREATE SCHEMA workaround;
           "
 update_database
 
-printf "\nTEST: Upgrade a database whose hive_account_operations_uq1 lacks INCLUDE (op_type_id). The index should be rebuilt in place.\n"
+printf "\nTEST: Upgrade a database whose hive_account_operations_uq1 lacks INCLUDE (op_type_id) and whose deployed libhfm is not shipped. The index should be rebuilt in place.\n"
 prepare_database
-exec_sql "ALTER TABLE hafd.account_operations DROP CONSTRAINT hive_account_operations_uq1;
-          ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_uq1 UNIQUE (account_id, account_op_seq_no);
-          ALTER TABLE hafd.account_operations CLUSTER ON hive_account_operations_uq1;"
+make_account_operations_uq1_outdated
+unship_deployed_libhfm
 update_database
 check_account_operations_uq1
 [ "$(exec_sql "SELECT indisclustered FROM pg_index WHERE indexrelid = 'hafd.hive_account_operations_uq1'::regclass")" = "t" ] \
     || { echo "TEST FAILED: hafd.account_operations is no longer clustered on hive_account_operations_uq1"; exit 7; }
 [ "$(exec_sql "SELECT count(*) FROM pg_indexes WHERE schemaname = 'hafd' AND indexname LIKE 'hive_account_operations_uq1%'")" = "1" ] \
     || { echo "TEST FAILED: a leftover hive_account_operations_uq1 index remains"; exit 8; }
+
+printf "\nTEST: Upgrade a database where an earlier update built hive_account_operations_uq1_new but failed in the swap. The index should be reused.\n"
+prepare_database
+make_account_operations_uq1_outdated
+exec_sql "CREATE UNIQUE INDEX hive_account_operations_uq1_new ON hafd.account_operations (account_id, account_op_seq_no) INCLUDE (op_type_id)"
+uq1_new_oid=$(index_oid hive_account_operations_uq1_new)
+unship_deployed_libhfm
+update_database
+check_account_operations_uq1
+[ "$(index_oid hive_account_operations_uq1)" = "$uq1_new_oid" ] \
+    || { echo "TEST FAILED: the valid hive_account_operations_uq1_new was not reused"; exit 9; }
+
+printf "\nTEST: Upgrade a database where an earlier update was interrupted while building hive_account_operations_uq1_new. The index should be rebuilt.\n"
+prepare_database
+make_account_operations_uq1_outdated
+exec_sql "CREATE UNIQUE INDEX hive_account_operations_uq1_new ON hafd.account_operations (account_id, account_op_seq_no) INCLUDE (op_type_id)"
+uq1_new_oid=$(index_oid hive_account_operations_uq1_new)
+exec_sql "UPDATE pg_index SET indisvalid = false WHERE indexrelid = $uq1_new_oid"
+unship_deployed_libhfm
+update_database
+check_account_operations_uq1
+[ "$(index_oid hive_account_operations_uq1)" != "$uq1_new_oid" ] \
+    || { echo "TEST FAILED: the invalid hive_account_operations_uq1_new was swapped in instead of rebuilt"; exit 10; }
+[ "$(exec_sql "SELECT indisvalid FROM pg_index WHERE indexrelid = 'hafd.hive_account_operations_uq1'::regclass")" = "t" ] \
+    || { echo "TEST FAILED: hive_account_operations_uq1 is not valid"; exit 11; }
 
 printf "\nTEST: Upgrade a database whose hive_account_operations_uq1 is dropped for a massive sync. Its restore command should be updated.\n"
 prepare_database
