@@ -381,9 +381,11 @@ $BODY$
 -- 'keep': the leading key grows with the chain (block number, block or operation id, block time),
 -- so hived's massive inserts append at the right edge of the btree and maintaining the index costs
 -- almost nothing; these are also the indexes apps' block-range scans read. applied_hardforks is
--- kept as well: a few dozen rows ever, keyed by hardfork number and block number.
+-- kept as well: a few dozen rows ever, keyed by hardfork number and block number. So are the
+-- accounts indexes: apps look accounts up by name and id on every batch they process, and the table
+-- gets a row only per new account, so maintaining even its name index costs a few leaf inserts.
 -- 'defer': the leading key is random with respect to insert order (transaction hash, account,
--- producer, operation type, account name, json body), so every insert touches a random leaf.
+-- producer, operation type, json body), so every insert touches a random leaf.
 -- Indexes this function does not know, e.g. ones an app created directly on a hafd table, are
 -- deferred, except the block-number-keyed partial indexes of hive.create_op_type_partial_index.
 CREATE OR REPLACE FUNCTION hive.default_massive_sync_index_class( _table_name TEXT, _index_constraint_name TEXT )
@@ -404,6 +406,9 @@ SELECT CASE
         , ( 'hafd.operations', 'hive_operations_block_num_trx_in_block_idx' )
         , ( 'hafd.applied_hardforks', 'pk_hive_applied_hardforks' )
         , ( 'hafd.applied_hardforks', 'hive_applied_hardforks_block_num_idx' )
+        , ( 'hafd.accounts', 'pk_hive_accounts_id' )
+        , ( 'hafd.accounts', 'uq_hive_accounst_name' )
+        , ( 'hafd.accounts', 'hive_accounts_block_num_idx' )
     ) THEN 'keep'
     WHEN _table_name = 'hafd.operations' AND _index_constraint_name ~ '^hive_operations_op_types_[0-9_]+_idx$' THEN 'keep'
     ELSE 'defer'

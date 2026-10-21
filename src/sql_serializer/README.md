@@ -99,10 +99,10 @@ have no class (NULL); foreign keys are dropped during every massive sync.
 | keep | `hive_transactions_block_num_trx_in_block_idx` | block number |
 | keep | `pk_hive_operations`, `hive_operations_block_num_id_idx`, `hive_operations_block_num_trx_in_block_idx`, `hive_operations_op_types_*_idx` (`hive.create_op_type_partial_index`) | operation id / block number; what the apps' block-range scans read |
 | keep | `pk_hive_applied_hardforks`, `hive_applied_hardforks_block_num_idx` | a few dozen rows ever |
+| keep | `pk_hive_accounts_id`, `uq_hive_accounst_name`, `hive_accounts_block_num_idx` | apps look accounts up by name and id on every batch, which without them is a sequential scan of millions of rows; the table gets one row per new account, so maintaining them costs a few leaf inserts |
 | defer | `pk_hive_transactions`, `pk_hive_transactions_multisig` | transaction hash, the largest single cost |
 | defer | `hive_blocks_producer_account_id_idx` | producer account |
 | defer | `hive_operations_op_type_id_block_num`, custom_json and other partial or expression indexes apps created on `hafd.operations` | operation type, json body |
-| defer | `pk_hive_accounts_id`, `uq_hive_accounst_name`, `hive_accounts_block_num_idx` | account name; the table is small |
 | defer | `hive_account_operations_uq1`, `hive_account_operations_account_id_op_type_id_idx` | account id |
 | defer | any other index on these tables | unknown shape |
 

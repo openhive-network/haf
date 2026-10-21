@@ -17,6 +17,7 @@ ROW_CHECKSUMS = {
     "transactions": "SELECT md5(t::text) FROM hafd.transactions t ORDER BY t.block_num, t.trx_in_block",
     "operations": "SELECT md5(t::text) FROM hafd.operations t ORDER BY t.id",
     "account_operations": "SELECT md5(t::text) FROM hafd.account_operations t ORDER BY t.account_id, t.account_op_seq_no",
+    "accounts": "SELECT md5(t::text) FROM hafd.accounts t ORDER BY t.id",
 }
 
 PK_AND_UNIQUE_DEFINITIONS = """
@@ -141,7 +142,7 @@ def test_replay_with_keep_monotonic_equals_drop_all(haf_node: HafNode) -> None:
         classes = dict(
             node.query_all(
                 "SELECT index_constraint_name, massive_sync_class FROM hafd.indexes_constraints"
-                " WHERE table_name IN ('hafd.operations', 'hafd.transactions', 'hafd.account_operations')"
+                " WHERE table_name IN ('hafd.operations', 'hafd.transactions', 'hafd.account_operations', 'hafd.accounts')"
             )
         )
         assert classes["pk_hive_operations"] == "keep"
@@ -150,6 +151,9 @@ def test_replay_with_keep_monotonic_equals_drop_all(haf_node: HafNode) -> None:
         assert classes["pk_hive_transactions"] == "defer"
         assert classes["hive_account_operations_uq1"] == "defer"
         assert classes["hive_operations_op_type_id_block_num"] == "defer"
+        assert classes["pk_hive_accounts_id"] == "keep"
+        assert classes["uq_hive_accounst_name"] == "keep"
+        assert classes["hive_accounts_block_num_idx"] == "keep"
 
     log = readiness_log(keep_monotonic_node)
     runs = [(state, len(list(group))) for state, group in groupby(log)]
@@ -168,6 +172,7 @@ def test_replay_with_keep_monotonic_equals_drop_all(haf_node: HafNode) -> None:
     }
     tt.logger.info(f"drop-all replay row counts: {counts}")
     assert drop_all_data["account_operations_count"] > 0
+    assert drop_all_data["accounts_count"] > 0
     assert all(
         row[3] == "created" and row[4] is not None
         for row in drop_all_data["core_indexes"]
