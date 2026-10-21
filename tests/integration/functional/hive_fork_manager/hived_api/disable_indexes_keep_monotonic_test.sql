@@ -50,15 +50,18 @@ BEGIN
 
     ASSERT ( SELECT array_agg( index_constraint_name ORDER BY index_constraint_name COLLATE "C" ) FROM hafd.indexes_constraints WHERE massive_sync_class = 'keep' )
         = ARRAY[
-              'hive_applied_hardforks_block_num_idx'
+              'hive_accounts_block_num_idx'
+            , 'hive_applied_hardforks_block_num_idx'
             , 'hive_blocks_created_at_idx'
             , 'hive_operations_block_num_id_idx'
             , 'hive_operations_block_num_trx_in_block_idx'
             , 'hive_operations_op_types_1_2_idx'
             , 'hive_transactions_block_num_trx_in_block_idx'
+            , 'pk_hive_accounts_id'
             , 'pk_hive_applied_hardforks'
             , 'pk_hive_blocks'
             , 'pk_hive_operations'
+            , 'uq_hive_accounst_name'
           ], FORMAT( 'Unexpected set of kept indexes: %s', ( SELECT array_agg( index_constraint_name ) FROM hafd.indexes_constraints WHERE massive_sync_class = 'keep' ) );
 
     FOR __row IN SELECT * FROM hafd.indexes_constraints WHERE massive_sync_class = 'keep' LOOP
@@ -74,6 +77,13 @@ BEGIN
     ASSERT ( SELECT massive_sync_class FROM hafd.indexes_constraints WHERE index_constraint_name = 'pk_hive_transactions' ) = 'defer', 'pk_hive_transactions is not deferred';
     ASSERT ( SELECT massive_sync_class FROM hafd.indexes_constraints WHERE index_constraint_name = 'hive_account_operations_uq1' ) = 'defer', 'hive_account_operations_uq1 is not deferred';
     ASSERT ( SELECT massive_sync_class FROM hafd.indexes_constraints WHERE index_constraint_name = 'hive_operations_op_type_id_block_num' ) = 'defer', 'hive_operations_op_type_id_block_num is not deferred';
+
+    -- apps look accounts up by name and id while hived replays
+    ASSERT hive.are_core_indexes_created( 'hafd.accounts', 'pk_hive_accounts_id' ), 'pk_hive_accounts_id is reported missing';
+    ASSERT hive.are_core_indexes_created( 'hafd.accounts', 'uq_hive_accounst_name' ), 'uq_hive_accounst_name is reported missing';
+    ASSERT hive.are_core_indexes_created( 'hafd.accounts', 'hive_accounts_block_num_idx' ), 'hive_accounts_block_num_idx is reported missing';
+    ASSERT EXISTS( SELECT 1 FROM pg_constraint WHERE conrelid = 'hafd.accounts'::regclass AND conname = 'uq_hive_accounst_name' AND contype = 'u' )
+         , 'uq_hive_accounst_name is not a unique constraint any more';
 
     -- foreign keys are dropped as with drop-all
     ASSERT NOT EXISTS(

@@ -250,7 +250,7 @@ synchronization process, improving efficiency and reducing system load.
 By default `hive.app_next_iteration` and `hive.app_next_block` deliver blocks only when `hive.is_instance_ready()`
 holds, i.e. after hived has rebuilt every index it dropped for a massive sync. When hived runs with
 `psql-massive-index-policy = keep-monotonic` (see the sql_serializer README), it keeps the indexes keyed by block
-number or operation id during the sync, and an application whose block processing reads only block ranges through
+number or operation id and the `hafd.accounts` indexes (lookups by account name or id) during the sync, and an application whose block processing reads only block ranges through
 the views can start processing irreversible blocks while hived is still replaying:
 
 - `hive.app_context_set_early_block_processing( _contexts, _enabled => TRUE )` opts the contexts in. A group of
