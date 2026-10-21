@@ -307,24 +307,34 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.disable_indexes_of_irreversible()
+-- _policy is hived's psql-massive-index-policy:
+--   'drop-all'       - drop every index and PK/UNIQUE constraint of the irreversible tables
+--   'keep-monotonic' - drop only those whose hafd.indexes_constraints.massive_sync_class is 'defer'
+CREATE OR REPLACE FUNCTION hive.disable_indexes_of_irreversible( _policy TEXT DEFAULT 'drop-all' )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
+DECLARE
+    __keep_monotonic BOOLEAN;
 BEGIN
+    IF _policy IS NULL OR _policy NOT IN ( 'drop-all', 'keep-monotonic' ) THEN
+        RAISE EXCEPTION 'Unknown massive sync index policy: %, expected drop-all or keep-monotonic', _policy;
+    END IF;
+    __keep_monotonic := _policy = 'keep-monotonic';
+
     IF hive.is_pruning_enabled() = TRUE THEN
        RETURN;
     END IF;
 
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'blocks' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'transactions' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'transactions_multisig' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'operations' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'applied_hardforks' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'accounts' );
-    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'account_operations' );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'blocks', __keep_monotonic );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'transactions', __keep_monotonic );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'transactions_multisig', __keep_monotonic );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'operations', __keep_monotonic );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'applied_hardforks', __keep_monotonic );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'accounts', __keep_monotonic );
+    PERFORM hive.save_and_drop_indexes_constraints( 'hafd', 'account_operations', __keep_monotonic );
 
     PERFORM hive.reanalyze_indexes_with_expressions(); --I wonder if reanalyzing is really needed when indexes are dropped
 END;

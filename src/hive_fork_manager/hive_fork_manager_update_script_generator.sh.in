@@ -352,6 +352,23 @@ BEGIN
         ALTER TABLE hafd.vacuum_requests ADD CONSTRAINT pk_hive_vacuum_requests UNIQUE( schema_name, table_name, kind );
     END IF;
 
+    -- Existing rows stay unclassified (NULL); the next massive sync classifies them.
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'hafd' AND table_name = 'indexes_constraints' AND column_name = 'massive_sync_class'
+    ) THEN
+        ALTER TABLE hafd.indexes_constraints ADD COLUMN massive_sync_class text;
+        ALTER TABLE hafd.indexes_constraints
+            ADD CONSTRAINT indexes_constraints_massive_sync_class_check CHECK ( massive_sync_class IN ('keep', 'defer') );
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'hafd' AND table_name = 'contexts' AND column_name = 'early_block_processing'
+    ) THEN
+        ALTER TABLE hafd.contexts ADD COLUMN early_block_processing BOOL NOT NULL DEFAULT FALSE;
+    END IF;
+
     -- Note: there is intentionally no migration for the rc_cost column of hafd.transactions
     -- and hafd.transactions_reversible - the values cannot be backfilled without a replay,
     -- so the schema hash mismatch reported by verify_table_schema forces one.

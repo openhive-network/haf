@@ -47,6 +47,7 @@ namespace hive::plugins::sql_serializer {
         , uint32_t wal_queue_depth = DEFAULT_WAL_QUEUE_DEPTH
         , bool lite_mode = false
         , uint32_t index_monitor_retry_budget_seconds = DEFAULT_INDEX_MONITOR_RETRY_BUDGET
+        , massive_index_policy index_policy = massive_index_policy::drop_all
       );
       ~indexation_state() = default;
       indexation_state& operator=( indexation_state& ) = delete;

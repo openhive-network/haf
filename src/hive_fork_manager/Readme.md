@@ -245,6 +245,28 @@ To optimize performance, applications should register their required indexes **b
 initiating synchronization. This approach ensures that index creation is integrated into the
 synchronization process, improving efficiency and reducing system load.
 
+##### - Processing blocks while hived replays
+
+By default `hive.app_next_iteration` and `hive.app_next_block` deliver blocks only when `hive.is_instance_ready()`
+holds, i.e. after hived has rebuilt every index it dropped for a massive sync. When hived runs with
+`psql-massive-index-policy = keep-monotonic` (see the sql_serializer README), it keeps the indexes keyed by block
+number or operation id during the sync, and an application whose block processing reads only block ranges through
+the views can start processing irreversible blocks while hived is still replaying:
+
+- `hive.app_context_set_early_block_processing( _contexts, _enabled => TRUE )` opts the contexts in. A group of
+  contexts processes blocks early only when all of them opted in. The setting is stored in `hafd.contexts.early_block_processing`.
+- `hive.is_instance_ready_for_block_processing()` / `hive.wait_for_ready_instance_for_block_processing( _contexts, _timeout, _wait_time )`
+  report or wait for that state; `hive.is_instance_ready()` / `hive.wait_for_ready_instance()` keep meaning that all
+  core indexes exist.
+- The indexes deferred to the end of the sync (`hive_account_operations_uq1`, `pk_hive_transactions` and the others
+  with `massive_sync_class = 'defer'` in `hafd.indexes_constraints`) may be missing. Before a step that needs one,
+  call `hive.wait_for_core_indexes( _contexts, 'hafd.account_operations', 'hive_account_operations_uq1', _timeout )`
+  (or pass `_index_name => NULL` to wait for all core indexes of the table); `hive.are_core_indexes_created()` checks
+  the same without waiting.
+
+Without the option on the node the opt-in has almost no effect: during a `drop-all` massive sync the `keep` indexes
+are dropped too, so opted-in contexts start only during the final index rebuild, once those are back.
+
 #### Managing Table Vacuuming
 
 `hived` is responsible for maintaining the integrity and performance of the database by executing
@@ -674,8 +696,9 @@ Marks a block as irreversible
 After finishing a massive push of blocks, hived will invoke this method to schedule a MASSIVE_SYNC event. The parameter `_block_num`
 is the last massively synced block - head or irreversible blocks.
 
-#### hive.disable_indexes_of_irreversible()
+#### hive.disable_indexes_of_irreversible( _policy )
 There are some indexes created by the extension on irreversible block data. Those indexes may slow down massive dumps of blocks data by hived. This function drops and saves description of indexes and FK constraints created on irreversible blocks table. Hived will use this function before starting massive sync of blocks.
+`_policy` is hived's `psql-massive-index-policy`: `'drop-all'` (default) drops every index, `'keep-monotonic'` only those with `massive_sync_class = 'defer'` in `hafd.indexes_constraints`.
 
 #### hive.enable_indexes_of_irreversible()
 It restores indexes and FK constarint dropped and saved by the function above.

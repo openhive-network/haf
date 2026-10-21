@@ -22,34 +22,117 @@ END
 $BODY$
 LANGUAGE plpgsql STABLE;
 
---- Allows to wait (until specified _timeout) until HAF database will be ready for application data processing.
---- Raises exception on _timeout.
+--- Returns true if apps may process irreversible blocks. Like hive.is_instance_ready(), but during a
+--- massive sync of hived run with psql-massive-index-policy=keep-monotonic it already holds while hived
+--- replays: once every core index the policy keeps (hafd.indexes_constraints.massive_sync_class = 'keep')
+--- exists. The deferred core indexes may still be missing; wait for the ones a processing step needs
+--- with hive.wait_for_core_indexes.
+CREATE OR REPLACE FUNCTION hive.is_instance_ready_for_block_processing()
+RETURNS BOOLEAN
+AS
+$BODY$
+BEGIN
+  IF NOT EXISTS( SELECT 1 FROM hafd.events_queue ) THEN
+      RETURN FALSE;
+  END IF;
+
+  IF hive.is_pruning_enabled() THEN
+      RETURN TRUE;
+  END IF;
+
+  RETURN NOT EXISTS(
+    SELECT 1
+    FROM hafd.indexes_constraints
+    WHERE contexts @> ARRAY[0] AND massive_sync_class = 'keep' AND status != 'created'
+  );
+END
+$BODY$
+LANGUAGE plpgsql STABLE;
+
+--- Readiness hive.app_next_iteration and hive.app_next_block wait for: hive.is_instance_ready(), or
+--- hive.is_instance_ready_for_block_processing() when every context of the group opted in with
+--- hive.app_context_set_early_block_processing.
+CREATE OR REPLACE FUNCTION hive.is_instance_ready_for_contexts( _context_names hive.contexts_group )
+RETURNS BOOLEAN
+AS
+$BODY$
+BEGIN
+  IF hive.is_instance_ready() THEN
+      RETURN TRUE;
+  END IF;
+
+  RETURN COALESCE( ( SELECT bool_and( early_block_processing ) FROM hafd.contexts WHERE name = ANY( _context_names ) ), FALSE )
+     AND hive.is_instance_ready_for_block_processing();
+END
+$BODY$
+LANGUAGE plpgsql STABLE;
+
+--- Returns true when the core index _index_name of the hafd table _table_name exists, or, with
+--- _index_name NULL, every core index and PK/UNIQUE constraint of the table. During a massive sync
+--- with psql-massive-index-policy=keep-monotonic the deferred ones are created only when it ends.
+--- Raises when the table or the index is unknown.
+CREATE OR REPLACE FUNCTION hive.are_core_indexes_created( _table_name TEXT, _index_name TEXT DEFAULT NULL )
+RETURNS BOOLEAN
+AS
+$BODY$
+DECLARE
+  __table_name TEXT;
+BEGIN
+  SELECT n.nspname || '.' || c.relname INTO __table_name
+  FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE c.oid = to_regclass( _table_name );
+
+  IF __table_name IS NULL THEN
+    RAISE EXCEPTION 'Unknown table %', _table_name;
+  END IF;
+
+  IF _index_name IS NOT NULL
+    AND NOT EXISTS( SELECT 1 FROM hafd.indexes_constraints WHERE table_name = __table_name AND index_constraint_name = _index_name AND contexts @> ARRAY[0] )
+    AND NOT EXISTS( SELECT 1 FROM pg_indexes WHERE schemaname || '.' || tablename = __table_name AND indexname = _index_name )
+  THEN
+    RAISE EXCEPTION 'Unknown index % of table %', _index_name, __table_name;
+  END IF;
+
+  RETURN NOT EXISTS(
+    SELECT 1
+    FROM hafd.indexes_constraints
+    WHERE table_name = __table_name AND contexts @> ARRAY[0] AND NOT is_foreign_key AND status != 'created'
+      AND ( _index_name IS NULL OR index_constraint_name = _index_name )
+  );
+END
+$BODY$
+LANGUAGE plpgsql STABLE;
+
+--- Waits (until _timeout) until the boolean SQL expression _is_ready holds; the expression may refer
+--- to _context_names as $1. _what names the awaited object in the log. Raises exception on _timeout.
 --- Logging is gated on whether a real wait occurred: the steady-state hot path
---- (instance already ready on first check) is silent. During an actual wait we
+--- (condition already met on first check) is silent. During an actual wait we
 --- emit one "Waiting..." line on entry, a heartbeat every ~10 s, and one
 --- "ready, exiting" line on the transition out (issue #331).
-CREATE OR REPLACE FUNCTION hive.wait_for_ready_instance(IN _context_names hive.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
+CREATE OR REPLACE FUNCTION hive.wait_for_instance_condition(IN _context_names hive.contexts_group, IN _is_ready TEXT, IN _what TEXT, IN _timeout INTERVAL, IN _wait_time INTERVAL)
 RETURNS VOID
 AS
 $BODY$
 DECLARE
   __waited BOOLEAN := FALSE;
   __last_heartbeat_at TIMESTAMPTZ := CLOCK_TIMESTAMP();
+  __ready BOOLEAN;
 BEGIN
   WHILE (CLOCK_TIMESTAMP() - TRANSACTION_TIMESTAMP() <= _timeout) LOOP
-    IF hive.is_instance_ready() THEN
+    EXECUTE 'SELECT ' || _is_ready INTO __ready USING _context_names;
+    IF __ready THEN
       IF __waited THEN
-        RAISE NOTICE 'HAF instance is ready. Exiting wait loop.';
+        RAISE NOTICE '% is ready. Exiting wait loop.', _what;
       END IF;
       RETURN;
     END IF;
 
     IF NOT __waited THEN
-      RAISE NOTICE 'Waiting for HAF instance to be ready...';
+      RAISE NOTICE 'Waiting for % to be ready...', _what;
       __waited := TRUE;
       __last_heartbeat_at := CLOCK_TIMESTAMP();
     ELSIF CLOCK_TIMESTAMP() - __last_heartbeat_at >= INTERVAL '10 seconds' THEN
-      RAISE NOTICE 'Still waiting for HAF instance (% s elapsed)',
+      RAISE NOTICE 'Still waiting for % (% s elapsed)', _what,
         extract(epoch from (CLOCK_TIMESTAMP() - TRANSACTION_TIMESTAMP()))::int;
       __last_heartbeat_at := CLOCK_TIMESTAMP();
     END IF;
@@ -62,7 +145,62 @@ BEGIN
     PERFORM pg_sleep_for(_wait_time);
   END LOOP;
 
-  RAISE EXCEPTION 'Timeout: HAF instance did not get ready in % s', extract(epoch from (_timeout));
+  RAISE EXCEPTION 'Timeout: % did not get ready in % s', _what, extract(epoch from (_timeout));
+END
+$BODY$
+LANGUAGE plpgsql VOLATILE;
+
+--- Allows to wait (until specified _timeout) until HAF database will be ready for application data processing.
+--- Raises exception on _timeout.
+CREATE OR REPLACE FUNCTION hive.wait_for_ready_instance(IN _context_names hive.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
+RETURNS VOID
+AS
+$BODY$
+BEGIN
+  PERFORM hive.wait_for_instance_condition(_context_names, 'hive.is_instance_ready()', 'HAF instance', _timeout, _wait_time);
+END
+$BODY$
+LANGUAGE plpgsql VOLATILE;
+
+--- Allows to wait (until specified _timeout) until hive.is_instance_ready_for_block_processing() holds.
+--- Raises exception on _timeout.
+CREATE OR REPLACE FUNCTION hive.wait_for_ready_instance_for_block_processing(IN _context_names hive.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
+RETURNS VOID
+AS
+$BODY$
+BEGIN
+  PERFORM hive.wait_for_instance_condition(_context_names, 'hive.is_instance_ready_for_block_processing()', 'HAF instance for block processing', _timeout, _wait_time);
+END
+$BODY$
+LANGUAGE plpgsql VOLATILE;
+
+--- Waits (until _timeout) for the readiness hive.app_next_iteration and hive.app_next_block require,
+--- see hive.is_instance_ready_for_contexts. Raises exception on _timeout.
+CREATE OR REPLACE FUNCTION hive.wait_for_ready_instance_for_contexts(IN _context_names hive.contexts_group, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
+RETURNS VOID
+AS
+$BODY$
+BEGIN
+  PERFORM hive.wait_for_instance_condition(_context_names, 'hive.is_instance_ready_for_contexts($1)', 'HAF instance', _timeout, _wait_time);
+END
+$BODY$
+LANGUAGE plpgsql VOLATILE;
+
+--- Allows to wait (until specified _timeout) until hive.are_core_indexes_created( _table_name, _index_name ) holds,
+--- e.g. before a processing step that needs a core index deferred by psql-massive-index-policy=keep-monotonic.
+--- Raises exception on _timeout, or when the table or the index is unknown.
+CREATE OR REPLACE FUNCTION hive.wait_for_core_indexes(IN _context_names hive.contexts_group, IN _table_name TEXT, IN _index_name TEXT DEFAULT NULL, IN _timeout INTERVAL DEFAULT '5 min'::INTERVAL, IN _wait_time INTERVAL DEFAULT '500 ms'::INTERVAL)
+RETURNS VOID
+AS
+$BODY$
+BEGIN
+  PERFORM hive.wait_for_instance_condition(
+      _context_names
+    , format( 'hive.are_core_indexes_created( %L, %L )', _table_name, _index_name )
+    , format( 'core indexes of %s%s', _table_name, COALESCE( ' (' || _index_name || ')', '' ) )
+    , _timeout
+    , _wait_time
+  );
 END
 $BODY$
 LANGUAGE plpgsql VOLATILE;
@@ -553,7 +691,7 @@ DECLARE
     __context_state hive.context_state;
     __result hive.blocks_range[];
 BEGIN
-    PERFORM hive.wait_for_ready_instance(_context_names, '178000000 years'::interval);
+    PERFORM hive.wait_for_ready_instance_for_contexts(_context_names, '178000000 years'::interval);
     SELECT * FROM hive.squash_and_get_state( _context_names ) INTO __context_state;
 
     SELECT ARRAY_AGG( hive.app_process_event(contexts.*, __context_state, _block_limit) ) INTO __result
@@ -605,7 +743,7 @@ DECLARE
     __i INTEGER := 0;
     __is_pruning_enabled BOOLEAN := FALSE;
 BEGIN
-    PERFORM hive.wait_for_ready_instance(_context_names, '178000000 years'::interval);
+    PERFORM hive.wait_for_ready_instance_for_contexts(_context_names, '178000000 years'::interval);
     SELECT hive.is_pruning_enabled() INTO __is_pruning_enabled;
 
     -- Passive polling for new blocks using a FOR loop to be sure that app won't

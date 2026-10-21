@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS hafd.contexts(
     baseclass_id REGCLASS NOT NULL, -- id of context base table
     stages hafd.application_stages,
     loop hafd.application_loop_state,
+    -- the context processes blocks as soon as hive.is_instance_ready_for_block_processing() holds,
+    -- see hive.app_context_set_early_block_processing
+    early_block_processing BOOL NOT NULL DEFAULT FALSE,
     CONSTRAINT pk_hive_contexts PRIMARY KEY( id ),
     CONSTRAINT uq_hive_context_name UNIQUE ( name )
 );

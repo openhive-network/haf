@@ -315,7 +315,7 @@ BEGIN
         RETURN;
     END IF;
 
-    IF NOT hive.is_instance_ready() THEN
+    IF NOT hive.is_instance_ready_for_contexts( _contexts ) THEN
         PERFORM hive.set_waiting_for_haf_stage( _contexts );
         IF _wait THEN
             PERFORM pg_sleep( 0.5 );
