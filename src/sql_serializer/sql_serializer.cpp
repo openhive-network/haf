@@ -311,6 +311,7 @@ public:
     , bool     _psql_lite_mode
     , bool     _psql_lite_schema
     , uint32_t _psql_index_monitor_retry_budget
+    , massive_index_policy _psql_massive_index_policy
   )
   :   db_url{url},
       chain_db{_chain_db},
@@ -335,7 +336,8 @@ public:
                          write_ahead_log,
                          _psql_wal_queue_depth,
                          _psql_lite_mode,
-                         _psql_index_monitor_retry_budget),
+                         _psql_index_monitor_retry_budget,
+                         _psql_massive_index_policy),
       _vacuum_cleaner( db_url )
   {
     HIVE_ADD_PLUGIN_INDEX(chain_db, account_ops_seq_index);
@@ -975,6 +977,7 @@ void sql_serializer_plugin::set_program_options(appbase::options_description &cl
 {
   cfg.add_options()("psql-url", boost::program_options::value<string>(), "postgres connection string")
                     ("psql-index-threshold", appbase::bpo::value<uint32_t>()->default_value( 20'000'000 ), "indexes/constraints will be recreated if `psql_block_number + psql_index_threshold >= head_block_number`")
+                    ("psql-massive-index-policy", appbase::bpo::value<std::string>()->default_value( "drop-all" ), "indexes of the irreversible tables dropped during a massive sync (replay or P2P sync above psql-index-threshold): `drop-all` drops all of them; `keep-monotonic` keeps the ones whose key grows with the chain, so applications that opted in with hive.app_context_set_early_block_processing can process blocks while hived replays, and defers the others to the end of the sync")
                     ("psql-index-monitor-retry-budget", appbase::bpo::value<uint32_t>()->default_value( indexation_state::DEFAULT_INDEX_MONITOR_RETRY_BUDGET ), "seconds the live-sync index monitor keeps reconnecting after losing its database connection before hived shuts down")
                     ("psql-operations-threads-number", appbase::bpo::value<uint32_t>()->default_value( 5 ), "number of threads which dump operations to database during reindexing")
                     ("psql-transactions-threads-number", appbase::bpo::value<uint32_t>()->default_value( 2 ), "number of threads which dump transactions to database during reindexing")
@@ -1029,6 +1032,7 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     , options["psql-lite-mode"].as<bool>() || options["psql-lite-schema"].as<bool>()
     , options["psql-lite-schema"].as<bool>()
     , options["psql-index-monitor-retry-budget"].as<uint32_t>()
+    , parse_massive_index_policy( options["psql-massive-index-policy"].as<std::string>() )
   );
 
   // settings

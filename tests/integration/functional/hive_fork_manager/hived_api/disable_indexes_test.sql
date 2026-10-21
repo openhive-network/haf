@@ -96,6 +96,13 @@ BEGIN
         SELECT * FROM hafd.indexes_constraints WHERE table_name='hafd.account_operations' AND command LIKE 'ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_uq1 UNIQUE (account_id, account_op_seq_no) INCLUDE (op_type_id)'
     ), 'No hafd.account_operations unique (account_id, account_op_seq_no)';
 
+    -- drop-all drops the indexes a keep-monotonic massive sync would keep as well
+    ASSERT EXISTS( SELECT 1 FROM hafd.indexes_constraints WHERE massive_sync_class = 'keep' ), 'No index classified as kept';
+    ASSERT NOT EXISTS(
+        SELECT 1 FROM hafd.indexes_constraints WHERE massive_sync_class = 'keep' AND status != 'missing'
+    ), 'drop-all kept an index';
+    ASSERT NOT hive.is_instance_ready_for_block_processing(), 'block processing must wait for the rebuild after drop-all';
+
 END;
 $BODY$
 ;

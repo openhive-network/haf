@@ -888,6 +888,32 @@ BEGIN
 END
 $BODY$;
 
+--- _enabled TRUE lets hive.app_next_iteration and hive.app_next_block deliver irreversible blocks to the contexts
+--- as soon as hive.is_instance_ready_for_block_processing() holds, instead of hive.is_instance_ready(): during a
+--- massive sync of hived run with psql-massive-index-policy=keep-monotonic the contexts then process blocks
+--- while hived still replays and the deferred core indexes are missing. Only for applications whose block
+--- processing does not need those indexes; wait for one with hive.wait_for_core_indexes before a step that does.
+--- A group delivers blocks early only when all its contexts are enabled.
+CREATE OR REPLACE FUNCTION hive.app_context_set_early_block_processing( _contexts hive.contexts_group, _enabled BOOLEAN DEFAULT TRUE )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __updated INTEGER;
+BEGIN
+    UPDATE hafd.contexts
+    SET early_block_processing = _enabled
+    WHERE name = ANY( _contexts );
+    GET DIAGNOSTICS __updated = ROW_COUNT;
+
+    IF __updated != ( SELECT COUNT( DISTINCT c ) FROM unnest( _contexts ) AS c ) THEN
+        RAISE EXCEPTION 'Some contexts from group % do not exist', _contexts;
+    END IF;
+END
+$BODY$;
+
 CREATE OR REPLACE FUNCTION hive.app_check_contexts_synchronized( _contexts hive.contexts_group )
     RETURNS VOID
     LANGUAGE plpgsql

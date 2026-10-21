@@ -183,6 +183,7 @@ indexation_state::indexation_state(
   , uint32_t wal_queue_depth
   , bool lite_mode
   , uint32_t index_monitor_retry_budget_seconds
+  , massive_index_policy index_policy
 )
   : _main_plugin( main_plugin )
   , _chain_db( chain_db )
@@ -197,7 +198,7 @@ indexation_state::indexation_state(
   , _psql_wal_queue_depth( wal_queue_depth )
   , _lite_mode( lite_mode )
   , _irreversible_block_num( NO_IRREVERSIBLE_BLOCK )
-  , _indexes_controler( db_url, psql_index_threshold, index_monitor_retry_budget_seconds, app )
+  , _indexes_controler( db_url, psql_index_threshold, index_monitor_retry_budget_seconds, index_policy, app )
   , _write_ahead_log{write_ahead_log}
 {
   FC_ASSERT( _psql_first_block >= 1, "psql-first-block=${v} < 1", ("v", _psql_first_block) );

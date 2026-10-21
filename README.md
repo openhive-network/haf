@@ -48,6 +48,8 @@ To start your HAF server, type:
 
 If you don't have a local block_log file, just remove the `--replay` option from the command line above to get the blockchain blocks using the P2P network via the normal sync procedure.
 
+A replay drops the HAF table indexes and rebuilds them at the end, and HAF apps wait for that rebuild before they process any block. Passing `--psql-massive-index-policy=keep-monotonic` keeps the indexes keyed by block number during the replay, so apps that opted in can process blocks while hived is still replaying; see [psql-massive-index-policy](src/sql_serializer/README.md#massive-sync-index-policy).
+
 It is advisable to have your own custom PostgreSQL config file in order to have PostgreSQL logs available locally and specify custom database access permissions. To do that, before starting your HAF server, just copy [doc/haf_postgresql_conf.d](./doc/haf_postgresql_conf.d) containing configuration files where you can override any PostgreSQL setting.
 
 The steps above should create a `haf-datadir/haf_db_store` subdirectory containig a PostgreSQL database holding HAF data and `haf-datadir/hived.log` containing the output of the underlying hived process.

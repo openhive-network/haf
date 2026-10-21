@@ -424,10 +424,32 @@ void start_missing_index_builds(pqxx::connection& conn, pqxx::nontransaction& tx
 
 }
 
-indexes_controler::indexes_controler( std::string db_url, uint32_t psql_index_threshold, uint32_t monitor_retry_budget_seconds, appbase::application& app )
+massive_index_policy parse_massive_index_policy( const std::string& name )
+{
+  if ( name == to_string( massive_index_policy::drop_all ) )
+    return massive_index_policy::drop_all;
+  if ( name == to_string( massive_index_policy::keep_monotonic ) )
+    return massive_index_policy::keep_monotonic;
+  throw std::invalid_argument( "Unknown massive index policy: " + name + ", expected drop-all or keep-monotonic" );
+}
+
+const char* to_string( massive_index_policy policy )
+{
+  switch ( policy )
+  {
+    case massive_index_policy::drop_all:
+      return "drop-all";
+    case massive_index_policy::keep_monotonic:
+      return "keep-monotonic";
+  }
+  throw std::invalid_argument( "Unknown massive index policy" );
+}
+
+indexes_controler::indexes_controler( std::string db_url, uint32_t psql_index_threshold, uint32_t monitor_retry_budget_seconds, massive_index_policy index_policy, appbase::application& app )
 : _db_url( std::move(db_url) )
 , _psql_index_threshold( psql_index_threshold )
 , _monitor_retry_budget_seconds( monitor_retry_budget_seconds )
+, _index_policy( index_policy )
 , _interruptor(_db_url, app)
 , theApp( app )
 {
@@ -471,8 +493,8 @@ indexes_controler::disable_indexes_depends_on_blocks( uint32_t number_of_blocks_
     return;
   }
 
-  ilog( "Number of blocks to sync is greater than threshold for disabling indexes. Indexes will be dropped. ${n}<${t}",("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
-  auto processor = start_commit_sql(false, "hive.disable_indexes_of_irreversible()", "disable indexes" );
+  ilog( "Number of blocks to sync is greater than threshold for disabling indexes. Indexes will be dropped with policy ${p}. ${n}<${t}",("p", to_string( _index_policy ))("n", number_of_blocks_to_insert )("t", _psql_index_threshold ) );
+  auto processor = start_commit_sql(false, std::string( "hive.disable_indexes_of_irreversible( '" ) + to_string( _index_policy ) + "' )", "disable indexes" );
   processor->join();
   ilog( "All irreversible blocks tables indexes are dropped" );
 }

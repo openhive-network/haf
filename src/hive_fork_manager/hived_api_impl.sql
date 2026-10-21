@@ -376,7 +376,56 @@ END;
 $BODY$
 ;
 
-CREATE OR REPLACE FUNCTION hive.save_and_drop_indexes_constraints( in _schema TEXT, in _table TEXT )
+-- The massive_sync_class a core index of the irreversible tables gets when it is first saved,
+-- NULL for any other table.
+-- 'keep': the leading key grows with the chain (block number, block or operation id, block time),
+-- so hived's massive inserts append at the right edge of the btree and maintaining the index costs
+-- almost nothing; these are also the indexes apps' block-range scans read. applied_hardforks is
+-- kept as well: a few dozen rows ever, keyed by hardfork number and block number.
+-- 'defer': the leading key is random with respect to insert order (transaction hash, account,
+-- producer, operation type, account name, json body), so every insert touches a random leaf.
+-- Indexes this function does not know, e.g. ones an app created directly on a hafd table, are
+-- deferred, except the block-number-keyed partial indexes of hive.create_op_type_partial_index.
+CREATE OR REPLACE FUNCTION hive.default_massive_sync_index_class( _table_name TEXT, _index_constraint_name TEXT )
+    RETURNS TEXT
+    LANGUAGE sql
+    IMMUTABLE
+AS
+$function$
+SELECT CASE
+    WHEN _table_name NOT IN ( 'hafd.blocks', 'hafd.transactions', 'hafd.transactions_multisig', 'hafd.operations'
+                            , 'hafd.applied_hardforks', 'hafd.accounts', 'hafd.account_operations' ) THEN NULL
+    WHEN ( _table_name, _index_constraint_name ) IN (
+          ( 'hafd.blocks', 'pk_hive_blocks' )
+        , ( 'hafd.blocks', 'hive_blocks_created_at_idx' )
+        , ( 'hafd.transactions', 'hive_transactions_block_num_trx_in_block_idx' )
+        , ( 'hafd.operations', 'pk_hive_operations' )
+        , ( 'hafd.operations', 'hive_operations_block_num_id_idx' )
+        , ( 'hafd.operations', 'hive_operations_block_num_trx_in_block_idx' )
+        , ( 'hafd.applied_hardforks', 'pk_hive_applied_hardforks' )
+        , ( 'hafd.applied_hardforks', 'hive_applied_hardforks_block_num_idx' )
+    ) THEN 'keep'
+    WHEN _table_name = 'hafd.operations' AND _index_constraint_name ~ '^hive_operations_op_types_[0-9_]+_idx$' THEN 'keep'
+    ELSE 'defer'
+END;
+$function$
+;
+
+-- Status a saved index or PK/UNIQUE constraint gets: 'created' when the massive sync keeps it
+-- (it is not dropped), otherwise 'missing'.
+CREATE OR REPLACE FUNCTION hive.massive_sync_index_status( _massive_sync_class TEXT, _keep_monotonic BOOLEAN )
+    RETURNS hafd.index_status
+    LANGUAGE sql
+    IMMUTABLE
+AS
+$function$
+SELECT CASE WHEN _keep_monotonic AND _massive_sync_class = 'keep' THEN 'created' ELSE 'missing' END::hafd.index_status;
+$function$
+;
+
+-- _keep_monotonic: drop only the indexes and PK/UNIQUE constraints whose massive_sync_class is 'defer'
+-- (psql-massive-index-policy=keep-monotonic); FALSE drops all of them.
+CREATE OR REPLACE FUNCTION hive.save_and_drop_indexes_constraints( in _schema TEXT, in _table TEXT, in _keep_monotonic BOOLEAN DEFAULT FALSE )
     RETURNS VOID
     AS
 $function$
@@ -384,12 +433,12 @@ DECLARE
     __command TEXT;
     __cursor REFCURSOR;
 BEGIN
-    PERFORM hive.save_and_drop_constraints( _schema, _table );
+    PERFORM hive.save_and_drop_constraints( _schema, _table, _keep_monotonic );
 
     --LEFT JOIN is needed in situation when PRIMARY KEY exists in a `_table`.
     --A method `hive.save_and_drop_constraints` finds it, but following code finds an index related to given PK as well.
     --Since dropping/restoring PK automatically drops/restores an index, then it's better to avoid storing a record with index related to PK.
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
+    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status, massive_sync_class )
     SELECT
         T.indexname
       , _schema || '.' || _table
@@ -398,7 +447,8 @@ BEGIN
       , TRUE as is_index
       , FALSE as is_foreign_key
       , ARRAY[0]
-      , 'missing' as status
+      , hive.massive_sync_index_status( hive.default_massive_sync_index_class( _schema || '.' || _table, T.indexname ), _keep_monotonic ) as status
+      , hive.default_massive_sync_index_class( _schema || '.' || _table, T.indexname )
     FROM
     (
       SELECT indexname, indexdef
@@ -406,13 +456,14 @@ BEGIN
       WHERE schemaname = _schema AND tablename = _table
     ) T LEFT JOIN hafd.indexes_constraints ic ON( T.indexname = ic.index_constraint_name )
     ON CONFLICT (index_constraint_name, table_name) DO UPDATE
-    SET status = 'missing';
+    SET massive_sync_class = COALESCE( hafd.indexes_constraints.massive_sync_class, EXCLUDED.massive_sync_class )
+      , status = hive.massive_sync_index_status( COALESCE( hafd.indexes_constraints.massive_sync_class, EXCLUDED.massive_sync_class ), _keep_monotonic );
 
 
-    --dropping indexes
+    --dropping indexes; the ones still 'created' are kept by the policy
     OPEN __cursor FOR (
         SELECT ('DROP INDEX IF EXISTS '::TEXT || _schema || '.' || index_constraint_name || ';')
-        FROM hafd.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_index = TRUE
+        FROM hafd.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_index = TRUE AND status = 'missing'
     );
 
     LOOP
@@ -425,7 +476,7 @@ BEGIN
     --dropping primary keys/unique contraints
     OPEN __cursor FOR (
         SELECT ('ALTER TABLE '::TEXT || _schema || '.' || _table || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
-        FROM hafd.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_constraint = TRUE
+        FROM hafd.indexes_constraints WHERE table_name = _schema || '.' || _table AND is_constraint = TRUE AND status = 'missing'
     );
 
     LOOP
@@ -481,7 +532,8 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
-CREATE OR REPLACE FUNCTION hive.save_and_drop_constraints( in _table_schema TEXT, in _table_name TEXT )
+-- _keep_monotonic: see hive.save_and_drop_indexes_constraints
+CREATE OR REPLACE FUNCTION hive.save_and_drop_constraints( in _table_schema TEXT, in _table_name TEXT, in _keep_monotonic BOOLEAN DEFAULT FALSE )
 RETURNS VOID
 AS
 $function$
@@ -489,22 +541,26 @@ DECLARE
 __command TEXT;
 __cursor REFCURSOR;
 BEGIN
-    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status )
+    INSERT INTO hafd.indexes_constraints( index_constraint_name, table_name, command, is_constraint, is_index, is_foreign_key, contexts, status, massive_sync_class )
     SELECT
-        DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
-        , _table_schema || '.' || _table_name as table_name
-        , 'ALTER TABLE ' || tc.table_schema || '.' || tc.table_name || ' ADD CONSTRAINT ' || pgc.conname || ' ' || pg_get_constraintdef(pgc.oid) as command
-        , tc.constraint_type = 'PRIMARY KEY' OR tc.constraint_type = 'UNIQUE' as is_constraint
-        , FALSE AS is_index
-        , FALSE as is_foreign_key
-        , ARRAY[0]
-        , 'missing' as status
-    FROM pg_constraint pgc
-        JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
-        JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
-    WHERE tc.constraint_type != 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name
+          T.constraint_name, T.table_name, T.command, T.is_constraint, FALSE AS is_index, FALSE as is_foreign_key, ARRAY[0]
+        , hive.massive_sync_index_status( T.massive_sync_class, _keep_monotonic ) as status
+        , T.massive_sync_class
+    FROM (
+        SELECT
+            DISTINCT ON ( pgc.conname ) pgc.conname as constraint_name
+            , _table_schema || '.' || _table_name as table_name
+            , 'ALTER TABLE ' || tc.table_schema || '.' || tc.table_name || ' ADD CONSTRAINT ' || pgc.conname || ' ' || pg_get_constraintdef(pgc.oid) as command
+            , tc.constraint_type = 'PRIMARY KEY' OR tc.constraint_type = 'UNIQUE' as is_constraint
+            , CASE WHEN tc.constraint_type IN ( 'PRIMARY KEY', 'UNIQUE' ) THEN hive.default_massive_sync_index_class( _table_schema || '.' || _table_name, pgc.conname ) END as massive_sync_class
+        FROM pg_constraint pgc
+            JOIN pg_namespace nsp on nsp.oid = pgc.connamespace
+            JOIN information_schema.table_constraints tc ON pgc.conname = tc.constraint_name AND nsp.nspname = tc.constraint_schema
+        WHERE tc.constraint_type != 'FOREIGN KEY' AND tc.table_schema = _table_schema AND tc.table_name = _table_name
+    ) T
     ON CONFLICT (index_constraint_name, table_name) DO UPDATE
-    SET status = 'missing';
+    SET massive_sync_class = COALESCE( hafd.indexes_constraints.massive_sync_class, EXCLUDED.massive_sync_class )
+      , status = hive.massive_sync_index_status( COALESCE( hafd.indexes_constraints.massive_sync_class, EXCLUDED.massive_sync_class ), _keep_monotonic );
 
     OPEN __cursor FOR (
             SELECT ('ALTER TABLE '::TEXT || _table_schema || '.' || _table_name || ' DROP CONSTRAINT IF EXISTS ' || index_constraint_name || ';')
@@ -558,6 +614,7 @@ AS
 $function$
 DECLARE
   __command TEXT;
+  __constraint TEXT[];
   __start_time TIMESTAMP;
   __end_time TIMESTAMP;
   __duration INTERVAL;
@@ -585,7 +642,16 @@ BEGIN
     RAISE NOTICE 'Restoring index: %', __command;
     UPDATE hafd.indexes_constraints SET status = 'creating' WHERE command = __command;
     __start_time := clock_timestamp();
-    EXECUTE __command;
+    -- ADD CONSTRAINT would hold an ACCESS EXCLUSIVE lock for the whole index build, stalling apps that
+    -- read the table while the restore runs; CREATE INDEX only takes a SHARE lock, and attaching the
+    -- built index is a catalog change. Constraint definitions beyond columns and INCLUDE take the plain path.
+    __constraint := regexp_match( __command, '^ALTER TABLE (\S+) ADD CONSTRAINT (\S+) (PRIMARY KEY|UNIQUE) (\([^()]*\)(?: INCLUDE \([^()]*\))?)$' );
+    IF __constraint IS NULL THEN
+      EXECUTE __command;
+    ELSE
+      EXECUTE format( 'CREATE UNIQUE INDEX %s ON %s %s', __constraint[2], __constraint[1], __constraint[4] );
+      EXECUTE format( 'ALTER TABLE %s ADD CONSTRAINT %s %s USING INDEX %s', __constraint[1], __constraint[2], __constraint[3], __constraint[2] );
+    END IF;
     __end_time := clock_timestamp();
     __duration := __end_time - __start_time;
     RAISE NOTICE 'Index % created in % seconds', __command, EXTRACT(EPOCH FROM __duration);

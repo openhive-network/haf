@@ -1,5 +1,13 @@
 CREATE TYPE hafd.index_status AS ENUM ('missing', 'creating', 'created', 'invalid');
 
+-- massive_sync_class says what a massive sync with psql-massive-index-policy=keep-monotonic
+-- does with a core index of the irreversible tables:
+--   'keep'  - left in place, it is maintained by hived's inserts
+--   'defer' - dropped, and rebuilt when the massive sync ends
+-- NULL marks rows the policy does not govern (foreign keys, reversible tables, app indexes).
+-- A row gets hive.default_massive_sync_index_class() when it is first saved; an operator may
+-- UPDATE it afterwards and later massive syncs keep the new value.
+-- Existing installs get the column from hive_fork_manager_update_script_generator.sh
 CREATE TABLE IF NOT EXISTS hafd.indexes_constraints (
     table_name text NOT NULL,
     index_constraint_name text NOT NULL,
@@ -9,7 +17,9 @@ CREATE TABLE IF NOT EXISTS hafd.indexes_constraints (
     is_foreign_key boolean NOT NULL,
     contexts int[] NOT NULL, 
     status hafd.index_status NOT NULL DEFAULT 'missing',
-    CONSTRAINT pk_hive_indexes_constraints UNIQUE( table_name, index_constraint_name )
+    massive_sync_class text,
+    CONSTRAINT pk_hive_indexes_constraints UNIQUE( table_name, index_constraint_name ),
+    CONSTRAINT indexes_constraints_massive_sync_class_check CHECK ( massive_sync_class IN ('keep', 'defer') )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.indexes_constraints', '');
 

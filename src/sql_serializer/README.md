@@ -35,6 +35,9 @@ The sql_serializer extends hived with these new parameters:
   psql-url = dbname=block_log user=my_hived_role password=pass hostaddr=127.0.0.1 port=5432
   ```
 * **psql-index-threshold** [default: 1'000'000] tells the sql_serializer to enter massive sync mode if more than this number of blocks need to be processed when hived is restarted. The sql_serializer can process blocks much faster in massive sync mode, but there is a potential performance tradeoff in operating in massive sync mode versus live sync mode, because the sql indexes in the HAF database must be deleted to enter massive sync mode and they must be rebuilt when the sql_serializer exits massive sync mode (and rebuilding these indexes takes a significant amount of time). In other words, psql-index-threshold is the limit of the number of unprocessed blocks that will be synchronized slowly with enabled indexes. *Question: how is the number of unprocessed blocks determined?*
+* **psql-massive-index-policy**[default: drop-all] which indexes of the irreversible tables (`hafd.blocks`, `transactions`, `transactions_multisig`, `operations`, `applied_hardforks`, `accounts`, `account_operations`) are dropped when the sql_serializer enters massive sync mode (see [Massive sync index policy](#massive-sync-index-policy)):
+  * `drop-all` drops all of them; applications wait until all are rebuilt at the end of the sync.
+  * `keep-monotonic` drops only the indexes classified `defer` and keeps the `keep` ones, so applications that opted in can process blocks while hived replays.
 * **psql-index-monitor-retry-budget**[default: 900] seconds the live-sync index monitor (the `haf_monitor` thread, which creates app-registered indexes and runs vacuum requests) keeps reconnecting, with backoff of up to 60 s, after losing its database connection. Block processing is unaffected meanwhile. When the connection stays unusable for longer than the budget, hived logs the last error and shuts down gracefully.
 * **psql-operations-threads-number**[default: 5] the number of threads used to dump blockchain operations to the database. Operations are the biggest part of the blockchain data, so by default more threads are assigned to process them. Operations are grouped into tuples which are dumped concurrently to the HAF database.
 * **psql-transactions-threads-number**[default: 2] the number of threads used to dump transactions to the database.
@@ -75,6 +78,52 @@ Below is a state machine diagram for how the sql_serializer transitions between 
 The current mode of the serializer is controlled by a singleton object of class [indexation_state](./include/hive/plugins/sql_serializer/indexation_state.hpp).
 
 Remark: enabling already enabled indexes or foreign keys does not take time because nothing is changing in the database.
+
+### Massive sync index policy
+
+Every insert has to maintain the indexes present on a table. An index whose leading key grows with the chain
+(block number, block or operation id, block time) gets its entries appended at the right edge of the btree, so
+maintaining it during a massive sync costs almost nothing. An index keyed by a value that is random with respect to
+insert order (a transaction hash, an account, an operation type, a json body expression) touches a random leaf for
+every row, and late in the chain that cost dominates the replay. On a mainnet clone at block 110M, inserting with all
+indexes present cost 3.7-4.6 ms per block more than without any, against 0.06-0.12 ms with only the monotonic ones.
+
+`hafd.indexes_constraints.massive_sync_class` records the class of each core index and PK/UNIQUE constraint; it is
+assigned by `hive.default_massive_sync_index_class` the first time a row is saved and an operator may `UPDATE` it
+afterwards (later massive syncs keep the new value). Rows of other tables, foreign keys and app-registered indexes
+have no class (NULL); foreign keys are dropped during every massive sync.
+
+| class | indexes | why |
+|---|---|---|
+| keep | `pk_hive_blocks`, `hive_blocks_created_at_idx` | block number, block time |
+| keep | `hive_transactions_block_num_trx_in_block_idx` | block number |
+| keep | `pk_hive_operations`, `hive_operations_block_num_id_idx`, `hive_operations_block_num_trx_in_block_idx`, `hive_operations_op_types_*_idx` (`hive.create_op_type_partial_index`) | operation id / block number; what the apps' block-range scans read |
+| keep | `pk_hive_applied_hardforks`, `hive_applied_hardforks_block_num_idx` | a few dozen rows ever |
+| defer | `pk_hive_transactions`, `pk_hive_transactions_multisig` | transaction hash, the largest single cost |
+| defer | `hive_blocks_producer_account_id_idx` | producer account |
+| defer | `hive_operations_op_type_id_block_num`, custom_json and other partial or expression indexes apps created on `hafd.operations` | operation type, json body |
+| defer | `pk_hive_accounts_id`, `uq_hive_accounst_name`, `hive_accounts_block_num_idx` | account name; the table is small |
+| defer | `hive_account_operations_uq1`, `hive_account_operations_account_id_op_type_id_idx` | account id |
+| defer | any other index on these tables | unknown shape |
+
+With `keep-monotonic`, `hive.disable_indexes_of_irreversible('keep-monotonic')` leaves the `keep` rows `created`, and
+`hive.is_instance_ready_for_block_processing()` turns true as soon as all of them exist, while hived still replays and
+`hive.end_massive_sync` moves the irreversible head batch by batch. `hive.is_instance_ready()` keeps meaning that every
+core index exists. When the sync ends, `indexes_controler::enable_indexes` rebuilds the `defer` indexes as before while
+the opted-in applications keep processing blocks. Locks they meet during the restore:
+
+* `CREATE INDEX` takes a SHARE lock, which blocks only writers. PK/UNIQUE constraints are rebuilt the same way:
+  `CREATE UNIQUE INDEX` and then `ALTER TABLE ... ADD CONSTRAINT ... USING INDEX`, which holds an ACCESS EXCLUSIVE lock
+  only for the catalog change. That lock still waits for running readers of the table, and readers arriving meanwhile
+  queue behind it, so a long application transaction reading `hafd.transactions` or `hafd.accounts` delays it and the
+  readers behind it until it commits.
+* `hafd.account_operations` is rebuilt with `CLUSTER`, which holds an ACCESS EXCLUSIVE lock on that table for its whole
+  rebuild; applications must not read `hafd.account_operations` before `hive.wait_for_core_indexes` for it returns.
+* restoring foreign keys takes SHARE ROW EXCLUSIVE locks, and the final `VACUUM (FREEZE, ANALYZE)` of
+  `hafd.account_operations` a SHARE UPDATE EXCLUSIVE lock; neither blocks readers.
+
+A massive sync resumed with `keep-monotonic` after one interrupted under `drop-all` does not rebuild the missing `keep`
+indexes until the sync ends, so early block processing does not start in that run.
 
 ### Collect data from hived's chainbase
 In each mode of the serializer, the block data that will be written to the HAF database is cached inside [cached_data_t](./include/hive/plugins/sql_serializer/cached_data.h). 
