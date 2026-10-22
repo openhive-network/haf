@@ -263,6 +263,10 @@ the views can start processing irreversible blocks while hived is still replayin
   call `hive.wait_for_core_indexes( _contexts, 'hafd.account_operations', 'hive_account_operations_uq1', _timeout )`
   (or pass `_index_name => NULL` to wait for all core indexes of the table); `hive.are_core_indexes_created()` checks
   the same without waiting.
+- While the instance is not ready, `hive.app_next_iteration` keeps such contexts detached, also once they catch up
+  with the blocks hived has dumped: there are no reversible blocks yet. It attaches them when `hive.is_instance_ready()`
+  holds. `hive.app_next_block` delivers irreversible blocks to detached contexts through the non-forking path, as
+  with pruning; every range ends at or below `hafd.hive_state.consistent_block`.
 
 Without the option on the node the opt-in has almost no effect: during a `drop-all` massive sync the `keep` indexes
 are dropped too, so opted-in contexts start only during the final index rebuild, once those are back.

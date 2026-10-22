@@ -293,6 +293,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( application_loop/validate_stages.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/current_stage.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/early_block_processing_in_massive_sync.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/early_block_processing_catches_up_with_replay.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/current_live_stage.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/loop_commits.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/loop_update_current_stage.sql )

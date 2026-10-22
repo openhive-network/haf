@@ -122,7 +122,9 @@ CREATE OR REPLACE FUNCTION hive.update_attachment( _contexts hive.contexts_group
 AS
 $body$
 BEGIN
-    IF hive.is_livesync(_contexts)
+    -- contexts processing blocks while hived replays (hive.app_context_set_early_block_processing)
+    -- stay detached until the instance is ready, see hive.app_next_iteration
+    IF hive.is_livesync(_contexts) AND hive.is_instance_ready()
     THEN -- ensures that contexts are attached
         IF NOT hive.app_context_are_attached( _contexts )
         THEN
@@ -355,7 +357,12 @@ BEGIN
         -- get lock to synchronize with potentially running autodetach
         PERFORM  1 FROM hafd.contexts c WHERE c.name = ANY(_contexts) FOR UPDATE;
         SELECT hive.get_sync_state() INTO __hive_sync_state;
+        -- Early contexts (hive.app_context_set_early_block_processing) are not attached while hived
+        -- replays: there are no reversible blocks yet, and an iteration that finds no block to
+        -- process would leave them attached, with shadow-table triggers and union views, for as
+        -- long as they wait for hived. hive.app_next_block takes the non-forking path for them.
         IF NOT hive.app_context_are_attached( _contexts ) AND ( __hive_sync_state = 'LIVE' OR NOT hive.is_pruning_enabled() )
+           AND hive.is_instance_ready()
         THEN
             PERFORM hive.app_context_attach( _contexts );
         END IF;
