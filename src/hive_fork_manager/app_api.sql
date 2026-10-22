@@ -229,7 +229,9 @@ BEGIN
 
     -- if there there is  registered table for given context
     -- In lite mode, always use the non-forking path (defense-in-depth)
+    -- Detached early contexts process irreversible blocks while hived replays, see hive.app_next_iteration
     IF NOT hive.is_lite_mode() AND hive.app_are_forking( _context_names ) AND ( __hive_sync_state = 'LIVE' OR NOT hive.is_pruning_enabled() )
+       AND ( hive.is_instance_ready() OR hive.app_context_are_attached( _context_names ) )
     THEN
         RETURN hive.app_next_block_forking_app( _context_names, _wait, __block_limit );
     END IF;
