@@ -8,16 +8,15 @@ namespace hive { namespace plugins { namespace sql_serializer {
 
 namespace {
 
-// A VACUUM waiting for its lock queues every later session touching the table behind it,
-// and applications keep transactions open on the tables hived vacuums.
-const char* const VACUUM_LOCK_TIMEOUT = "1s";
 const std::string LOCK_NOT_AVAILABLE = "55P03";
 
 } // namespace
 
-bool vacuum_unless_locked( pqxx::nontransaction& tx, const std::string& vacuum_command )
+// A VACUUM waiting for its lock queues every later session touching the table behind it,
+// and applications keep transactions open on the tables hived vacuums.
+bool vacuum_unless_locked( pqxx::nontransaction& tx, const std::string& vacuum_command, std::chrono::milliseconds lock_timeout )
 {
-  tx.exec( std::string( "SET lock_timeout = '" ) + VACUUM_LOCK_TIMEOUT + "'" );
+  tx.exec( "SET lock_timeout = " + std::to_string( lock_timeout.count() ) );
   try
   {
     tx.exec( vacuum_command );
@@ -27,7 +26,7 @@ bool vacuum_unless_locked( pqxx::nontransaction& tx, const std::string& vacuum_c
     tx.exec( "RESET lock_timeout" );
     if ( e.sqlstate() == LOCK_NOT_AVAILABLE )
     {
-      wlog( "Skipped ${cmd}: its table stayed locked for ${t}; it will be retried later", ( "cmd", vacuum_command )( "t", VACUUM_LOCK_TIMEOUT ) );
+      wlog( "Skipped ${cmd}: its table stayed locked for ${t} ms; it will be retried later", ( "cmd", vacuum_command )( "t", lock_timeout.count() ) );
       return false;
     }
     throw;

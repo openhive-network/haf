@@ -352,6 +352,14 @@ BEGIN
         ALTER TABLE hafd.vacuum_requests ADD CONSTRAINT pk_hive_vacuum_requests UNIQUE( schema_name, table_name, kind );
     END IF;
 
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'hafd' AND table_name = 'vacuum_requests' AND column_name = 'skip_count'
+    ) THEN
+        ALTER TABLE hafd.vacuum_requests ADD COLUMN skip_count integer NOT NULL DEFAULT 0;
+        ALTER TABLE hafd.vacuum_requests ADD COLUMN first_skip_time timestamp;
+    END IF;
+
     -- Existing rows stay unclassified (NULL); the next massive sync classifies them.
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns

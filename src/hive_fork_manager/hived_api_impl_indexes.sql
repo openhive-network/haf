@@ -28,7 +28,9 @@ SELECT pg_catalog.pg_extension_config_dump('hafd.indexes_constraints', '');
 --   'vacuum'  - VACUUM (ANALYZE)
 --   'analyze' - ANALYZE
 --   'freeze'  - VACUUM (FREEZE, ANALYZE)
--- Existing installs get the kind column from hive_fork_manager_update_script_generator.sh
+-- skip_count and first_skip_time track the consecutive polls at which hived skipped the request
+-- because its table stayed locked; they lengthen hived's lock wait and are cleared when the request ends.
+-- Existing installs get the kind, skip_count and first_skip_time columns from hive_fork_manager_update_script_generator.sh
 CREATE TYPE hafd.vacuum_status AS ENUM ('requested', 'vacuumed', 'failed');
 CREATE TABLE IF NOT EXISTS hafd.vacuum_requests (
     schema_name text NOT NULL,
@@ -37,6 +39,8 @@ CREATE TABLE IF NOT EXISTS hafd.vacuum_requests (
     last_vacuumed_time timestamp,
     error_message text,
     kind text NOT NULL DEFAULT 'full',
+    skip_count integer NOT NULL DEFAULT 0,
+    first_skip_time timestamp,
     CONSTRAINT pk_hive_vacuum_requests UNIQUE( schema_name, table_name, kind ),
     CONSTRAINT vacuum_requests_kind_check CHECK ( kind IN ('full', 'vacuum', 'analyze', 'freeze') )
 );
