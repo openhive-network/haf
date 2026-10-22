@@ -56,6 +56,8 @@ CREATE TABLE IF NOT EXISTS hafd.hive_state (
 -- or supported within CREATE TABLE, and thus, seems not to work there.
 -- This applies to the following tables as well.
 ALTER TABLE hafd.hive_state ADD CONSTRAINT fk_1_hive_irreversible_data FOREIGN KEY (consistent_block) REFERENCES hafd.blocks (num) NOT VALID;
+-- as for hafd.contexts: skipping truncation keeps hived's periodic vacuum from waiting on apps' locks
+ALTER TABLE hafd.hive_state SET ( vacuum_truncate = false );
 SELECT pg_catalog.pg_extension_config_dump('hafd.hive_state', '');
 
 CREATE TABLE IF NOT EXISTS hafd.transactions (
