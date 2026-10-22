@@ -342,6 +342,12 @@ Requests of different kinds for the same table are kept separately, and `min_int
 per kind, so a recent `'full'` does not suppress a `'freeze'`. When a `'full'` and another kind are
 pending for one table, `hived` runs `'full'` first.
 
+`hived` waits at most one second for the lock a vacuum needs. When the table stays locked, for example
+by an application transaction that writes it, `hived` logs that it skipped the vacuum, leaves the
+request `requested` together with the table's other pending kinds, and retries at the next poll.
+`hived`'s own periodic vacuums follow the same rule; they run a plain `VACUUM` of `hafd.contexts` and
+`hafd.hive_state`, and in pruned mode a `VACUUM FULL` of the other `hafd` tables every 500,000 blocks.
+
 ```sql
 -- Refresh planner statistics without rewriting the table
 SELECT hive.app_request_table_vacuum('my_schema', 'my_table', INTERVAL '10 minutes', 'analyze');

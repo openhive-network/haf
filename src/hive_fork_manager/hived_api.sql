@@ -870,21 +870,26 @@ $BODY$
 ;
 
 DROP FUNCTION IF EXISTS hive.get_vacuum_full_commands(TEXT);
+DROP FUNCTION IF EXISTS hive.get_vacuum_full_periodic_commands();
 
+-- hafd.contexts and hafd.hive_state are left to hive.get_vacuum_periodic_commands
 CREATE OR REPLACE FUNCTION hive.get_vacuum_full_prune_commands(schema_name TEXT DEFAULT 'hafd')
 RETURNS SETOF TEXT
 LANGUAGE sql
 AS $$
     SELECT format('VACUUM FULL %I.%I;', schemaname, tablename) as vacuum_cmd
     FROM pg_tables
-    WHERE schemaname = schema_name;
+    WHERE schemaname = schema_name
+    AND (schemaname, tablename) NOT IN (('hafd', 'contexts'), ('hafd', 'hive_state'));
 $$;
 
-CREATE OR REPLACE FUNCTION hive.get_vacuum_full_periodic_commands()
+-- Every application iteration updates these tiny tables, so they are vacuumed without
+-- the ACCESS EXCLUSIVE lock of VACUUM FULL, which would wait for the applications' transactions.
+CREATE OR REPLACE FUNCTION hive.get_vacuum_periodic_commands()
 RETURNS SETOF TEXT
 LANGUAGE sql
 AS $$
-    SELECT 'VACUUM FULL hafd.contexts;'::text
+    SELECT 'VACUUM hafd.contexts;'::text
     UNION ALL
-    SELECT 'VACUUM FULL hafd.hive_state;'::text
+    SELECT 'VACUUM hafd.hive_state;'::text
 $$;

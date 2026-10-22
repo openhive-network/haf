@@ -3,6 +3,7 @@
 #include <hive/plugins/sql_serializer/indexes_controler.h>
 #include <hive/plugins/sql_serializer/queries_commit_data_processor.h>
 #include <hive/plugins/sql_serializer/indexes_interruptor.h>
+#include <hive/plugins/sql_serializer/vacuum_cleaner.h>
 
 #include <appbase/application.hpp>
 
@@ -322,6 +323,7 @@ void process_vacuum_requests(pqxx::connection& conn, pqxx::nontransaction& tx)
     );
     dlog("Found ${count} tables with vacuum requests.", ("count", data.size()));
 
+    std::string locked_table;
     for (const auto& record : data)
     {
       std::string schema_name;
@@ -335,9 +337,20 @@ void process_vacuum_requests(pqxx::connection& conn, pqxx::nontransaction& tx)
         std::string qualified_table_name = tx.quote_name(schema_name) + "." + tx.quote_name(table_name);
         std::string vacuum_command = vacuum_command_prefix(kind) + qualified_table_name;
 
+        // A skipped 'full' must stay ahead of the table's other kinds, so they wait for the next poll too.
+        if (qualified_table_name == locked_table)
+        {
+          dlog("Postponed ${vacuum_command} until ${table} is unlocked", (vacuum_command)("table", qualified_table_name));
+          continue;
+        }
+
         ilog("Performing vacuum: ${vacuum_command}", (vacuum_command));
         auto start_time = fc::time_point::now();
-        tx.exec(vacuum_command);
+        if (!vacuum_unless_locked(tx, vacuum_command))
+        {
+          locked_table = qualified_table_name;
+          continue;
+        }
         auto end_time = fc::time_point::now();
         fc::microseconds vacuum_duration = end_time - start_time;
         ilog("Vacuumed table: ${schema}.${table} in ${duration} seconds", ("schema", schema_name)("table", table_name)("duration", vacuum_duration.to_seconds()));
