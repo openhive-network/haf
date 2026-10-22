@@ -4,9 +4,37 @@
 #include <fc/log/logger.hpp>
 #include <fc/time.hpp>
 
-#include <pqxx/pqxx>
-
 namespace hive { namespace plugins { namespace sql_serializer {
+
+namespace {
+
+// A VACUUM waiting for its lock queues every later session touching the table behind it,
+// and applications keep transactions open on the tables hived vacuums.
+const char* const VACUUM_LOCK_TIMEOUT = "1s";
+const std::string LOCK_NOT_AVAILABLE = "55P03";
+
+} // namespace
+
+bool vacuum_unless_locked( pqxx::nontransaction& tx, const std::string& vacuum_command )
+{
+  tx.exec( std::string( "SET lock_timeout = '" ) + VACUUM_LOCK_TIMEOUT + "'" );
+  try
+  {
+    tx.exec( vacuum_command );
+  }
+  catch ( const pqxx::sql_error& e )
+  {
+    tx.exec( "RESET lock_timeout" );
+    if ( e.sqlstate() == LOCK_NOT_AVAILABLE )
+    {
+      wlog( "Skipped ${cmd}: its table stayed locked for ${t}; it will be retried later", ( "cmd", vacuum_command )( "t", VACUUM_LOCK_TIMEOUT ) );
+      return false;
+    }
+    throw;
+  }
+  tx.exec( "RESET lock_timeout" );
+  return true;
+}
 
 vacuum_cleaner::vacuum_cleaner( std::string db_url )
   : _db_url( std::move( db_url ) )
@@ -15,8 +43,20 @@ vacuum_cleaner::vacuum_cleaner( std::string db_url )
 
 void vacuum_cleaner::vacuum( bool is_pruning_enabled, uint32_t block_num )
 {
-  // At prune intervals (every 500k blocks), vacuum all tables in the schema.
-  // This already covers contexts and hive_state, so periodic vacuum is skipped.
+  if ( block_num % 100'000 == 0 )
+  {
+    try
+    {
+      execute_vacuum_commands( "SELECT hive.get_vacuum_periodic_commands() as vacuum_cmd;" );
+    }
+    catch ( const std::exception& e )
+    {
+      elog( "Error while checking for periodic vacuum requests: ${e}", ( "e", e.what() ) );
+      throw;
+    }
+  }
+
+  // At prune intervals (every 500k blocks), rewrite the pruned tables to return their space.
   if ( is_pruning_enabled && block_num % 500'000 == 0 )
   {
     try
@@ -26,18 +66,6 @@ void vacuum_cleaner::vacuum( bool is_pruning_enabled, uint32_t block_num )
     catch ( const std::exception& e )
     {
       elog( "Error while checking for prune vacuum requests: ${e}", ( "e", e.what() ) );
-      throw;
-    }
-  }
-  else if ( block_num % 100'000 == 0 )
-  {
-    try
-    {
-      execute_vacuum_commands( "SELECT hive.get_vacuum_full_periodic_commands() as vacuum_cmd;" );
-    }
-    catch ( const std::exception& e )
-    {
-      elog( "Error while checking for periodic vacuum requests: ${e}", ( "e", e.what() ) );
       throw;
     }
   }
@@ -53,7 +81,8 @@ void vacuum_cleaner::execute_vacuum_commands( const std::string& query )
   {
     std::string vacuum_command = record["vacuum_cmd"].as<std::string>();
     auto start_time = fc::time_point::now();
-    tx.exec( vacuum_command );
+    if ( !vacuum_unless_locked( tx, vacuum_command ) )
+      continue;
     auto end_time = fc::time_point::now();
     fc::microseconds vacuum_duration = end_time - start_time;
     ilog( "${cmd} in ${duration} ms", ( "cmd", vacuum_command )( "duration", vacuum_duration.count() / 1000 ) );

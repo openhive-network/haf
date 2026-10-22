@@ -277,7 +277,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.set_sync_state( _new_state hafd.sync_state )
     , hive.get_sync_state()
     , hive.get_vacuum_full_prune_commands(schema_name TEXT)
-    , hive.get_vacuum_full_periodic_commands()
+    , hive.get_vacuum_periodic_commands()
 TO hived_group;
 
 GRANT USAGE ON SCHEMA hive to haf_maintainer;
