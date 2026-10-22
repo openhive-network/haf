@@ -40,9 +40,29 @@ BEGIN
        = ARRAY['analyze', 'vacuum']
         , 'a.table2 should have pending analyze and vacuum requests';
 
+   CALL alice_test_rerequest_keeps_skips();
    CALL alice_test_min_interval_per_kind();
    CALL alice_test_invalid_kind();
    CALL alice_test_nonexistent_table();
+END;
+$BODY$
+;
+
+CREATE OR REPLACE PROCEDURE alice_test_rerequest_keeps_skips()
+    LANGUAGE 'plpgsql'
+AS
+$BODY$
+BEGIN
+    -- as hived leaves a request it skipped twice because the table stayed locked
+    UPDATE hafd.vacuum_requests SET skip_count = 2, first_skip_time = NOW() - INTERVAL '20 seconds'
+    WHERE schema_name = 'a' AND table_name = 'table2' AND kind = 'analyze';
+
+    PERFORM hive.app_request_table_vacuum('a.table2', _kind => 'analyze');
+
+    ASSERT
+        (SELECT skip_count = 2 AND first_skip_time = NOW() - INTERVAL '20 seconds' FROM hafd.vacuum_requests
+         WHERE schema_name = 'a' AND table_name = 'table2' AND kind = 'analyze')
+        , 'requesting a pending vacuum again must keep its skips, or hived would never lengthen its lock wait';
 END;
 $BODY$
 ;

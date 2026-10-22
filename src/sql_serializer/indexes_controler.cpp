@@ -12,6 +12,7 @@
 #include <fc/thread/thread.hpp>
 
 #include <algorithm>
+#include <chrono>
 #include <exception>
 #include <memory>
 #include <mutex>
@@ -78,6 +79,22 @@ std::string vacuum_command_prefix(const std::string& kind)
   if (it == commands.end())
     throw std::invalid_argument("Unknown vacuum kind: " + kind);
   return it->second;
+}
+
+// A 'full' request for a table that an application writes in every long transaction is rarely granted its
+// lock within VACUUM_LOCK_TIMEOUT, so the wait doubles with every consecutive skip, and once the request has
+// been skipped for long enough, hived waits for the lock however long the sessions queued behind it wait.
+const std::chrono::milliseconds MAX_ESCALATED_LOCK_TIMEOUT = std::chrono::seconds(60);
+const std::chrono::seconds UNLIMITED_LOCK_WAIT_AFTER = std::chrono::minutes(30);
+
+std::chrono::milliseconds vacuum_request_lock_timeout(int64_t skip_count, std::chrono::seconds skipped_for)
+{
+  if (skipped_for >= UNLIMITED_LOCK_WAIT_AFTER)
+    return std::chrono::milliseconds::zero();
+  std::chrono::milliseconds lock_timeout = VACUUM_LOCK_TIMEOUT;
+  for (int64_t i = 0; i < skip_count && lock_timeout < MAX_ESCALATED_LOCK_TIMEOUT; ++i)
+    lock_timeout *= 2;
+  return std::min(lock_timeout, MAX_ESCALATED_LOCK_TIMEOUT);
 }
 
 const fc::microseconds POLL_INTERVAL = fc::seconds(10);
@@ -318,7 +335,9 @@ void process_vacuum_requests(pqxx::connection& conn, pqxx::nontransaction& tx)
   {
     // 'full' rewrites the table and drops its visibility map, so it must precede any other kind on the same table.
     pqxx::result data = tx.exec(
-      "SELECT schema_name, table_name, kind FROM hafd.vacuum_requests WHERE status = 'requested' "
+      "SELECT schema_name, table_name, kind, skip_count, "
+      "COALESCE(EXTRACT(EPOCH FROM NOW()::timestamp - first_skip_time)::bigint, 0) AS skipped_for_seconds "
+      "FROM hafd.vacuum_requests WHERE status = 'requested' "
       "ORDER BY schema_name, table_name, kind <> 'full', kind;"
     );
     dlog("Found ${count} tables with vacuum requests.", ("count", data.size()));
@@ -344,19 +363,34 @@ void process_vacuum_requests(pqxx::connection& conn, pqxx::nontransaction& tx)
           continue;
         }
 
-        ilog("Performing vacuum: ${vacuum_command}", (vacuum_command));
+        const int64_t skip_count = record["skip_count"].as<int64_t>();
+        const std::chrono::seconds skipped_for(record["skipped_for_seconds"].as<int64_t>());
+        const std::chrono::milliseconds lock_timeout = vacuum_request_lock_timeout(skip_count, skipped_for);
+
+        ilog("Performing vacuum: ${vacuum_command} (lock wait ${t} ms, 0 = unlimited)", (vacuum_command)("t", lock_timeout.count()));
         auto start_time = fc::time_point::now();
-        if (!vacuum_unless_locked(tx, vacuum_command))
+        if (!vacuum_unless_locked(tx, vacuum_command, lock_timeout))
         {
           locked_table = qualified_table_name;
+          tx.exec_params(
+            "UPDATE hafd.vacuum_requests SET skip_count = skip_count + 1, first_skip_time = COALESCE(first_skip_time, NOW()) "
+            "WHERE schema_name = $1 AND table_name = $2 AND kind = $3",
+            schema_name,
+            table_name,
+            kind
+          );
+          wlog("Vacuum request ${vacuum_command} has now been skipped ${n} times in a row, over ${s} seconds",
+            (vacuum_command)("n", skip_count + 1)("s", skipped_for.count()));
           continue;
         }
         auto end_time = fc::time_point::now();
         fc::microseconds vacuum_duration = end_time - start_time;
-        ilog("Vacuumed table: ${schema}.${table} in ${duration} seconds", ("schema", schema_name)("table", table_name)("duration", vacuum_duration.to_seconds()));
+        ilog("Vacuumed table: ${schema}.${table} in ${duration} seconds, after ${n} skips over ${s} seconds",
+          ("schema", schema_name)("table", table_name)("duration", vacuum_duration.to_seconds())("n", skip_count)("s", skipped_for.count()));
 
         tx.exec_params(
-          "UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW(), error_message = NULL WHERE schema_name = $1 AND table_name = $2 AND kind = $3",
+          "UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW(), error_message = NULL, skip_count = 0, first_skip_time = NULL "
+          "WHERE schema_name = $1 AND table_name = $2 AND kind = $3",
           schema_name,
           table_name,
           kind
@@ -373,7 +407,8 @@ void process_vacuum_requests(pqxx::connection& conn, pqxx::nontransaction& tx)
           std::string error_msg = e.what();
 
           tx.exec_params(
-            "UPDATE hafd.vacuum_requests SET status = 'failed', error_message = $1 WHERE schema_name = $2 AND table_name = $3 AND kind = $4",
+            "UPDATE hafd.vacuum_requests SET status = 'failed', error_message = $1, skip_count = 0, first_skip_time = NULL "
+            "WHERE schema_name = $2 AND table_name = $3 AND kind = $4",
             error_msg,
             schema_name,
             table_name,
