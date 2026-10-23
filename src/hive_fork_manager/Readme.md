@@ -198,6 +198,23 @@ SELECT hive.register_index_dependency(
 This request is stored in **`hafd.indexes_constraints`**, and `hived` will later process and
 create the required indexes.
 
+##### - Indexing custom_json operations by type
+
+An application that reads `custom_json` operations of a few types requests a partial index on
+`hafd.operations` for them with **`hive.register_custom_json_type_index`**:
+```sql
+SELECT hive.register_custom_json_type_index('my_app_context', ARRAY['follow', 'reblog']);
+```
+- The index covers all the requested types, including the ones `hived` has not met yet: their
+  `hafd.custom_json_types` rows are reserved with negative ids, which `hived` adopts when it meets them.
+- It is registered with `hive.register_index_dependency`, so `hived` builds it concurrently.
+- Requesting the same set again (e.g. at every application start) changes nothing.
+- A context has one such index. When it requests another set, its index for the previous set is
+  released once the new one is created.
+- Call it in a short transaction: `hived` cannot store a type it is reserving until the transaction commits.
+
+`hive.create_custom_json_type_index` is no longer supported and raises an error.
+
 ##### - Checking Index Creation Status
 
 Applications can check if `hived` has finished creating the registered indexes using

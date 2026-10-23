@@ -909,6 +909,9 @@ $$;
 -- Drop all indexes registered by the given context.
 -- Only touches indexes where this context_id is in the contexts array
 -- and status is not already 'missing'. Never drops PKs or unique constraints.
+-- Indexes on hafd tables are left alone: they are shared with other contexts, and
+-- hived's indexes controller builds them concurrently; a plain CREATE INDEX in
+-- hive.app_restore_indexes would block hived's writes for the whole build.
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION hive.app_save_and_drop_indexes(
     _context_name TEXT
@@ -939,6 +942,7 @@ BEGIN
           AND is_index = TRUE
           AND is_foreign_key = FALSE
           AND status != 'missing'
+          AND table_name NOT LIKE 'hafd.%'
     LOOP
         __start_time := clock_timestamp();
         EXECUTE format('DROP INDEX IF EXISTS %s.%s', split_part(__r.table_name, '.', 1), __r.index_constraint_name);
@@ -993,6 +997,7 @@ BEGIN
           AND is_index = TRUE
           AND is_foreign_key = FALSE
           AND status = 'missing'
+          AND table_name NOT LIKE 'hafd.%'
     LOOP
         RAISE NOTICE 'Restoring index: %', __r.command;
         UPDATE hafd.indexes_constraints
@@ -1072,6 +1077,7 @@ BEGIN
         FROM hafd.indexes_constraints
         WHERE __context_id = ANY(contexts)
           AND table_name = _table_name
+          AND table_name NOT LIKE 'hafd.%'
           AND is_index = TRUE
           AND is_foreign_key = FALSE
           AND status = 'missing'

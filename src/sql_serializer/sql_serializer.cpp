@@ -245,17 +245,21 @@ public:
     return new_id;
   }
 
-  void flush_pending( const std::string& db_url, appbase::application& app )
+  // A name may already have a row reserved from SQL (hive.register_custom_json_type_index), with an id
+  // of its own; such ids are adopted, in the mapping and in the not yet written cached_operations.
+  void flush_pending( const std::string& db_url, appbase::application& app,
+    std::vector<PSQL::processing_objects::process_operation_t>& cached_operations )
   {
     if( _pending_inserts.empty() )
       return;
 
     auto pending = std::move( _pending_inserts );
     _pending_inserts.clear();
+    std::map<int16_t, int16_t> adopted_ids; // assigned id -> id stored in the database
 
     queries_commit_data_processor flusher(
       db_url, "Flush custom_json_types", "cjflush",
-      [&pending](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
+      [&pending, &adopted_ids](const data_processor::data_chunk_ptr&, transaction_controllers::transaction& tx) -> data_processor::data_processing_status {
         for( const auto& [id, cj_id] : pending )
         {
           // custom_json ids are protocol-validated (max 32 chars, no special chars)
@@ -267,8 +271,12 @@ public:
             if( c == '\'' ) escaped_id += "''";
             else escaped_id += c;
           }
-          tx.exec("INSERT INTO hafd.custom_json_types(id, custom_json_id) OVERRIDING SYSTEM VALUE VALUES("
-            + std::to_string(id) + ", '" + escaped_id + "') ON CONFLICT DO NOTHING");
+          // DO UPDATE rather than DO NOTHING: RETURNING then yields the stored row even when it was committed concurrently
+          pqxx::result stored = tx.exec("INSERT INTO hafd.custom_json_types(id, custom_json_id) OVERRIDING SYSTEM VALUE VALUES("
+            + std::to_string(id) + ", '" + escaped_id + "') ON CONFLICT (custom_json_id) DO UPDATE SET custom_json_id = EXCLUDED.custom_json_id RETURNING id");
+          const int16_t stored_id = stored[0][0].as<int16_t>();
+          if( stored_id != id )
+            adopted_ids[id] = stored_id;
         }
         return data_processor::data_processing_status();
       },
@@ -276,6 +284,27 @@ public:
     );
     flusher.trigger(data_processor::data_chunk_ptr(), 0);
     flusher.join();
+
+    if( adopted_ids.empty() )
+      return;
+
+    for( const auto& [id, cj_id] : pending )
+    {
+      auto adopted = adopted_ids.find( id );
+      if( adopted != adopted_ids.end() )
+      {
+        ilog("custom_json id ${cj_id} adopts its reserved type id ${stored_id}", (cj_id)("stored_id", adopted->second));
+        _mapping[cj_id] = adopted->second;
+      }
+    }
+    for( auto& op : cached_operations )
+    {
+      if( !op.custom_json_type_id.valid() )
+        continue;
+      auto adopted = adopted_ids.find( *op.custom_json_type_id );
+      if( adopted != adopted_ids.end() )
+        op.custom_json_type_id = adopted->second;
+    }
   }
 
 private:
@@ -823,7 +852,7 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
       dgpo.get_initial_hbd_supply()
       );
 
-    _custom_json_cache.flush_pending( db_url, theApp );
+    _custom_json_cache.flush_pending( db_url, theApp, currently_caching_data->operations );
 
     _indexation_state.trigger_data_flush( *currently_caching_data, _last_block_num );
 

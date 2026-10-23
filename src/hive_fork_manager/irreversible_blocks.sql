@@ -98,6 +98,10 @@ CREATE TABLE IF NOT EXISTS hafd.custom_json_types (
     custom_json_id VARCHAR(32) NOT NULL UNIQUE
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.custom_json_types', '');
+-- hived gives the types it meets positive ids; types requested from SQL before hived met them
+-- (hive.register_custom_json_type_index) get negative ids from this sequence, so the two never collide.
+CREATE SEQUENCE IF NOT EXISTS hafd.custom_json_types_reserved_id_seq AS SMALLINT INCREMENT BY -1 MINVALUE -32768 MAXVALUE -1 START WITH -1;
+SELECT pg_catalog.pg_extension_config_dump('hafd.custom_json_types_reserved_id_seq', '');
 CREATE STATISTICS IF NOT EXISTS operation_types_id_name_dependency_stats (dependencies) ON id, name FROM hafd.operation_types;
 
 CREATE TABLE IF NOT EXISTS hafd.operations (
@@ -167,45 +171,6 @@ CREATE INDEX IF NOT EXISTS hive_transactions_block_num_trx_in_block_idx ON hafd.
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_id_idx ON hafd.operations USING btree( hafd.operation_id_to_block_num(id), id);
 CREATE INDEX IF NOT EXISTS hive_operations_block_num_trx_in_block_idx ON hafd.operations USING btree (hafd.operation_id_to_block_num(id) ASC NULLS LAST, trx_in_block ASC NULLS LAST, op_type_id);
 CREATE INDEX IF NOT EXISTS hive_operations_op_type_id_block_num ON hafd.operations (op_type_id, hafd.operation_id_to_block_num(id));
-
--- Register a partial index on hafd.operations for specific custom_json types.
--- Uses register_index_dependency so the indexes_controler creates it with
--- CREATE INDEX CONCURRENTLY, avoiding ShareLock contention with other apps.
--- Example: SELECT hive.register_custom_json_type_index('hivemind_app', ARRAY['follow', 'reblog', 'community', 'notify']);
-CREATE OR REPLACE FUNCTION hive.register_custom_json_type_index(_context_name TEXT, _custom_json_ids TEXT[])
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = hive, hafd, pg_catalog
-AS $$
-DECLARE
-    _type_ids SMALLINT[];
-    _index_name TEXT;
-    _where_clause TEXT;
-    _create_cmd TEXT;
-BEGIN
-    SELECT array_agg(id ORDER BY id)
-    INTO _type_ids
-    FROM hafd.custom_json_types
-    WHERE custom_json_id = ANY(_custom_json_ids);
-
-    IF _type_ids IS NULL OR array_length(_type_ids, 1) IS NULL THEN
-        RAISE NOTICE 'No matching custom_json_type_ids found for: %', _custom_json_ids;
-        RETURN;
-    END IF;
-
-    _index_name := 'hive_operations_custom_json_types_' || array_to_string(_type_ids, '_') || '_idx';
-    _where_clause := 'custom_json_type_id IN (' || array_to_string(_type_ids, ',') || ')';
-    _create_cmd := format(
-        'CREATE INDEX IF NOT EXISTS %I ON hafd.operations (custom_json_type_id) WHERE %s',
-        _index_name,
-        _where_clause
-    );
-
-    RAISE NOTICE 'Registering index dependency % for custom_json types: % (IDs: %)', _index_name, _custom_json_ids, _type_ids;
-    PERFORM hive.register_index_dependency(_context_name, _create_cmd);
-END;
-$$;
 
 --Clustering to speedup get_account_history queries (returns ordered set of operations for a specific account)
 --Clustering takes 2 hours on a fast system with 4 maintenance works

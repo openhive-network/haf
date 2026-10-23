@@ -890,6 +890,35 @@ END;
 $BODY$
 ;
 
+-- Removes the context from the contexts depending on the index, and drops the index when no context
+-- depends on it any more (HAF-internal dependencies are marked as being dependent on context 0 to prevent their removal)
+CREATE OR REPLACE FUNCTION hive.remove_index_dependency(
+    _context_id INT,
+    _table_name TEXT,
+    _index_constraint_name TEXT
+)
+RETURNS void
+LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    __remaining_contexts INT[];
+BEGIN
+    UPDATE hafd.indexes_constraints
+    SET contexts = array_remove(contexts, _context_id)
+    WHERE table_name = _table_name AND index_constraint_name = _index_constraint_name
+    RETURNING contexts INTO __remaining_contexts;
+
+    IF NOT FOUND OR array_length(__remaining_contexts, 1) IS NOT NULL THEN
+        RETURN;
+    END IF;
+
+    EXECUTE 'DROP INDEX IF EXISTS ' || split_part(_table_name, '.', 1) || '.' || _index_constraint_name;
+    DELETE FROM hafd.indexes_constraints WHERE table_name = _table_name AND index_constraint_name = _index_constraint_name;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.remove_index_dependencies(
     _context_name TEXT
 )
@@ -900,7 +929,6 @@ $BODY$
 DECLARE
     __context_id INT;
     __index_record RECORD;
-    _schema TEXT;
 BEGIN
     -- Lookup the context_id using context_name
     SELECT id INTO __context_id
@@ -918,19 +946,7 @@ BEGIN
         FROM hafd.indexes_constraints
         WHERE contexts @> ARRAY[__context_id]
     LOOP
-        -- Parse the schema name from the table field
-        _schema := split_part(__index_record.table_name, '.', 1);
-
-        -- Remove the context from the list of contexts
-        UPDATE hafd.indexes_constraints
-        SET contexts = array_remove(contexts, __context_id)
-        WHERE table_name = __index_record.table_name AND index_constraint_name = __index_record.index_constraint_name;
-
-        -- Drop the index if there are no remaining contexts dependent on it (note that HAF-internal dependencies are marked as being dependent on context 0 to prevent their removal)
-        IF (SELECT array_length(contexts, 1) FROM hafd.indexes_constraints WHERE table_name = __index_record.table_name AND index_constraint_name = __index_record.index_constraint_name) IS NULL THEN
-            EXECUTE 'DROP INDEX IF EXISTS ' || _schema || '.' || __index_record.index_constraint_name;
-            DELETE FROM hafd.indexes_constraints WHERE table_name = __index_record.table_name AND index_constraint_name = __index_record.index_constraint_name;
-        END IF;
+        PERFORM hive.remove_index_dependency(__context_id, __index_record.table_name, __index_record.index_constraint_name);
     END LOOP;
 END;
 $BODY$

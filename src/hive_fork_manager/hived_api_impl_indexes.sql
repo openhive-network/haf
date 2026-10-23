@@ -23,6 +23,16 @@ CREATE TABLE IF NOT EXISTS hafd.indexes_constraints (
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.indexes_constraints', '');
 
+-- The custom_json type index each context requested last (hive.register_custom_json_type_index).
+-- Its other custom_json type indexes are released once this one is created.
+CREATE TABLE IF NOT EXISTS hafd.custom_json_type_indexes (
+    context_id integer NOT NULL,
+    index_name text NOT NULL,
+    CONSTRAINT pk_hive_custom_json_type_indexes PRIMARY KEY ( context_id ),
+    CONSTRAINT fk_hive_custom_json_type_indexes_context FOREIGN KEY ( context_id ) REFERENCES hafd.contexts( id ) ON DELETE CASCADE
+);
+SELECT pg_catalog.pg_extension_config_dump('hafd.custom_json_type_indexes', '');
+
 -- One vacuum request per table and kind:
 --   'full'    - VACUUM FULL ANALYZE (rewrites the table and drops its visibility map)
 --   'vacuum'  - VACUUM (ANALYZE)
