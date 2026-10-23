@@ -218,6 +218,8 @@ BEGIN
     SET last_active_at = NOW()
     WHERE name =ANY(_context_names);
 
+    PERFORM hive.register_pending_custom_json_type_indexes( _context_names );
+
     IF hive.app_is_paused( _context_names ) THEN
         IF _wait THEN
             PERFORM pg_sleep( 1 );
