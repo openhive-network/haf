@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS hafd.contexts(
     CONSTRAINT pk_hive_contexts PRIMARY KEY( id ),
     CONSTRAINT uq_hive_context_name UNIQUE ( name )
 );
+-- Apps hold locks on this tiny table nearly all the time, so a vacuum's attempt to truncate its trailing
+-- empty pages would wait out PostgreSQL's 5 s truncation-lock timeout, stalling hived's periodic vacuum.
+ALTER TABLE hafd.contexts SET ( vacuum_truncate = false );
 SELECT pg_catalog.pg_extension_config_dump('hafd.contexts', '');
 SELECT pg_catalog.pg_extension_config_dump('hafd.contexts_id_seq', '');
 
