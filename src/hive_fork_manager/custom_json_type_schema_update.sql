@@ -90,20 +90,13 @@ BEGIN
 END;
 $$;
 
--- Serializes reading hafd.custom_json_type_index_requests against reading hafd.custom_json_types:
--- without it a request and the arrival of its last type, in two concurrent transactions,
--- would each miss the other and the index would never be registered.
-CREATE OR REPLACE FUNCTION hive.lock_custom_json_type_index_requests()
-RETURNS VOID
-LANGUAGE sql
-AS $$
-    SELECT pg_advisory_xact_lock( hashtext('hive_custom_json_type_index_requests') );
-$$;
+DROP FUNCTION IF EXISTS hive.lock_custom_json_type_index_requests;
 
--- Registers the context's requested custom_json type index once every requested type has an id.
--- Registering an already registered index changes nothing.
+-- Registers the context's requested custom_json type index once every requested type has an id,
+-- and returns whether it is registered. Registering an already registered index changes nothing.
+DROP FUNCTION IF EXISTS hive.register_requested_custom_json_type_index;
 CREATE OR REPLACE FUNCTION hive.register_requested_custom_json_type_index(_context_id INT)
-RETURNS VOID
+RETURNS BOOLEAN
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -122,9 +115,7 @@ BEGIN
     WHERE custom_json_id = ANY(__custom_json_ids);
 
     IF cardinality(__type_ids) IS DISTINCT FROM cardinality(__custom_json_ids) THEN
-        RAISE NOTICE 'custom_json type index of the context % waits for types % to appear', __context_name
-            , ARRAY( SELECT unnest(__custom_json_ids) EXCEPT SELECT custom_json_id FROM hafd.custom_json_types );
-        RETURN;
+        RETURN FALSE;
     END IF;
 
     __index_name := 'hive_operations_custom_json_block_num_' || array_to_string(__type_ids, '_') || '_idx';
@@ -141,6 +132,31 @@ BEGIN
     UPDATE hafd.custom_json_type_index_requests
     SET index_name = __index_name
     WHERE context_id = _context_id AND index_name IS DISTINCT FROM __index_name;
+    RETURN TRUE;
+END;
+$$;
+
+-- Registers the pending requests of the contexts whose types have all appeared. A request whose last
+-- type hived stored while the request was not yet committed, or was locked by the requesting
+-- transaction, is left pending by hive.on_custom_json_type_added; the application's next block
+-- request registers it here.
+CREATE OR REPLACE FUNCTION hive.register_pending_custom_json_type_indexes(_contexts hafd.context_name[])
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = hive, hafd, pg_catalog
+AS $$
+DECLARE
+    __context_id INT;
+BEGIN
+    FOR __context_id IN
+        SELECT r.context_id
+        FROM hafd.custom_json_type_index_requests r
+        JOIN hafd.contexts c ON c.id = r.context_id
+        WHERE r.index_name IS NULL AND c.name = ANY(_contexts)
+    LOOP
+        PERFORM hive.register_requested_custom_json_type_index(__context_id);
+    END LOOP;
 END;
 $$;
 
@@ -184,10 +200,21 @@ AS $$
 DECLARE
     __context_id INT;
 BEGIN
-    PERFORM hive.lock_custom_json_type_index_requests();
+    IF NOT EXISTS (
+        SELECT 1 FROM hafd.custom_json_type_index_requests
+        WHERE index_name IS NULL AND NEW.custom_json_id = ANY(custom_json_ids)
+    ) THEN
+        RETURN NULL;
+    END IF;
+
+    -- Runs in hived's transaction, which must never wait on an application. A request row locked by an
+    -- application transaction is skipped and registered by hive.register_pending_custom_json_type_indexes.
+    -- The index row registered here names NEW.id, which no other transaction can see yet, so that insert
+    -- cannot wait either.
     FOR __context_id IN
         SELECT context_id FROM hafd.custom_json_type_index_requests
         WHERE index_name IS NULL AND NEW.custom_json_id = ANY(custom_json_ids)
+        FOR UPDATE SKIP LOCKED
     LOOP
         PERFORM hive.register_requested_custom_json_type_index(__context_id);
     END LOOP;
@@ -237,11 +264,12 @@ EXECUTE FUNCTION hive.on_custom_json_type_index_created();
 -- - The index is registered through hive.register_index_dependency, so hived's indexes controller
 --   builds it with CREATE INDEX CONCURRENTLY.
 -- - It is registered only once every requested type has an id in hafd.custom_json_types, i.e. hived
---   has met it in a block; a request made earlier is kept and acted on when the last type appears.
+--   has met it in a block; a request made earlier is kept and acted on when the last type appears,
+--   or, if that races with the request's transaction, at the context's next hive.app_next_block /
+--   hive.app_next_iteration.
 -- - Requesting the same set again changes nothing.
 -- - A context has one such request: when it requests another set, its index for the previous set
 --   is released once the index for the new set is created.
--- Call it in a short transaction: until it commits, hived waits before storing a type it has just met.
 -- Raises insufficient_privilege unless the caller can impersonate the context's owner.
 -- Example: SELECT hive.register_custom_json_type_index('nft_tracker_app', ARRAY['NFT']);
 CREATE OR REPLACE FUNCTION hive.register_custom_json_type_index(_context_name TEXT, _custom_json_ids TEXT[])
@@ -282,14 +310,15 @@ BEGIN
             USING ERRCODE = '22023';
     END IF;
 
-    PERFORM hive.lock_custom_json_type_index_requests();
-
     INSERT INTO hafd.custom_json_type_index_requests(context_id, custom_json_ids)
     VALUES (__context_id, __custom_json_ids)
     ON CONFLICT (context_id) DO UPDATE SET custom_json_ids = EXCLUDED.custom_json_ids, index_name = NULL
     WHERE hafd.custom_json_type_index_requests.custom_json_ids <> EXCLUDED.custom_json_ids;
 
-    PERFORM hive.register_requested_custom_json_type_index(__context_id);
+    IF NOT hive.register_requested_custom_json_type_index(__context_id) THEN
+        RAISE NOTICE 'custom_json type index of the context % waits for types % to appear', _context_name
+            , ARRAY( SELECT unnest(__custom_json_ids) EXCEPT SELECT custom_json_id FROM hafd.custom_json_types );
+    END IF;
     PERFORM hive.release_superseded_custom_json_type_indexes(__context_id);
 END;
 $$;

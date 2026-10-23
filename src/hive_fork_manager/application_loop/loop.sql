@@ -293,6 +293,7 @@ BEGIN
     UPDATE hafd.contexts ctx
     SET last_active_at = __now
     WHERE ctx.name = ANY(_contexts);
+    PERFORM hive.register_pending_custom_json_type_indexes( _contexts );
     -- Commit the heartbeat immediately so this write transaction is not
     -- held open across the wait inside hive.app_next_block during live
     -- sync, which would pin the global snapshot horizon and throttle

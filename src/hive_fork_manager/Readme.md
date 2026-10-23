@@ -215,7 +215,8 @@ SELECT hive.register_custom_json_type_index('my_app_context', ARRAY['follow', 'r
 - Requesting the same set again (e.g. at every application start) changes nothing.
 - A context has one such request. When it requests another set, its index for the previous set
   is released once the index for the new set is created.
-- Call it in a short transaction: until it commits, `hived` waits before storing a type it has just met.
+- `hived` never waits on it. When the last type appears while the requesting transaction is still
+  open, the index is registered at the context's next `hive.app_next_iteration` / `hive.app_next_block`.
 
 The planner uses a partial index only when the query's `custom_json_type_id` condition is provable
 at plan time: write the ids as literals (`custom_json_type_id IN (2, 5)`), not as a function call
