@@ -198,6 +198,32 @@ SELECT hive.register_index_dependency(
 This request is stored in **`hafd.indexes_constraints`**, and `hived` will later process and
 create the required indexes.
 
+##### - Indexing custom_json operations by type
+
+An application that reads `custom_json` operations of a few types requests a partial index on
+`hafd.operations` for them with **`hive.register_custom_json_type_index`**:
+```sql
+SELECT hive.register_custom_json_type_index('my_app_context', ARRAY['follow', 'reblog']);
+```
+- The index is keyed on block number and limited to the requested types
+  (`ON hafd.operations (hafd.operation_id_to_block_num(id)) WHERE custom_json_type_id IN (...)`),
+  so it serves block-range scans of these types and whole-chain lookups of them.
+- It is registered with `hive.register_index_dependency`, so `hived` builds it concurrently.
+- It is registered only when every requested type has an id in `hafd.custom_json_types`, i.e.
+  `hived` has met it in a block. A request made earlier is kept, and the index is registered
+  when the last of its types appears.
+- Requesting the same set again (e.g. at every application start) changes nothing.
+- A context has one such request. When it requests another set, its index for the previous set
+  is released once the index for the new set is created.
+- Call it in a short transaction: until it commits, `hived` waits before storing a type it has just met.
+
+The planner uses a partial index only when the query's `custom_json_type_id` condition is provable
+at plan time: write the ids as literals (`custom_json_type_id IN (2, 5)`), not as a function call
+or a parameter of a generic plan.
+
+`hive.create_custom_json_type_index` is deprecated and will be removed: it builds its index with a
+plain `CREATE INDEX`, which blocks `hived`'s writes to `hafd.operations`, and raises a `WARNING`.
+
 ##### - Checking Index Creation Status
 
 Applications can check if `hived` has finished creating the registered indexes using
