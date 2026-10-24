@@ -39,6 +39,7 @@ namespace hive::plugins::sql_serializer {
 
     bool are_any_indexes_missing() const;
     void vacuum_account_operations();
+    void request_freeze_of_irreversible();
   private:
     const std::string _db_url;
     const uint32_t _psql_index_threshold;

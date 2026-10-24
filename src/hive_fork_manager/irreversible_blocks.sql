@@ -158,6 +158,11 @@ SELECT pg_catalog.pg_extension_config_dump('hafd.account_operations', '');
 --At the default scale factor (0.2) that is billions of rows between vacuums on mainnet,
 --leaving newly inserted pages out of the visibility map and forcing heap fetches in index-only scans.
 ALTER TABLE hafd.account_operations SET (autovacuum_vacuum_insert_scale_factor = 0.005);
+--The same holds for the other large insert-only tables: on a live node the default threshold
+--is never reached after a replay, so the pages inserted since stay not-all-visible.
+ALTER TABLE hafd.operations SET (autovacuum_vacuum_insert_scale_factor = 0.005);
+ALTER TABLE hafd.transactions SET (autovacuum_vacuum_insert_scale_factor = 0.005);
+ALTER TABLE hafd.blocks SET (autovacuum_vacuum_insert_scale_factor = 0.005);
 
 
 CREATE INDEX IF NOT EXISTS hive_applied_hardforks_block_num_idx ON hafd.applied_hardforks ( block_num );

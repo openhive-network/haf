@@ -115,6 +115,7 @@ ADD_TEST( NAME test_update_script
 
  ADD_SQL_FUNCTIONAL_TEST( hived_api/schema_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/vacuum_skips_truncation_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/request_freeze_of_irreversible_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/back_from_fork_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/push_block_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/set_irreversible_test.sql )
@@ -345,6 +346,7 @@ SET_TESTS_PROPERTIES(
  ADD_SQL_FUNCTIONAL_TEST( state_providers/accounts_start_state_provider.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/accounts_update_state_provider.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/keyauth_update_state_provider.sql )
+ ADD_SQL_FUNCTIONAL_TEST( state_providers/restore_indexes_freezes_state_provider_tables.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/metadata_start_state_provider.sql)
  ADD_SQL_FUNCTIONAL_TEST( state_providers/metadata_update_state_provider.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/metadata_drop_state_provider.sql )

@@ -958,8 +958,8 @@ $$;
 -- Restore all indexes registered by the given context that have
 -- status = 'missing'. Runs the stored CREATE INDEX commands and updates
 -- status through 'creating' -> 'created'. Runs ANALYZE on affected tables.
--- Requests a 'freeze' vacuum of every table registered in the context; hived
--- runs it after the caller's transaction commits.
+-- Requests a 'freeze' vacuum of every table registered in the context and of
+-- its state-provider tables; hived runs them after the caller's transaction commits.
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION hive.app_restore_indexes(
     _context_name TEXT
@@ -1028,6 +1028,14 @@ BEGIN
     PERFORM hive.app_request_table_vacuum(rt.origin_table_schema, rt.origin_table_name, _kind => 'freeze')
     FROM hafd.registered_tables rt
     WHERE rt.context_id = __context_id;
+
+    -- State-provider tables are filled in bulk by the same sync; a non-forking context does not register them.
+    PERFORM hive.app_request_table_vacuum('hafd', sp.table_name, _kind => 'freeze')
+    FROM (
+        SELECT DISTINCT unnest(spr.tables) AS table_name
+        FROM hafd.state_providers_registered spr
+        WHERE spr.context_id = __context_id
+    ) sp;
 END;
 $$;
 
