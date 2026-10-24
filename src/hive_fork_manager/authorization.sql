@@ -166,6 +166,8 @@ GRANT EXECUTE ON FUNCTION
     , hive.end_massive_sync( INTEGER )
     , hive.disable_indexes_of_irreversible( _policy TEXT )
     , hive.enable_indexes_of_irreversible()
+    , hive.request_freeze_of_irreversible()
+    , hive.app_request_table_vacuum( _schema_name TEXT, _table_name TEXT, _min_interval INTERVAL, _kind TEXT )
     , hive.save_and_drop_indexes_constraints( in _schema TEXT, in _table TEXT, in _keep_monotonic BOOLEAN )
     , hive.default_massive_sync_index_class( _table_name TEXT, _index_constraint_name TEXT )
     , hive.massive_sync_index_status( _massive_sync_class TEXT, _keep_monotonic BOOLEAN )

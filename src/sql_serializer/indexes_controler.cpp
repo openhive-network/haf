@@ -581,6 +581,7 @@ indexes_controler::enable_indexes() {
   );
 
   vacuum_account_operations();
+  request_freeze_of_irreversible();
 
   fc::time_point cluster_start_time = fc::time_point::now();
   fc::microseconds restore_indexes_time = cluster_start_time - restore_indexes_start_time;
@@ -604,6 +605,16 @@ indexes_controler::vacuum_account_operations() {
   tx.exec(vacuum_command);
   fc::microseconds vacuum_duration = fc::time_point::now() - start_time;
   ilog("PROFILE: Vacuumed hafd.account_operations: ${t}s", ("t", vacuum_duration.to_seconds()));
+}
+
+void
+indexes_controler::request_freeze_of_irreversible() {
+  if (theApp.is_interrupt_request())
+    return;
+
+  // Only queued: haf_monitor runs the VACUUM (FREEZE, ANALYZE) online, so serving need not wait for it.
+  auto processor = start_commit_sql( true, "hive.request_freeze_of_irreversible()", "freeze requests of irreversible tables" );
+  processor->join();
 }
 
 bool

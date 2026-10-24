@@ -382,6 +382,23 @@ $BODY$
 SET maintenance_work_mem TO '6GB';
 ;
 
+-- Called by hived once a massive sync has restored the irreversible tables' indexes.
+-- Bulk inserts leave these tables partly outside the visibility map and entirely unfrozen;
+-- without a freeze now, each would get an anti-wraparound vacuum of the whole table later.
+-- hafd.account_operations is not listed: hived freezes it synchronously after CLUSTER.
+CREATE OR REPLACE FUNCTION hive.request_freeze_of_irreversible()
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM hive.app_request_table_vacuum( 'hafd', t.table_name, _kind => 'freeze' )
+    FROM unnest( ARRAY[ 'operations', 'transactions', 'blocks', 'accounts', 'transactions_multisig' ] ) AS t( table_name );
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.enable_fk_of_irreversible()
     RETURNS void
     LANGUAGE plpgsql
