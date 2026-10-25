@@ -126,8 +126,20 @@ same across its versions:
 
 An app's roles may be members of another app's, so `serve.sh` applies the files
 in the explicit order of its `app_roles` list (hafbe after hafah, btracker and
-reptracker), and refuses to serve when `app-roles/` holds a file that list does
-not name. To install an app in its clone, the consumer (the clone's owner) first
+reptracker), and refuses to serve when `app-roles/` or `app-grants/` holds a file
+that list does not name.
+
+An app whose user role is NOINHERIT (or in no HAF group) gets no HAF data through
+group membership: its install grants the role its reads per database, which the
+consumer cannot do in a clone, as it holds no grant option on `hafd` and `hive`.
+`shared-haf/app-grants/` holds those per-database grants, one SQL file per app
+that needs them, which `serve.sh` applies as `postgres` in `haf_template` on every
+start, after the freeze (briefly allowing connections to it), so every later clone
+of any version carries them; clones made before stay as they are:
+
+- `app-grants/haf_stats.sql`: `USAGE` on `hafd` and `hive`, `SELECT` on all their
+  tables and `EXECUTE` on all functions in `hive`, to `haf_stats_owner` and
+  `haf_stats_user` (the `hafd`/`hive` block of haf_stats' `db/builtin_roles.sql`). To install an app in its clone, the consumer (the clone's owner) first
 grants the app's roles the database:
 
 ```sql
@@ -147,8 +159,10 @@ then runs the app's install as the consumer, skipping its own role-creation step
 haf_block_explorer: `scripts/install_app.sh` without the `db/builtin_roles.sql`
 of itself, balance_tracker and reputation_tracker; haf_stats and haf_fyp: their
 `db/builtin_roles.sql` also makes per-database grants and assertions, so their
-installs need a step the consumer can run in place of it). A new consumer app
-adds its file to `app-roles/` and to `serve.sh`'s `app_roles`, after the apps whose roles
+installs need a step the consumer can run in place of it; haf_stats' grants are in
+`app-grants/`). A new consumer app
+adds its file to `app-roles/` (and, if it needs per-database grants, to
+`app-grants/`) and to `serve.sh`'s `app_roles`, after the apps whose roles
 it depends on, and restarts the service.
 
 **How it works.** Both services run the `hive/haf/fixture-5m:<commit>` image

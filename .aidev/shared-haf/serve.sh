@@ -9,7 +9,9 @@
 #    that no one may connect to, with its head block recorded. haf_block_log
 #    itself stays connectable, because the entrypoint checks and updates the
 #    extension in it on every start;
-# 3. reaps run databases every HAF_SHARED_REAP_INTERVAL seconds, then serves
+# 3. applies the per-database grants of the consumer apps that need them
+#    (app-grants/<app>.sql) in haf_template, so every clone carries them;
+# 4. reaps run databases every HAF_SHARED_REAP_INTERVAL seconds, then serves
 #    as the image's sleep_infinity.sh does.
 #
 # Environment: HAF_FIXTURE_COMMIT (as start.sh),
@@ -33,10 +35,11 @@ psql_pg -d haf_shared -f "$here/admin.sql"
 # An app's roles may be members of another app's, so they are applied after
 # those: hafbe's roles are members of btracker's, reptracker's and hafah's.
 app_roles=(hafah btracker reptracker hafbe haf_stats haf_fyp)
-for file in "$here"/app-roles/*.sql; do
+shopt -s nullglob
+for file in "$here"/app-roles/*.sql "$here"/app-grants/*.sql; do
     app="$(basename "$file" .sql)"
     if [[ " ${app_roles[*]} " != *" $app "* ]]; then
-        echo "app-roles/$app.sql is not listed in serve.sh's app_roles; refusing to serve" >&2
+        echo "$(basename "$(dirname "$file")")/$app.sql is not listed in serve.sh's app_roles; refusing to serve" >&2
         exit 1
     fi
 done
@@ -63,6 +66,22 @@ EOF
 insert into haf_shared.template (database_name, haf_commit, head_block) values ('haf_template', :'commit', :'head_block');
 EOF
 fi
+
+# haf_template refuses connections: allow them only while the grants are
+# applied, and refuse them again even when applying fails. A clone requested
+# meanwhile fails, as the template is in use.
+apply_app_grants() {
+    local app file status=0
+    psql_pg -d postgres -c 'alter database haf_template allow_connections true'
+    for app in "${app_roles[@]}"; do
+        file="$here/app-grants/$app.sql"
+        [ -f "$file" ] || continue
+        psql_pg -d haf_template -f "$file" || { status=$?; break; }
+    done
+    psql_pg -d postgres -c 'alter database haf_template allow_connections false'
+    return "$status"
+}
+apply_app_grants
 psql_pg -d haf_shared -c 'select * from haf_shared.health()'
 
 reap() {
