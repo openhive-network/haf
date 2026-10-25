@@ -73,10 +73,12 @@ registry cache near the build host; unset, it builds straight from
 A persistent PostgreSQL that holds the 5M replay of a HAF version and gives each
 test run, from any session, its own copy-on-write clone of it. It is declared
 under `sandbox.shared.haf` in `project.yaml`, defined in `shared-haf.compose.yml`
-and implemented in `shared-haf/`. A dedicated session hosts it:
+and implemented in `shared-haf/`. A dedicated session, `haf-shared`, hosts it; the
+service runs on that session's host (`aidev session list`; currently
+steem-3.syncad.com):
 
 ```bash
-aidev session create haf-shared --host steem-13 --remote git@gitlab.syncad.com:hive/haf.git \
+aidev session create haf-shared --host <ZFS 2.4+ host> --remote git@gitlab.syncad.com:hive/haf.git \
     --target-branch aidev/integration --shared-service haf
 ```
 
@@ -193,13 +195,29 @@ path as the daemon sees it), not a relative `./shared-haf`, which would name a
 worker-side path the daemon would create as an empty directory. With
 `AIDEV_HOST_CHECKOUT` unset the compose file refuses to resolve.
 
-**Host setup (once, on steem-13).** The data root must be a dataset on a pool
-with `feature@block_cloning` (ZFS 2.4+; steem-9/steem-17's 2.2.2 cannot clone).
-No credential is provisioned: consumers are trusted by source address (above).
+**Host setup (once, on the `haf-shared` session's host).** The data root must be
+a dataset on a pool with `feature@block_cloning` (ZFS 2.4+; steem-9/steem-17's
+2.2.2 cannot clone); that is what qualifies a host. No credential is provisioned:
+consumers are trusted by source address (above).
 
 ```bash
-sudo zfs create haf-pool/aidev-shared-haf            # mounted at /haf-pool/aidev-shared-haf
+sudo zfs create <pool>/aidev-shared-haf              # steem-3: tank/aidev-shared-haf, mounted at /haf-pool/aidev-shared-haf
 ```
+
+**Finding the running service.** Live changes, such as applying an `app-roles/`
+or `app-grants/` file without a restart, need the `haf` container. On the
+session's host it is the `fixture-5m` container whose name ends in `-haf-1`
+(other stacks there may run the same image):
+
+```bash
+aidev session list | grep haf-shared                 # the host
+ssh <host> 'docker ps --format "{{.Names}} {{.Image}}" | grep fixture-5m'
+# e.g. aidev-devstack-2b7c74563c165c01-haf-1 registry.gitlab.syncad.com/hive/haf/fixture-5m:<commit>
+ssh <host> 'docker exec -i -u postgres <container> psql -X -v ON_ERROR_STOP=1 -d postgres' < shared-haf/app-roles/<app>.sql
+```
+
+An `app-grants/` file goes to `haf_template` instead, which refuses connections:
+allow them around it as `serve.sh` does.
 
 **Changing the served version.** Set `HAF_FIXTURE_COMMIT` and `HAF_FIXTURE_DIGEST`
 in `project.yaml` to a `fixture-5m` image whose full-commit tag exists (the tag
