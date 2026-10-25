@@ -372,6 +372,7 @@ SET_TESTS_PROPERTIES(
  ADD_SQL_FUNCTIONAL_TEST( authorization/hived_to_api_access.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_access_to_head_block_views.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_cannot_change_context_owner_and_forking.sql)
+ ADD_SQL_FUNCTIONAL_TEST( authorization/alice_cannot_truncate_control_tables.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_access_to_bob.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/can_impersonate.sql )
  ADD_SQL_FUNCTIONAL_TEST( authorization/alice_impersonal_access_context.sql )

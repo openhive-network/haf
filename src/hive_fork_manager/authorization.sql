@@ -73,6 +73,12 @@ GRANT ALL ON hafd.state_providers_registered TO hive_applications_group;
 GRANT ALL ON hafd.vacuum_requests TO hive_applications_group;
 GRANT ALL ON hafd.applications TO hive_applications_group;
 GRANT ALL ON hafd.application_dependencies TO hive_applications_group;
+-- row-level security does not apply to TRUNCATE, and no App API call needs an
+-- application role to truncate, reference or add a trigger on a control table
+REVOKE TRUNCATE, REFERENCES, TRIGGER
+    ON hafd.contexts, hafd.contexts_attachment, hafd.registered_tables, hafd.triggers,
+       hafd.state_providers_registered, hafd.vacuum_requests, hafd.applications, hafd.application_dependencies
+    FROM hive_applications_group;
 
 -- protect an application rows aginst other applications
 REVOKE UPDATE( is_forking, owner ) ON hafd.contexts FROM GROUP hive_applications_group;
