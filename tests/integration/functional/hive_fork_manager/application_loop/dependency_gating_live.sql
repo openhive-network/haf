@@ -41,6 +41,11 @@ DECLARE
     __blocks hive.blocks_range;
     __i INTEGER;
 BEGIN
+    -- the update variant re-creates hive.get_estimated_hive_head_block() after 'given',
+    -- which drops the mock; the real one estimates the head from the 2016 block timestamps
+    PERFORM test.install_mock_hive_get_estimated_hive_head_block();
+    PERFORM test.set_head_block_num( 3 );
+
     -- bring both to the head (3), parent first
     FOR __i IN 1 .. 10 LOOP
         CALL hive.app_next_iteration( ARRAY[ 'parent' ], __blocks, _wait => FALSE );
