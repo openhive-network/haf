@@ -32,7 +32,7 @@ EOF
 psql_pg -d haf_shared -f "$here/admin.sql"
 # An app's roles may be members of another app's, so they are applied after
 # those: hafbe's roles are members of btracker's, reptracker's and hafah's.
-app_roles=(hafah btracker reptracker hafbe)
+app_roles=(hafah btracker reptracker hafbe haf_stats haf_fyp)
 for file in "$here"/app-roles/*.sql; do
     app="$(basename "$file" .sql)"
     if [[ " ${app_roles[*]} " != *" $app "* ]]; then

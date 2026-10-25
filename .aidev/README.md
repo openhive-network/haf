@@ -118,12 +118,17 @@ same across its versions:
 - `app-roles/reptracker.sql`: reputation_tracker's `reptracker_owner` and
   `reptracker_user`;
 - `app-roles/hafbe.sql`: haf_block_explorer's `hafbe_owner` and `hafbe_user`,
-  members of the three apps' owner and user roles above.
+  members of the three apps' owner and user roles above;
+- `app-roles/haf_stats.sql`: haf_stats' `haf_stats_owner` and `haf_stats_user`
+  (NOINHERIT, in no HAF group);
+- `app-roles/haf_fyp.sql`: haf_fyp's `haf_fyp_owner` and `haf_fyp_user` (in no
+  HAF group, which haf_fyp's install asserts).
 
 An app's roles may be members of another app's, so `serve.sh` applies the files
-in the explicit order of its `app_roles` list (hafbe last), and refuses to serve
-when `app-roles/` holds a file that list does not name. To install an app in its
-clone, the consumer (the clone's owner) first grants the app's roles the database:
+in the explicit order of its `app_roles` list (hafbe after hafah, btracker and
+reptracker), and refuses to serve when `app-roles/` holds a file that list does
+not name. To install an app in its clone, the consumer (the clone's owner) first
+grants the app's roles the database:
 
 ```sql
 -- in run_<run id>, as haf_shared_consumer
@@ -131,13 +136,19 @@ clone, the consumer (the clone's owner) first grants the app's roles the databas
 grant create, connect on database run_<run id> to hafah_owner, hafah_user;
 -- haf_block_explorer (with balance_tracker and reputation_tracker):
 grant create, connect on database run_<run id> to hafbe_owner, hafbe_user, btracker_owner, btracker_user, reptracker_owner, reptracker_user;
+-- haf_stats:
+grant create, connect on database run_<run id> to haf_stats_owner, haf_stats_user;
+-- haf_fyp:
+grant create, connect on database run_<run id> to haf_fyp_owner, haf_fyp_user;
 ```
 
 then runs the app's install as the consumer, skipping its own role-creation step
 (HAfAH: `scripts/install_app.sh` without `db/builtin_roles.sql`;
 haf_block_explorer: `scripts/install_app.sh` without the `db/builtin_roles.sql`
-of itself, balance_tracker and reputation_tracker). A new consumer app adds its
-file to `app-roles/` and to `serve.sh`'s `app_roles`, after the apps whose roles
+of itself, balance_tracker and reputation_tracker; haf_stats and haf_fyp: their
+`db/builtin_roles.sql` also makes per-database grants and assertions, so their
+installs need a step the consumer can run in place of it). A new consumer app
+adds its file to `app-roles/` and to `serve.sh`'s `app_roles`, after the apps whose roles
 it depends on, and restarts the service.
 
 **How it works.** Both services run the `hive/haf/fixture-5m:<commit>` image
