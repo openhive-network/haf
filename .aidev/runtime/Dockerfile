@@ -9,7 +9,7 @@
 # l2_pubkey_to_bytea, hive/haf#370). Re-pin when the base should follow develop (a
 # C++ change only reaches these checks through a new base). Build with
 # .aidev/runtime/build.sh.
-FROM registry.gitlab.syncad.com/hive/haf@sha256:ce13d0fd816b4febe4da3fbc0b91029f9214f2b1752e494758c94992f2ab90b8
+FROM registry.gitlab.syncad.com/hive/haf@sha256:0b9366e37b7674fba7f4ccb01d2fcdf44737aff23d60d3720c1a9e5edaf818e3
 
 ENTRYPOINT []
 CMD ["bash"]
