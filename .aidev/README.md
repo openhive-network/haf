@@ -97,14 +97,17 @@ A run id is 1-48 of `[a-z0-9_-]`. The clone is owned by the consumer, who is a
 `hive_applications_owner_group` member inside it.
 
 **Access.** Over TCP only `haf_shared_consumer` can log in, only to `haf_shared`
-and `run_*` databases, and only from the fleet's LAN or tailnet, where it is
-trusted without a password: `192.168.3.0/24`, `192.168.5.0/24` and
-`192.168.6.0/24` (the fleet's LAN), `100.64.0.0/10` (pull hosts that reach the
-provider over Tailscale), and `172.16.0.0/12`
-(connections from the provider host itself arrive through docker's NAT). The
-data is public chain data, so the tailnet is trusted like the LAN; what either
-can do is create and drop clones. The rules are the
-`haf` service's `PG_ACCESS`, which replaces the image's own trust rule.
+and `run_*` databases, and only from fleet addresses, where it is trusted
+without a password: `192.168.3.0/24`, `192.168.5.0/24` and `192.168.6.0/24`
+(the sites' LANs), `100.64.0.0/10` (the inter-site VPN: it carries only fleet
+traffic between the site gateways, so a consumer at another site, e.g. a PL
+pull host reaching a US provider, arrives with a source address in it), and
+`172.16.0.0/12` (connections from the provider host itself arrive through
+docker's NAT). The data is public chain data, so the VPN is trusted like the
+LANs; what either can do is create and drop clones. The rules are the `haf`
+service's `PG_ACCESS`, which replaces the image's own trust rule; the shared
+hivemind service (hive/hivemind) keeps a copy of the same list, so a range
+added here is added there too.
 
 **App roles.** Installing a HAF app creates cluster-wide roles, which the
 consumer may not do (PostgreSQL checks `CREATEROLE` before noticing the role

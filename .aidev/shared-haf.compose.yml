@@ -48,11 +48,20 @@ services:
       <<: *shared-haf-env
       HAF_SHARED_RUN_TTL: "${HAF_SHARED_RUN_TTL:-6 hours}"
       # Over TCP only the consumer role, only to the clone API and its own
-      # clones, and only from the fleet's LAN or tailnet, without a password:
-      # the data is public chain data. 172.16.0.0/12 admits the provider host
-      # itself, whose connections arrive through docker's NAT; 100.64.0.0/10
-      # admits pull hosts that reach it over Tailscale. The image's trust rule
-      # is replaced.
+      # clones, and only from fleet addresses, without a password: the data is
+      # public chain data. Every range gets the same two rules, in this order:
+      #   192.168.3.0/24  Jefferson site LAN
+      #   192.168.5.0/24  site LAN
+      #   192.168.6.0/24  PL site LAN
+      #   172.16.0.0/12   docker: the provider host itself, whose connections
+      #                   arrive through docker's NAT
+      #   100.64.0.0/10   the inter-site VPN, which carries only fleet traffic
+      #                   between the site gateways (192.168.6.6 at PL,
+      #                   192.168.3.4 at Jefferson); a host at another site
+      #                   arrives with a source address in it
+      # The hivemind shared service (hive/hivemind,
+      # .aidev/shared-hivemind.compose.yml) keeps a copy of this list; change
+      # both together. The image's trust rule is replaced.
       PG_ACCESS: 'host haf_shared haf_shared_consumer 192.168.3.0/24 trust\nhost /^run_[a-z0-9_-]+$$ haf_shared_consumer 192.168.3.0/24 trust\nhost haf_shared haf_shared_consumer 192.168.5.0/24 trust\nhost /^run_[a-z0-9_-]+$$ haf_shared_consumer 192.168.5.0/24 trust\nhost haf_shared haf_shared_consumer 192.168.6.0/24 trust\nhost /^run_[a-z0-9_-]+$$ haf_shared_consumer 192.168.6.0/24 trust\nhost haf_shared haf_shared_consumer 172.16.0.0/12 trust\nhost /^run_[a-z0-9_-]+$$ haf_shared_consumer 172.16.0.0/12 trust\nhost haf_shared haf_shared_consumer 100.64.0.0/10 trust\nhost /^run_[a-z0-9_-]+$$ haf_shared_consumer 100.64.0.0/10 trust'
     ports:
       - "0.0.0.0:${AIDEV_PORT_PG:?}:5432"
