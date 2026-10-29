@@ -8,13 +8,18 @@
 # The port is published on every interface: consumers reach it through relays
 # on other hosts.
 #
-# A second version is a second service of this shape — its own fixture commit
-# and digest, its own port name in project.yaml — over the same data root.
+# Both services run the plain HAF image of the served version, pinned by digest
+# (HAF_IMAGE), and HAF_VERSION, its 40-hex HAF commit, names the version's
+# directory in the data root. seed.sh builds that directory once by a local 5M
+# replay of the data root's block_log_5m/block_log.
+#
+# A second version is a second service of this shape — its own image and
+# version, its own port name in project.yaml — over the same data root.
 
 x-shared-haf: &shared-haf
-  image: "registry.gitlab.syncad.com/hive/haf/fixture-5m:${HAF_FIXTURE_COMMIT:?}@${HAF_FIXTURE_DIGEST:?}"
+  image: "${HAF_IMAGE:?HAF_IMAGE must name the HAF image as <repository>:<tag>@sha256:<digest>}"
   environment: &shared-haf-env
-    HAF_FIXTURE_COMMIT: "${HAF_FIXTURE_COMMIT:?}"
+    HAF_VERSION: "${HAF_VERSION:?HAF_VERSION must name the full HAF commit of HAF_IMAGE}"
     HAF_SHARED_ROOT: /haf-shared
 
 # Compose runs in the session worker, but the host's daemon resolves bind
@@ -30,11 +35,22 @@ x-scripts: &scripts
   read_only: true
 
 services:
-  # Copies the image's replayed cluster onto the dataset on the first start of
-  # a version; a no-op afterwards.
+  # Replays the version's 5M cluster onto the dataset on the first start of a
+  # version; a no-op afterwards.
   seed:
     <<: *shared-haf
-    volumes: [*data-root, *scripts]
+    environment:
+      <<: *shared-haf-env
+      # The replay's PostgreSQL trusts no network client.
+      PG_ACCESS: ""
+    volumes:
+      - *data-root
+      - *scripts
+      # The configuration CI's prepare_haf_data replays with.
+      - type: bind
+        source: "${AIDEV_HOST_CHECKOUT:?}/docker/config_5M.ini"
+        target: /aidev/config_5M.ini
+        read_only: true
     entrypoint: ["/aidev/shared-haf/seed.sh"]
     command: []
     restart: "no"
@@ -68,14 +84,15 @@ services:
     volumes:
       - *data-root
       - *scripts
-      # The version's cluster, mounted at the very path the image's tablespace
-      # and postgresql.conf name: a symlink there makes setup_postgres.sh see the
-      # tablespace at a different location and abort. Compose creates this
+      # The version's cluster, mounted at the very path the image's
+      # postgresql.conf names, beside which its relative tablespace link
+      # resolves: a symlink there makes setup_postgres.sh see the tablespace at
+      # a different location and abort. Compose creates this
       # container before seed runs, and the daemon refuses a missing source
       # unless allowed to create it; seed.sh removes such an empty directory
       # before seeding.
       - type: bind
-        source: "${HAF_SHARED_DATA_ROOT:?}/${HAF_FIXTURE_COMMIT:?}/haf_db_store"
+        source: "${HAF_SHARED_DATA_ROOT:?}/${HAF_VERSION:?}/haf_db_store"
         target: /home/hived/datadir/haf_db_store
         bind:
           create_host_path: true
@@ -87,5 +104,6 @@ services:
       interval: 15s
       timeout: 10s
       retries: 3
-      # The first start of a version freezes its template.
+      # The first start of a version freezes its template; its replay runs
+      # before, in `seed`.
       start_period: 30m

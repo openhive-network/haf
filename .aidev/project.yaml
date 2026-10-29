@@ -100,12 +100,16 @@ sandbox:
       compose: ".aidev/shared-haf.compose.yml"
       services: [haf]
       ports: [pg]
-      # The first start of a version copies its replayed cluster onto the dataset.
+      # The first start of a version replays 5M blocks onto the dataset (CI's
+      # prepare_haf_data allows 80 minutes) and freezes its template. The
+      # replay outlasts AIDEV's ceiling for this value, 1800 seconds, so a new
+      # version is seeded by hand before the service starts on it (README).
       readiness_timeout: 1800
       env:
-        # Fixture image hive/haf/fixture-5m:<commit> (CI's build_haf_fixture_image).
-        HAF_FIXTURE_COMMIT: "54a35dbc06b3befaa4be2861d3487359a2bd2f46"
-        HAF_FIXTURE_DIGEST: "sha256:a82e29099c8316deb958f49ec914d5628f994f545a00d6e9ee574675c75edf54"
+        # The HAF image of develop pipeline 183480, pinned by digest, and its
+        # full HAF commit, which names the version's directory in the data root.
+        HAF_IMAGE: "registry.gitlab.syncad.com/hive/haf:17c8606f@sha256:0b9366e37b7674fba7f4ccb01d2fcdf44737aff23d60d3720c1a9e5edaf818e3"
+        HAF_VERSION: "17c8606f2c78ae6c5783e1189d59031be2b43fbe"
         HAF_SHARED_DATA_ROOT: "/haf-pool/aidev-shared-haf"
 
 capabilities: []

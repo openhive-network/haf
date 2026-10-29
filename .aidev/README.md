@@ -170,16 +170,26 @@ adds its file to `app-roles/` (and, if it needs per-database grants, to
 `app-grants/`) and to `serve.sh`'s `app_roles`, after the apps whose roles
 it depends on, and restarts the service.
 
-**How it works.** Both services run the `hive/haf/fixture-5m:<commit>` image
-CI's `build_haf_fixture_image` publishes. The one-shot `seed` service
+**How it works.** Both services run the plain `hive/haf` image of the served
+version, pinned by digest (`HAF_IMAGE`); `HAF_VERSION`, its full HAF commit,
+names the version's directory in the data root. The one-shot `seed` service
 (`seed.sh`) refuses a data root that is not ZFS and, on the first start of a
-version, copies the image's replayed cluster to
-`$HAF_SHARED_DATA_ROOT/<commit>/haf_db_store`; later starts find it there and
-exit at once. `haf` starts only once `seed` has succeeded, with that directory
-bind-mounted directly at the image's `/home/hived/datadir/haf_db_store`. It must
-not be a symlink: the cluster's tablespace link is relative, and the image's
-`setup_postgres.sh` compares its resolved location with the unresolved expected
-path, aborting when they differ. `start.sh` (the `haf` entrypoint) checks the
+version, builds the cluster by replaying the first 5,000,000 blocks of
+`$HAF_SHARED_DATA_ROOT/block_log_5m/block_log` in that image, as CI's
+`prepare_haf_data` does (`docker/config_5M.ini`, `--replay-blockchain
+--stop-at-block=5000000`). It works in `<version>.partial` on a copy of the
+block log (a free block clone; the block log itself is never written), checks
+that PostgreSQL shut down cleanly and that `haf_block_log` is at head block
+5,000,000, relinks the tablespace relative to `pgdata` (`../../tablespace`, as in
+CI's replay caches), keeps only `haf_db_store` and only then moves it to
+`$HAF_SHARED_DATA_ROOT/<version>/haf_db_store`. An interrupted replay leaves only
+the partial directory, which the next start removes and redoes. Later starts
+find the cluster and exit at once; with neither the cluster nor the block log
+`seed` fails, naming the missing path. `haf` starts only once `seed` has
+succeeded, with that directory bind-mounted directly at the image's
+`/home/hived/datadir/haf_db_store`. It must not be a symlink: the image's
+`setup_postgres.sh` compares the tablespace's resolved location with the
+unresolved expected path, aborting when they differ. `start.sh` (the `haf` entrypoint) checks the
 mount, sets `file_copy_method = clone` and runs the HAF entrypoint with
 `serve.sh` as its maintenance script. `serve.sh` installs
 `admin.sql` into the `haf_shared` database, applies `app-roles/`, and once per version freezes
@@ -199,32 +209,53 @@ worker-side path the daemon would create as an empty directory. With
 `AIDEV_HOST_CHECKOUT` unset the compose file refuses to resolve.
 
 **Host setup (once, on the `haf-shared` session's host).** The data root must be
-a dataset on a pool with `feature@block_cloning` (ZFS 2.4+; steem-9/steem-17's
-2.2.2 cannot clone); that is what qualifies a host. No credential is provisioned:
-consumers are trusted by source address (above).
+a dataset on a pool with `feature@block_cloning`, which needs ZFS 2.4+
+(steem-9/steem-17's 2.2.2 cannot clone); that is what qualifies a host. The pool
+may be a file vdev. The data root also holds the 5M block log every version is
+replayed from (1,684,661,073 bytes). No credential is provisioned: consumers are
+trusted by source address (above).
 
 ```bash
 sudo zfs create <pool>/aidev-shared-haf              # steem-3: tank/aidev-shared-haf, mounted at /haf-pool/aidev-shared-haf
+sudo mkdir -p <data root>/block_log_5m
+sudo curl -o <data root>/block_log_5m/block_log https://gtg.openhive.network/get/blockchain/block_log.5M
 ```
 
 **Finding the running service.** Live changes, such as applying an `app-roles/`
 or `app-grants/` file without a restart, need the `haf` container. On the
-session's host it is the `fixture-5m` container whose name ends in `-haf-1`
+session's host it is the `hive/haf` container whose name ends in `-haf-1`
 (other stacks there may run the same image):
 
 ```bash
 aidev session list | grep haf-shared                 # the host
-ssh <host> 'docker ps --format "{{.Names}} {{.Image}}" | grep fixture-5m'
-# e.g. aidev-devstack-2b7c74563c165c01-haf-1 registry.gitlab.syncad.com/hive/haf/fixture-5m:<commit>
+ssh <host> 'docker ps --format "{{.Names}} {{.Image}}" | grep "hive/haf:"'
+# e.g. aidev-devstack-2b7c74563c165c01-haf-1 registry.gitlab.syncad.com/hive/haf:<tag>@sha256:<digest>
 ssh <host> 'docker exec -i -u postgres <container> psql -X -v ON_ERROR_STOP=1 -d postgres' < shared-haf/app-roles/<app>.sql
 ```
 
 An `app-grants/` file goes to `haf_template` instead, which refuses connections:
 allow them around it as `serve.sh` does.
 
-**Changing the served version.** Set `HAF_FIXTURE_COMMIT` and `HAF_FIXTURE_DIGEST`
-in `project.yaml` to a `fixture-5m` image whose full-commit tag exists (the tag
-means CI started it). AIDEV keeps the hosting session's service checkout fixed,
-so a push does not restart a running service: restart it to switch. The new version is seeded beside the old one, whose
-directory can be destroyed once nothing uses it. To serve two versions at once,
+**Changing the served version.** Set `HAF_IMAGE` in `project.yaml` to the
+`registry.gitlab.syncad.com/hive/haf:<tag>@sha256:<digest>` image of the version,
+pinned by digest (the registry deletes old tags, so the digest is what keeps it
+pullable), and `HAF_VERSION` to the full HAF commit that image was built from
+(the pipeline's `HAF_COMMIT`). AIDEV keeps the hosting session's service checkout
+fixed, so a push does not restart a running service: restart it to switch. The
+new version is replayed beside the old one, whose directory can be destroyed once
+nothing uses it.
+
+The replay takes longer than AIDEV lets a start wait (`readiness_timeout` is at
+its 1800-second ceiling), and a stack's first start that times out is taken down, `seed`
+with it. Seed the version by hand on the host first, with the service's own
+script, image and mounts; the service then finds it seeded:
+
+```bash
+docker run --rm --entrypoint /aidev/shared-haf/seed.sh \
+    -e HAF_VERSION=<version> -e HAF_SHARED_ROOT=/haf-shared -e PG_ACCESS= \
+    -v <data root>:/haf-shared \
+    -v <checkout>/.aidev/shared-haf:/aidev/shared-haf:ro \
+    -v <checkout>/docker/config_5M.ini:/aidev/config_5M.ini:ro \
+    <HAF_IMAGE>
+``` To serve two versions at once,
 add a second service of the same shape with its own port name.

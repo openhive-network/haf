@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 # Entrypoint of the shared HAF service (.aidev/shared-haf.compose.yml), run in
-# the hive/haf/fixture-5m image of HAF_FIXTURE_COMMIT once seed.sh has seeded
-# the version. Compose bind-mounts <root>/<commit>/haf_db_store directly at
+# the hive/haf image of HAF_VERSION once seed.sh has seeded the version.
+# Compose bind-mounts <root>/<version>/haf_db_store directly at
 # /home/hived/datadir/haf_db_store — the path the image's postgresql.conf and
 # tablespace were written for. This script checks that mount holds a cluster,
 # adds the clone setting and hands over to the HAF entrypoint, which starts
 # PostgreSQL and then runs serve.sh.
 #
-# Environment: HAF_FIXTURE_COMMIT, HAF_SHARED_ROOT (as seed.sh; read by serve.sh).
+# Environment: HAF_VERSION, HAF_SHARED_ROOT (as seed.sh; read by serve.sh).
 set -euo pipefail
 
 root="${HAF_SHARED_ROOT:?HAF_SHARED_ROOT must name the mounted ZFS dataset}"
 here="$(cd "$(dirname "$0")" && pwd -P)"
 store=/home/hived/datadir/haf_db_store
 
-# The image carries its own cluster at $store: only the device tells the
-# dataset's copy apart from it.
+# Only the device tells the dataset's copy apart from the image's own
+# directory at $store.
 if [ -L "$store" ] || [ "$(stat -c %d "$store")" != "$(stat -c %d "$root")" ] \
     || ! sudo -n test -f "$store/pgdata/PG_VERSION"; then
     echo "$store is not the seeded cluster bind-mounted from the data root" >&2
