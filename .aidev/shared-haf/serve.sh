@@ -14,11 +14,11 @@
 # 4. reaps run databases every HAF_SHARED_REAP_INTERVAL seconds, then serves
 #    as the image's sleep_infinity.sh does.
 #
-# Environment: HAF_FIXTURE_COMMIT (as start.sh),
+# Environment: HAF_VERSION (as start.sh),
 # HAF_SHARED_RUN_TTL (default '6 hours'), HAF_SHARED_REAP_INTERVAL (default 300).
 set -euo pipefail
 
-commit="${HAF_FIXTURE_COMMIT:?}"
+version="${HAF_VERSION:?}"
 ttl="${HAF_SHARED_RUN_TTL:-6 hours}"
 interval="${HAF_SHARED_REAP_INTERVAL:-300}"
 here="$(cd "$(dirname "$0")" && pwd -P)"
@@ -48,7 +48,7 @@ for app in "${app_roles[@]}"; do
 done
 
 if [ "$(psql_pg -d haf_shared -Atc "select count(*) from haf_shared.template")" != 1 ]; then
-    echo "freezing haf_template from haf_block_log of $commit"
+    echo "freezing haf_template from haf_block_log of $version"
     head_block="$(psql_pg -d haf_block_log -Atc 'select max(num) from hafd.blocks')"
     if [[ ! "$head_block" =~ ^[0-9]+$ ]]; then
         echo "haf_block_log holds no blocks; refusing to serve it" >&2
@@ -62,7 +62,7 @@ EOF
     psql_pg -d postgres -c 'drop database if exists haf_template'
     psql_pg -d postgres -c 'create database haf_template template haf_block_log strategy file_copy'
     psql_pg -d postgres -c 'alter database haf_template is_template true allow_connections false'
-    psql_pg -d haf_shared -v commit="$commit" -v head_block="$head_block" <<'EOF'
+    psql_pg -d haf_shared -v commit="$version" -v head_block="$head_block" <<'EOF'
 insert into haf_shared.template (database_name, haf_commit, head_block) values ('haf_template', :'commit', :'head_block');
 EOF
 fi
