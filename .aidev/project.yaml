@@ -101,9 +101,9 @@ sandbox:
       services: [haf]
       ports: [pg]
       # The first start of a version replays 5M blocks onto the dataset (CI's
-      # prepare_haf_data allows 80 minutes) and freezes its template. The
-      # replay outlasts AIDEV's ceiling for this value, 1800 seconds, so a new
-      # version is seeded by hand before the service starts on it (README).
+      # prepare_haf_data allows 80 minutes; on session24.pl the seed took about
+      # 6) and freezes its template. 1800 seconds is AIDEV's ceiling; a slower
+      # host seeds a version by hand first (README).
       readiness_timeout: 1800
       env:
         # The HAF image of develop pipeline 183480, pinned by digest, and its

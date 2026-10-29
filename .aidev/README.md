@@ -245,10 +245,10 @@ fixed, so a push does not restart a running service: restart it to switch. The
 new version is replayed beside the old one, whose directory can be destroyed once
 nothing uses it.
 
-The replay takes longer than AIDEV lets a start wait (`readiness_timeout` is at
-its 1800-second ceiling), and a stack's first start that times out is taken down, `seed`
-with it. Seed the version by hand on the host first, with the service's own
-script, image and mounts; the service then finds it seeded:
+The replay fits inside `readiness_timeout` (1800 s, AIDEV's ceiling): on session24.pl
+(32 cores, ZFS on NVMe) the whole seed of 17c8606f took about 6 minutes. A slower host
+can seed the version by hand first, with the service's own script, image and mounts;
+the service then finds it seeded:
 
 ```bash
 docker run --rm --entrypoint /aidev/shared-haf/seed.sh \
@@ -257,5 +257,7 @@ docker run --rm --entrypoint /aidev/shared-haf/seed.sh \
     -v <checkout>/.aidev/shared-haf:/aidev/shared-haf:ro \
     -v <checkout>/docker/config_5M.ini:/aidev/config_5M.ini:ro \
     <HAF_IMAGE>
-``` To serve two versions at once,
+```
+
+To serve two versions at once,
 add a second service of the same shape with its own port name.

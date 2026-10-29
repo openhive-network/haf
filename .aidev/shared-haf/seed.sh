@@ -73,7 +73,10 @@ for file in "$block_log" "$block_log.artifacts"; do
     sudo -n chown hived:users "$part/blockchain/$(basename "$file")"
 done
 
-DATADIR="$part" SHUTDOWN_VACUUM_ANALYZE=true /home/hived/docker_entrypoint.sh \
+# The image's environment pins SHM_DIR and WAL_DIR under its default datadir;
+# without them the entrypoint looks for /home/hived/datadir/blockchain and exits.
+DATADIR="$part" SHM_DIR="$part/blockchain" WAL_DIR="$part/blockchain/haf_wal" \
+    SHUTDOWN_VACUUM_ANALYZE=true /home/hived/docker_entrypoint.sh \
     --replay-blockchain --stop-at-block="$stop_at_block" --exit-before-sync
 
 require_clean_shutdown() {
