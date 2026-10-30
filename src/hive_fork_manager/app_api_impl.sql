@@ -588,14 +588,13 @@ BEGIN
         -- no RETURN here because code after the case will continue processing irreversible blocks only
         WHEN 'NEW_BLOCK' THEN
             ASSERT  _context_state.next_event_block_num > _context_state.current_block_num, 'We could not process block without consume event';
+            IF _context_state.next_event_block_num > _block_limit THEN
+                -- a dependency has not committed this block yet: keep the event for later
+                __result.first_block = -1;
+                __result.last_block = -2;
+                RETURN __result;
+            END IF;
             IF _context_state.next_event_block_num = ( _context_state.current_block_num + 1 ) THEN
-                IF _context_state.next_event_block_num > _block_limit THEN
-                    -- a dependency has not committed this block yet: keep the event for later
-                    __result.first_block = -1;
-                    __result.last_block = -2;
-                    RETURN __result;
-                END IF;
-
                 UPDATE hafd.contexts
                 SET current_block_num = _context_state.next_event_block_num
                 WHERE name = _context;
@@ -604,15 +603,13 @@ BEGIN
                 __result.last_block = _context_state.next_event_block_num;
                 RETURN __result ;
             END IF;
-            -- A hole between current_block_num and the NEW_BLOCK event block_num is possible only
-            -- when current_block_num is already irreversible. The context's stored irreversible block
-            -- may lag the chain (it was set at its previous iteration), so compare against the
-            -- irreversible head and bring the stored value up to it before processing the
-            -- irreversible range below.
-            SELECT GREATEST( hs.consistent_block, _context_state.irreversible_block_num ) INTO __irreversible_head_block
-            FROM hafd.hive_state hs;
-            ASSERT _context_state.current_block_num <= __irreversible_head_block, 'current_block_num is reversible!';
-            IF __irreversible_head_block > _context_state.irreversible_block_num THEN
+            -- it is impossible to have hole between __current_block_num and NEW_BLOCK event block_num
+            -- when __current_block_num is not irreversible; the context's stored irreversible block
+            -- may lag the chain (it is set at its previous iteration), so check against the irreversible
+            -- head and bring the stored value up to it for the irreversible range processed below
+            IF _context_state.current_block_num > _context_state.irreversible_block_num THEN
+                SELECT hs.consistent_block INTO __irreversible_head_block FROM hafd.hive_state hs;
+                ASSERT _context_state.current_block_num <= __irreversible_head_block, 'current_block_num is reversible!';
                 PERFORM hive.context_set_irreversible_block( _context, __irreversible_head_block );
             END IF;
         ELSE
