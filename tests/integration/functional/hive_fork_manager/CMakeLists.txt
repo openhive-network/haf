@@ -318,6 +318,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( application_loop/process_BFF_wrong_id.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/process_fork_and_MASSIVE_SYNC_event.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/process_SET_IRREVERSIBLE_event.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/process_NEW_BLOCK_after_squashed_irreversible.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/process_squash_MASSIVE_SYNC_event.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/override_for_greater_batch.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/override_for_lesser_batch.sql )

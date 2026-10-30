@@ -565,6 +565,7 @@ DECLARE
     __fork_id BIGINT;
     __result hive.blocks_range;
     __next_event_block_num INT;
+    __irreversible_head_block INT;
 BEGIN
     -- TODO(@Mickiewicz): get context id to do not repeat searching by name
     CASE _context_state.next_event_type
@@ -603,8 +604,14 @@ BEGIN
                 RETURN __result ;
             END IF;
             -- it is impossible to have hole between __current_block_num and NEW_BLOCK event block_num
-            -- when __current_block_num is not irreversible
-            ASSERT _context_state.current_block_num <= _context_state.irreversible_block_num, 'current_block_num is reversible!';
+            -- when __current_block_num is not irreversible; the context's stored irreversible block
+            -- may lag the chain (it is set at its previous iteration), so check against the irreversible
+            -- head and bring the stored value up to it for the irreversible range processed below
+            IF _context_state.current_block_num > _context_state.irreversible_block_num THEN
+                SELECT hs.consistent_block INTO __irreversible_head_block FROM hafd.hive_state hs;
+                ASSERT _context_state.current_block_num <= __irreversible_head_block, 'current_block_num is reversible!';
+                PERFORM hive.context_set_irreversible_block( _context, __irreversible_head_block );
+            END IF;
         ELSE
         END CASE;
 
