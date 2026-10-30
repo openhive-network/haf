@@ -293,6 +293,8 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST(app_api/app_remove_context_with_index_dependencies.sql)
  ADD_SQL_FUNCTIONAL_TEST(app_api/register_custom_json_type_index.sql)
  ADD_SQL_FUNCTIONAL_TEST(app_api/register_custom_json_type_index_concurrency.sql)
+ADD_SQL_FUNCTIONAL_TEST( app_api/install_lock_healthy_app.sql )
+ADD_SQL_FUNCTIONAL_TEST( app_api/install_lock_broken_app.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( application_loop/validate_stages.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/current_stage.sql )
