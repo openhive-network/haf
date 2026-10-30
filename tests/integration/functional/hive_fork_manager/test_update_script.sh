@@ -118,6 +118,69 @@ check_account_operations_uq1() {
     fi
 }
 
+create_app_depending_on_hive() {
+    exec_sql "DO \$\$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'update_test_app_owner') THEN CREATE ROLE update_test_app_owner IN ROLE hive_applications_owner_group; END IF;
+                IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'update_test_app_reader') THEN CREATE ROLE update_test_app_reader; END IF;
+              END \$\$;
+              CREATE SCHEMA update_test_app AUTHORIZATION update_test_app_owner;
+              SET ROLE update_test_app_owner;
+              CREATE PROCEDURE update_test_app.process_blocks(_context hive.context_name, _blocks hive.blocks_range)
+                  LANGUAGE plpgsql AS \$\$ BEGIN RAISE NOTICE 'processing %', _blocks; END \$\$;
+              CREATE FUNCTION update_test_app.next_range(_last INT) RETURNS hive.blocks_range
+                  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = update_test_app
+                  AS \$\$ SELECT ROW(_last + 1, _last + 1000)::hive.blocks_range \$\$;
+              CREATE FUNCTION update_test_app.current_age(_context TEXT DEFAULT hive.get_app_current_block_age('update_test_app')::TEXT) RETURNS TEXT
+                  LANGUAGE sql AS \$\$ SELECT _context \$\$;
+              CREATE VIEW update_test_app.next_range_view AS SELECT (update_test_app.next_range(10)).first_block AS first_block;
+              CREATE VIEW update_test_app.ranges_view AS SELECT first_block FROM update_test_app.next_range_view;
+              CREATE MATERIALIZED VIEW update_test_app.ranges_matview AS SELECT (update_test_app.next_range(g)).* FROM generate_series(1, 3) AS g;
+              CREATE UNIQUE INDEX ranges_matview_first_block ON update_test_app.ranges_matview (first_block);
+              REVOKE ALL ON PROCEDURE update_test_app.process_blocks(hive.context_name, hive.blocks_range) FROM PUBLIC;
+              GRANT EXECUTE ON PROCEDURE update_test_app.process_blocks(hive.context_name, hive.blocks_range) TO update_test_app_reader;
+              GRANT EXECUTE ON FUNCTION update_test_app.next_range(INT) TO update_test_app_reader WITH GRANT OPTION;
+              GRANT SELECT ON update_test_app.ranges_view TO update_test_app_reader;
+              COMMENT ON PROCEDURE update_test_app.process_blocks(hive.context_name, hive.blocks_range) IS 'processes a range';
+              COMMENT ON FUNCTION update_test_app.next_range(INT) IS 'next range';
+              RESET ROLE;"
+}
+
+# Definition, owner, privileges and comment of every routine, view and index of update_test_app.
+app_objects_snapshot() {
+    exec_sql "SELECT p.oid::regprocedure::text, pg_get_functiondef(p.oid), pg_get_userbyid(p.proowner), p.proacl::text, obj_description(p.oid, 'pg_proc')
+              FROM pg_proc p WHERE p.pronamespace = 'update_test_app'::regnamespace
+              UNION ALL
+              SELECT c.oid::regclass::text, CASE WHEN c.relkind = 'i' THEN pg_get_indexdef(c.oid) ELSE pg_get_viewdef(c.oid) END,
+                     pg_get_userbyid(c.relowner), c.relacl::text, obj_description(c.oid, 'pg_class')
+              FROM pg_class c WHERE c.relnamespace = 'update_test_app'::regnamespace
+              ORDER BY 1"
+}
+
+check_app_objects_unchanged() {
+    actual=$(app_objects_snapshot)
+    if [ "$1" != "$actual" ]; then
+        printf "TEST FAILED: objects of update_test_app changed in the update:\nBefore:\n%s\nAfter:\n%s\n" "$1" "$actual"
+        return 12
+    fi
+    if [ "$(exec_sql "SELECT count(*) FROM pg_class WHERE relnamespace = 'update_test_app'::regnamespace AND relkind IN ('v', 'm', 'i')")" != "4" ] \
+        || [ "$(exec_sql "SELECT count(*) FROM pg_proc WHERE pronamespace = 'update_test_app'::regnamespace")" != "3" ]; then
+        echo "TEST FAILED: update_test_app lost a view, an index or a routine"
+        return 13
+    fi
+}
+
+deployed_version() {
+    exec_sql "SELECT extversion FROM pg_extension WHERE extname = 'hive_fork_manager'"
+}
+
+check_accepts_connections() {
+    if [ "$(psql -w -d postgres -t -A -c "SELECT datallowconn FROM pg_database WHERE datname = '$UPDATE_DB_NAME'")" != "t" ] \
+        || [ "$(exec_sql "SELECT 1")" != "1" ]; then
+        echo "TEST FAILED: $UPDATE_DB_NAME does not accept connections after the update"
+        return 14
+    fi
+}
+
 HAF_DIR=""
 
 while [ $# -gt 0 ]; do
@@ -357,5 +420,60 @@ exec_sql "SELECT hive.save_and_drop_indexes_constraints('hafd', 'account_operati
 update_database
 exec_sql "SELECT hive.restore_indexes('hafd.account_operations');"
 check_account_operations_uq1
+
+printf "\nTEST: Upgrade a database with app routines and views that depend on hive types and functions. They should be restored unchanged.\n"
+prepare_database
+create_app_depending_on_hive
+app_before=$(app_objects_snapshot)
+update_database
+check_table_is_empty hafd.deps_saved_ddl
+check_app_objects_unchanged "$app_before"
+exec_sql "CALL update_test_app.process_blocks('update_test_app', update_test_app.next_range(10))"
+
+printf "\nTEST: Upgrade while another session holds a lock on a hive object. The session should be ended and the database reopened afterwards.\n"
+prepare_database
+create_app_depending_on_hive
+app_before=$(app_objects_snapshot)
+psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -c "BEGIN; LOCK TABLE hive.blocks_view IN ACCESS SHARE MODE; SELECT pg_sleep(600);" &
+lock_holder=$!
+until [ "$(exec_sql "SELECT count(*) FROM pg_locks WHERE relation = 'hive.blocks_view'::regclass AND granted AND pid <> pg_backend_pid()")" = "1" ]; do sleep 0.1; done
+exec_sql "UPDATE pg_extension SET extversion = '1.0' WHERE extname = 'hive_fork_manager';"
+sudo timeout 300 "/usr/share/postgresql/$POSTGRES_VERSION/extension/hive_fork_manager_update_script_generator.sh" --haf-db-name="$UPDATE_DB_NAME" \
+    || { echo "TEST FAILED: the update did not complete while another session held a lock on a hive object"; exit 15; }
+if wait "$lock_holder"; then
+    echo "TEST FAILED: the session holding a lock on a hive object was not ended by the update"
+    exit 16
+fi
+[ "$(deployed_version)" != "1.0" ] || { echo "TEST FAILED: the extension was not updated"; exit 17; }
+check_accepts_connections
+check_app_objects_unchanged "$app_before"
+
+printf "\nTEST: Upgrade a database whose app view uses a hive function the new version lacks. The update should fail and leave the database on the old version, unchanged and accepting connections.\n"
+prepare_database
+create_app_depending_on_hive
+exec_sql "CREATE FUNCTION hive.removed_in_new_version() RETURNS INT LANGUAGE sql AS 'SELECT 1';
+          CREATE VIEW update_test_app.removed_function_view AS SELECT hive.removed_in_new_version() AS one;"
+app_before=$(app_objects_snapshot)
+update_output=$(failswith 1 update_database 2>&1) || { echo "$update_output"; exit 18; }
+echo "$update_output"
+grep -q "update_test_app.removed_function_view: function hive.removed_in_new_version() does not exist" <<< "$update_output" \
+    || { echo "TEST FAILED: the failed restore of update_test_app.removed_function_view was not reported"; exit 19; }
+[ "$(deployed_version)" = "1.0" ] || { echo "TEST FAILED: a failed update left version $(deployed_version) deployed"; exit 20; }
+check_accepts_connections
+check_table_is_empty hafd.deps_saved_ddl
+[ "$(app_objects_snapshot)" = "$app_before" ] || { echo "TEST FAILED: a failed update changed update_test_app"; exit 21; }
+[ "$(exec_sql "SELECT hive.removed_in_new_version()")" = "1" ] || { echo "TEST FAILED: a failed update changed the hive schema"; exit 22; }
+
+printf "\nTEST: Upgrade a database whose app table has a column default calling a hive function. The update should fail naming it, and leave the database unchanged.\n"
+prepare_database
+exec_sql "CREATE TABLE public.default_from_hive(age INTERVAL DEFAULT hive.get_app_current_block_age('x'))"
+update_output=$(failswith 1 update_database 2>&1) || { echo "$update_output"; exit 23; }
+echo "$update_output"
+grep -q "cannot be restored: default value for public.default_from_hive.age" <<< "$update_output" \
+    || { echo "TEST FAILED: the column default depending on hive was not named"; exit 24; }
+[ "$(deployed_version)" = "1.0" ] || { echo "TEST FAILED: a failed update left version $(deployed_version) deployed"; exit 25; }
+check_accepts_connections
+[ -n "$(exec_sql "SELECT pg_get_expr(adbin, adrelid) FROM pg_attrdef WHERE adrelid = 'public.default_from_hive'::regclass")" ] \
+    || { echo "TEST FAILED: a failed update dropped the column default"; exit 26; }
 
 echo "Succeeded"

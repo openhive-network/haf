@@ -34,6 +34,106 @@ psql_do() {
      psql -w "${POSTGRES_ACCESS[@]}" -v ON_ERROR_STOP=on -U "$DB_ADMIN" "$@"
 }
 
+# The update session: one connection to $DB_NAME that runs every statement of the update once it is open.
+# It is opened before the database stops accepting connections (see fence_connections), because then no
+# new session is admitted, a superuser's included.
+UPDATE_SESSION_PID=""
+UPDATE_SESSION_DIR=""
+UPDATE_SESSION_IN=""
+UPDATE_SESSION_OUT=""
+UPDATE_SESSION_END="-- end of hive_fork_manager update statement $$ --"
+CONNECTIONS_FENCED=0
+
+# Runs SQL against $DB_NAME and prints its rows unaligned and without headers: through the update session
+# once it is open, otherwise in a connection of its own.
+db_sql() {
+  if [ -z "$UPDATE_SESSION_PID" ]; then
+    psql_do -d "$DB_NAME" -q -t -A -c "$1"
+    return
+  fi
+  # the extra ';' ends a statement that lacks one, so it runs before the \echo that marks its end
+  printf '%s\n;\n\\echo %s\n' "$1" "$UPDATE_SESSION_END" >&"$UPDATE_SESSION_IN"
+  local line
+  while IFS= read -r line <&"$UPDATE_SESSION_OUT"; do
+    if [ "$line" = "$UPDATE_SESSION_END" ]; then
+      return 0
+    fi
+    printf '%s\n' "$line"
+  done
+  echo "ERROR: the update session ended on an error, the update is rolled back" >&2
+  return 1
+}
+
+open_update_session() {
+  UPDATE_SESSION_DIR=$(mktemp -d)
+  mkfifo "$UPDATE_SESSION_DIR/in" "$UPDATE_SESSION_DIR/out"
+  psql_do -d "$DB_NAME" -q -t -A < "$UPDATE_SESSION_DIR/in" > "$UPDATE_SESSION_DIR/out" &
+  UPDATE_SESSION_PID=$!
+  exec {UPDATE_SESSION_IN}>"$UPDATE_SESSION_DIR/in" {UPDATE_SESSION_OUT}<"$UPDATE_SESSION_DIR/out"
+}
+
+# Closing the session's input ends it; a transaction it has not committed is rolled back.
+close_update_session() {
+  [ -n "$UPDATE_SESSION_PID" ] || return 0
+  exec {UPDATE_SESSION_IN}>&- {UPDATE_SESSION_OUT}<&-
+  wait "$UPDATE_SESSION_PID" || true
+  UPDATE_SESSION_PID=""
+  rm -rf "$UPDATE_SESSION_DIR"
+}
+
+# Stops $DB_NAME from accepting connections and ends every other client session in it, so no client
+# (an app, PostgREST, pgbouncer reconnecting while the update runs) can take locks the update conflicts with.
+fence_connections() {
+  local session_backend_pid
+  session_backend_pid=$(db_sql "SELECT pg_backend_pid()")
+  echo
+  echo "Closing database $DB_NAME to other sessions for the duration of the update..."
+  CONNECTIONS_FENCED=1
+  psql_do -d postgres -q -c "ALTER DATABASE \"$DB_NAME\" ALLOW_CONNECTIONS false"
+  psql_do -d postgres -q -c "
+    DO \$\$
+    DECLARE
+      __deadline TIMESTAMPTZ := clock_timestamp() + INTERVAL '60 seconds';
+      __remaining INT;
+    BEGIN
+      LOOP
+        PERFORM pg_stat_clear_snapshot();
+        SELECT count(pg_terminate_backend(pid)) INTO __remaining
+        FROM pg_stat_activity
+        WHERE datname = '$DB_NAME' AND backend_type = 'client backend' AND pid <> $session_backend_pid;
+        EXIT WHEN __remaining = 0;
+        IF clock_timestamp() > __deadline THEN
+          RAISE EXCEPTION 'Sessions connected to $DB_NAME did not end within 60 seconds';
+        END IF;
+        PERFORM pg_sleep(0.1);
+      END LOOP;
+    END \$\$;"
+}
+
+reopen_connections() {
+  echo "Opening database $DB_NAME to connections..."
+  psql_do -d postgres -q -c "ALTER DATABASE \"$DB_NAME\" ALLOW_CONNECTIONS true"
+}
+
+# A generator killed while the database was closed (see fence_connections) leaves it closed; no update was committed then.
+reopen_connections_left_closed() {
+  local allows_connections
+  allows_connections=$(psql_do -d postgres -t -A -c "SELECT datallowconn FROM pg_database WHERE datname = '$DB_NAME'")
+  if [ "$allows_connections" = "f" ]; then
+    echo "Database $DB_NAME does not accept connections, as an interrupted update leaves it"
+    reopen_connections
+  fi
+}
+
+finish() {
+  local exit_code=$?
+  close_update_session
+  if [ "$CONNECTIONS_FENCED" = 1 ]; then
+    reopen_connections || { echo "ERROR: could not reopen database $DB_NAME to connections"; exit_code=5; }
+  fi
+  exit "$exit_code"
+}
+
 DB_NAME="haf_block_log"
 DB_ADMIN="haf_admin"
 POSTGRES_HOST="/var/run/postgresql"
@@ -81,10 +181,10 @@ POSTGRES_EXTENSION_DIR='@POSTGRES_SHAREDIR@/extension'
 DB_NAME_AFTER_UPDATE="upd_${DB_NAME}" # truncate before postgres will do this
 DB_NAME_AFTER_UPDATE="${DB_NAME_AFTER_UPDATE:0:63}"
 save_table_schema() {
-  psql_do -d "$DB_NAME" -o before_update_columns.txt -q -t -A -c "SELECT table_name, table_columns FROM hive_update.calculate_schema_hash()"
-  psql_do -d "$DB_NAME" -o before_update_constraints.txt -q -t -A -c "SELECT table_name, table_constraints FROM hive_update.calculate_schema_hash()"
-  psql_do -d "$DB_NAME" -o before_update_indexes.txt -q -t -A -c "SELECT table_name, table_indexes FROM hive_update.calculate_schema_hash()"
-  psql_do -d "$DB_NAME" -o before_update_providers.txt -q -t -A -c "SELECT provider, hash FROM hive_update.calculate_state_provider_hashes(enum_range(NULL::hafd.state_providers))"
+  db_sql "SELECT table_name, table_columns FROM hive_update.calculate_schema_hash()" > before_update_columns.txt
+  db_sql "SELECT table_name, table_constraints FROM hive_update.calculate_schema_hash()" > before_update_constraints.txt
+  db_sql "SELECT table_name, table_indexes FROM hive_update.calculate_schema_hash()" > before_update_indexes.txt
+  db_sql "SELECT provider, hash FROM hive_update.calculate_state_provider_hashes(enum_range(NULL::hafd.state_providers))" > before_update_providers.txt
 
   psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_columns.txt -q -t -A -c "SELECT table_name, table_columns FROM hive_update.calculate_schema_hash()"
   psql_do -d "$DB_NAME_AFTER_UPDATE" -o after_update_constraings.txt -q -t -A -c "SELECT table_name, table_constraints FROM hive_update.calculate_schema_hash()"
@@ -98,8 +198,8 @@ verify_table_schema() {
   psql_do -a -d "$DB_NAME_AFTER_UPDATE" -c 'CREATE EXTENSION hive_fork_manager CASCADE;'
   psql_do -d "$DB_NAME_AFTER_UPDATE" -q -t -A -f "$SCRIPTPATH/update.sql"
 
-  STATE_PROVIDERS=$(psql_do -d "$DB_NAME" -t -A -c "SELECT hive_update.get_used_state_providers()")
-  BEFORE_UPDATE=$(psql_do -d "$DB_NAME" -t -A -c "SELECT hive_update.create_database_hash('${STATE_PROVIDERS}'::hafd.state_providers[])")
+  STATE_PROVIDERS=$(db_sql "SELECT hive_update.get_used_state_providers()")
+  BEFORE_UPDATE=$(db_sql "SELECT hive_update.create_database_hash('${STATE_PROVIDERS}'::hafd.state_providers[])")
   AFTER_UPDATE=$(psql_do -d "$DB_NAME_AFTER_UPDATE" -t -A -c "SELECT hive_update.create_database_hash('${STATE_PROVIDERS}'::hafd.state_providers[])")
   if [ "$BEFORE_UPDATE" = "$AFTER_UPDATE" ]; then
     echo "The table schema is correct, verification completed."
@@ -147,68 +247,28 @@ generate_final_update_script() {
   echo "Update file was created correctly"
 }
 
-make_update() {
+# Saving, ALTER EXTENSION, restoring and the C function check run in one transaction: when any of them
+# fails, the database stays on the deployed version with every app object it had.
+update_extension() {
   echo
   echo "Attempting to update your database..."
+  db_sql "BEGIN"
 
-  psql_do -d "$DB_NAME" -c "ALTER EXTENSION hive_fork_manager UPDATE TO '$COMMIT_NEW_ID'"
-  psql_do -d "$DB_NAME" -c "SELECT hive.state_providers_update_runtime();"
-}
-
-save_views() {
   echo
-  echo "Saving views referencing haf types..."
+  echo "Saving views and routines that depend on the hive schema..."
+  db_sql "SELECT hive_update.save_hive_dependents()"
 
-  query="
-    CREATE TEMP VIEW views AS
-    SELECT DISTINCT col.table_schema::TEXT AS schema, col.table_name::TEXT AS name
-      FROM information_schema.columns AS col
-      JOIN pg_class as cls ON cls.relname = col.table_name
-      WHERE
-        cls.relkind = 'v' AND
-        col.table_schema<>'hafd' AND
-        col.table_schema<>'hive' AND
-        ( col.udt_schema = 'hive' OR col.domain_schema = 'hive' )
-    ;
-    SELECT format('Saving %s.%s', v.schema, v.name), hive_update.deps_save_and_drop_dependencies(v.schema, v.name) FROM views AS v"
-  psql_do -d "$DB_NAME" -q -t -A -F '' -c "$query"
-}
+  db_sql "ALTER EXTENSION hive_fork_manager UPDATE TO '$COMMIT_NEW_ID'"
+  db_sql "SELECT hive.state_providers_update_runtime()"
 
-save_materialized_views() {
   echo
-  echo "Saving materialized views referencing haf types..."
+  echo "Restoring saved views and routines..."
+  db_sql "SELECT hive_update.restore_hive_dependents()"
 
-  query="
-    CREATE TEMP VIEW views AS
-    SELECT DISTINCT
-      view_ns.nspname::TEXT AS schema,
-      pg_class.relname::TEXT AS name
-    FROM pg_catalog.pg_attribute
-    JOIN pg_catalog.pg_class ON pg_class.oid = pg_attribute.attrelid
-    JOIN pg_catalog.pg_namespace AS view_ns ON view_ns.oid = pg_class.relnamespace
-    JOIN pg_catalog.pg_type AS col_type ON col_type.oid = pg_attribute.atttypid
-    JOIN pg_catalog.pg_namespace AS col_ns ON col_ns.oid = col_type.typnamespace
-    WHERE
-      pg_class.relkind = 'm' AND
-      NOT pg_attribute.attisdropped AND
-      pg_attribute.attnum > 0 AND
-      view_ns.nspname<>'hive' AND
-      view_ns.nspname<>'hafd' AND
-      col_ns.nspname='hive';
-    SELECT format('Saving %s.%s', v.schema, v.name), hive_update.deps_save_and_drop_dependencies(v.schema, v.name) FROM views AS v"
-  psql_do -d "$DB_NAME" -q -t -A -F '' -c "$query"
-}
+  check_functions_were_updated
 
-restore_views() {
-  echo
-  echo "Restoring saved views..."
-
-  query="
-    SELECT
-      format('Restoring %s.%s', deps_view_schema, deps_view_name),
-      hive_update.deps_restore_dependencies(deps_view_schema, deps_view_name)
-    FROM hafd.deps_saved_ddl"
-  psql_do -d "$DB_NAME" -q -t -A -F '' -c "$query" | uniq # do not print duplicates
+  db_sql "COMMIT"
+  echo "The database was updated to $COMMIT_NEW_ID"
 }
 
 check_tables_dont_reference_haf_types() {
@@ -222,7 +282,7 @@ check_tables_dont_reference_haf_types() {
         cls.relkind = 'r' AND
         col.udt_schema='hive' AND
         col.table_schema<>'hive'"
-  psql_do -d "$DB_NAME" -q -t -A -c "$query" | \
+  db_sql "$query" | \
     awk -F'|' '{print($1"."$2, "contains column", $3, "of type", $4"."$5, "which would be dropped on upgrade")} END{exit NR > 0 ? 4 : 0}'
 }
 
@@ -238,7 +298,7 @@ check_tables_dont_reference_haf_domains() {
         cls.relkind = 'r' AND
         col.domain_schema='hive' AND
         col.table_schema<>'hive'"
-  psql_do -d "$DB_NAME" -q -t -A -c "$query" | \
+  db_sql "$query" | \
     awk -F'|' '{print($1"."$2, "contains column", $3, "of type", $4"."$5, "which would be dropped on upgrade")} END{exit NR > 0 ? 4 : 0}'
 }
 
@@ -253,7 +313,7 @@ migrate_account_operations_uq1() {
 
   local uq1_definition='UNIQUE (account_id, account_op_seq_no) INCLUDE (op_type_id)'
   local uq1_state
-  uq1_state=$(psql_do -d "$DB_NAME" -t -A -c "
+  uq1_state=$(db_sql "
     SELECT CASE
              WHEN c.oid IS NULL THEN 'absent'
              WHEN pg_get_constraintdef(c.oid) = '${uq1_definition}' THEN 'current'
@@ -267,7 +327,7 @@ migrate_account_operations_uq1() {
     # An interrupted earlier run leaves hive_account_operations_uq1_new behind: invalid when the
     # build itself was interrupted (drop and rebuild it), valid when the swap below failed (reuse it).
     local uq1_new_state
-    uq1_new_state=$(psql_do -d "$DB_NAME" -t -A -c "
+    uq1_new_state=$(db_sql "
       SELECT COALESCE(
         (SELECT CASE WHEN i.indisvalid THEN 'valid' ELSE 'invalid' END
          FROM pg_index i
@@ -276,17 +336,17 @@ migrate_account_operations_uq1() {
          WHERE n.nspname = 'hafd' AND c.relname = 'hive_account_operations_uq1_new'),
         'absent')")
     if [ "$uq1_new_state" = "invalid" ]; then
-      psql_do -d "$DB_NAME" -c "DROP INDEX CONCURRENTLY hafd.hive_account_operations_uq1_new"
+      db_sql "DROP INDEX CONCURRENTLY hafd.hive_account_operations_uq1_new"
     fi
     if [ "$uq1_new_state" = "valid" ]; then
       echo "Reusing the valid hafd.hive_account_operations_uq1_new left by an earlier run"
     else
-      psql_do -d "$DB_NAME" -c "CREATE UNIQUE INDEX CONCURRENTLY hive_account_operations_uq1_new ON hafd.account_operations (account_id, account_op_seq_no) INCLUDE (op_type_id)"
+      db_sql "CREATE UNIQUE INDEX CONCURRENTLY hive_account_operations_uq1_new ON hafd.account_operations (account_id, account_op_seq_no) INCLUDE (op_type_id)"
     fi
     # This runs before ALTER EXTENSION UPDATE, so the ALTER TABLE event trigger still calls C
     # functions of the deployed version's libhfm, which the new image does not ship. The trigger
     # is disabled for the swap; the DISABLE rolls back with the swap if the block fails.
-    psql_do -d "$DB_NAME" -c "
+    db_sql "
     DO \$\$
     DECLARE
       __clustered BOOLEAN;
@@ -303,7 +363,7 @@ migrate_account_operations_uq1() {
     "
   fi
 
-  psql_do -d "$DB_NAME" -q -c "
+  db_sql "
     UPDATE hafd.indexes_constraints
     SET command = 'ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_uq1 ${uq1_definition}'
     WHERE table_name = 'hafd.account_operations' AND index_constraint_name = 'hive_account_operations_uq1'"
@@ -320,17 +380,29 @@ check_functions_were_updated() {
     JOIN pg_catalog.pg_namespace AS n ON p.pronamespace=n.oid
     JOIN pg_catalog.pg_language AS l ON p.prolang=l.oid
     WHERE (n.nspname='hive' OR n.nspname='hafd' ) AND l.lanname='c' AND p.probin NOT LIKE '%-$COMMIT_NEW_ID.so'"
-  psql_do -d "$DB_NAME" -q -t -A -c "$query" | \
+  db_sql "$query" | \
     awk -v "HASH=$COMMIT_NEW_ID" -F'|' '{print("Function", $1, "references", $2, "in", $3 ", but", HASH, "was expected")} END{exit NR > 0 ? 3 : 0}'
   echo "End of Checking that all C functions were properly updated..."
 }
 
+trap finish EXIT
+trap 'echo "ERROR: lost the update session"; exit 1' PIPE
+
+reopen_connections_left_closed
+
 # inject newer version of hash computation
 psql_do -d "$DB_NAME" -q -t -A -f "$SCRIPTPATH/update.sql"
 
+get_deployed_version
+
+if [ "$COMMIT_PREV_ID" != "$COMMIT_NEW_ID" ]; then
+  open_update_session
+  fence_connections
+fi
+
 # Schema migrations: add columns that exist in new extension but not in old DB.
 # These must run BEFORE verify_table_schema so the schema hashes match.
-psql_do -d "$DB_NAME" -q -t -A -c "
+db_sql "
 DO \$\$
 BEGIN
     IF NOT EXISTS (
@@ -385,8 +457,6 @@ END \$\$;
 
 verify_table_schema
 
-get_deployed_version
-
 check_commit_difference
 
 generate_final_update_script
@@ -397,11 +467,4 @@ check_tables_dont_reference_haf_domains
 
 migrate_account_operations_uq1
 
-save_views
-save_materialized_views
-
-make_update
-
-restore_views
-
-check_functions_were_updated
+update_extension
