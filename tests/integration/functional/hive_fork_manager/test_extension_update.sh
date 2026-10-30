@@ -77,6 +77,25 @@ test_extension_update() {
     echo "Add function testfun to schema hive"
     psql -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "CREATE FUNCTION hive.testfun() RETURNS VOID AS \$\$ BEGIN END; \$\$ LANGUAGE plpgsql;"
 
+    echo "Add app routines that depend on hive types"
+    psql -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "
+    CREATE ROLE extension_update_app_owner IN ROLE hive_applications_owner_group;
+    CREATE ROLE extension_update_app_reader;
+    CREATE SCHEMA extension_update_app AUTHORIZATION extension_update_app_owner;
+    SET ROLE extension_update_app_owner;
+    CREATE PROCEDURE extension_update_app.process_blocks(_blocks hive.blocks_range)
+        LANGUAGE plpgsql AS \$\$ BEGIN RAISE NOTICE 'processing %', _blocks; END \$\$;
+    CREATE FUNCTION extension_update_app.next_range(_last INT) RETURNS hive.blocks_range
+        LANGUAGE sql STABLE AS \$\$ SELECT ROW(_last + 1, _last + 1000)::hive.blocks_range \$\$;
+    REVOKE ALL ON PROCEDURE extension_update_app.process_blocks(hive.blocks_range) FROM PUBLIC;
+    GRANT EXECUTE ON PROCEDURE extension_update_app.process_blocks(hive.blocks_range) TO extension_update_app_reader;
+    GRANT EXECUTE ON FUNCTION extension_update_app.next_range(INT) TO extension_update_app_reader;
+    RESET ROLE;"
+    app_routines_query="
+    SELECT p.oid::regprocedure::text, pg_get_functiondef(p.oid), pg_get_userbyid(p.proowner), p.proacl::text
+    FROM pg_proc p WHERE p.pronamespace = 'extension_update_app'::regnamespace ORDER BY 1"
+    app_routines_before=$(psql -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -t -A -c "$app_routines_query")
+
 
     # old libhfm has to be removed so in case of an corrupted setup of haf the old libhfm won't be used
     sudo rm -rf /usr/lib/postgresql/${POSTGRES_VERSION}/lib/libhfm-*
@@ -107,6 +126,13 @@ test_extension_update() {
         ), 'Function hive.testfun() exists when it should not.';
     END
     \$\$ LANGUAGE plpgsql;"
+
+    # check that the app routines depending on hive types survived the update unchanged
+    app_routines_after=$(psql -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -t -A -c "$app_routines_query")
+    if [ -z "$app_routines_before" ] || [ "$app_routines_before" != "$app_routines_after" ]; then
+        printf "App routines changed in the update.\nBefore:\n%s\nAfter:\n%s\n" "$app_routines_before" "$app_routines_after"
+        exit 1
+    fi
 
     # check if function test added in new hfm version exists
     psql -d "$DB_NAME" -v ON_ERROR_STOP=on -U "$DB_ADMIN" -c "

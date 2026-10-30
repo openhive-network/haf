@@ -660,14 +660,25 @@ To use this script you have to rebuild the project and then run `hive_fork_manag
 4. Generate update extension sql script
 5. Checks for any tables using types or domains from the `hive` schema:
         - If such tables exist, the update is aborted because their columns would be removed when the `hive` schema is dropped.
-6. All views are saved to the `deps_saved_ddl` table. This prevents the loss of views containing elements from the `hive` schema, which would otherwise be cascade-deleted when the schema is dropped.
-7. The update process executes the command: `ALTER EXTENSION hive_fork_manager UPDATE`.
-    - The update script performs the following steps:
-        - The `hive` schema is dropped along with all its content. The `hafd` schema remains unmodified.
-        - A new version of the `hive` schema is created, containing only runtime code and excluding tables.
-8. Saved views are restored.
-9. Functions connected to the 'shared lib' are verified to ensure they use the correct version of the shared library.
+6. The remaining steps run in one transaction, so when any of them fails the database stays on the deployed version with all its objects:
+    - Every view, materialized view (with its indexes), function and procedure outside the `hive` and `hafd` schemas that depends,
+      directly or through other objects, on anything in the `hive` schema is saved to the `deps_saved_ddl` table: its definition,
+      owner, privileges and comments. These objects would otherwise be cascade-deleted when the schema is dropped.
+      Any other object that depends on the `hive` schema (for example a column default or an index calling a `hive` function)
+      cannot be saved: the update fails and names it.
+    - The update process executes the command: `ALTER EXTENSION hive_fork_manager UPDATE`.
+        - The update script performs the following steps:
+            - The `hive` schema is dropped along with all its content. The `hafd` schema remains unmodified.
+            - A new version of the `hive` schema is created, containing only runtime code and excluding tables.
+    - Saved objects are restored. An object that cannot be restored (for example a view calling a `hive` function the new version
+      no longer has) fails the update, and the error names it.
+    - Functions connected to the 'shared lib' are verified to ensure they use the correct version of the shared library.
 
+When the deployed version differs from the new one, the database does not accept connections while the update runs:
+the script opens its own session first, then disallows connections to the database (`ALLOW_CONNECTIONS false`) and ends
+every other client session, so a client (an app, PostgREST, pgbouncer) cannot take locks the update conflicts with.
+Connections are allowed again when the script ends, whether the update succeeded or failed. If the script is killed before
+that, its next run allows them again.
 
 **Warning**: The update check ensures that the database schema structure allows for the update, but it **does not guarantee compatibility of the shared library (written in C++)** with the current table content.
 While most updates are compatible, changes in the shared library may introduce functionality that conflicts with the existing data.

@@ -97,11 +97,30 @@ begin
             where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name
               and d.description is not null;
 
+            -- statements are restored in reverse order: the owner, then the privileges reset, then the grants in their original order
             insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
-            select p_view_schema, p_view_name, 'GRANT ' || privilege_type || ' ON '
-                                                   || table_schema || '.' || table_name || ' TO ' || grantee
-            from information_schema.role_table_grants
-            where table_schema = v_curr.obj_schema and table_name = v_curr.obj_name;
+            select p_view_schema, p_view_name, format('GRANT %s ON %I.%I TO %s%s', acl.privilege_type, n.nspname, c.relname,
+                                                   case when acl.grantee = 0 then 'PUBLIC' else quote_ident(pg_get_userbyid(acl.grantee)) end,
+                                                   case when acl.is_grantable then ' WITH GRANT OPTION' else '' end)
+            from pg_class c
+                     join pg_namespace n on n.oid = c.relnamespace
+                     cross join lateral aclexplode(c.relacl) with ordinality as acl
+            where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name
+            order by acl.ordinality desc;
+
+            insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+            select p_view_schema, p_view_name, format('REVOKE ALL ON %I.%I FROM PUBLIC, %I', n.nspname, c.relname, pg_get_userbyid(c.relowner))
+            from pg_class c
+                     join pg_namespace n on n.oid = c.relnamespace
+            where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name and c.relacl is not null;
+
+            insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+            select p_view_schema, p_view_name, format('ALTER %s %I.%I OWNER TO %I',
+                                                   case when c.relkind = 'm' then 'MATERIALIZED VIEW' else 'VIEW' end,
+                                                   n.nspname, c.relname, pg_get_userbyid(c.relowner))
+            from pg_class c
+                     join pg_namespace n on n.oid = c.relnamespace
+            where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name;
 
             if v_curr.obj_type = 'v' then
 
@@ -117,6 +136,13 @@ begin
                 where table_schema = v_curr.obj_schema and table_name = v_curr.obj_name;
 
             elsif v_curr.obj_type = 'm' then
+                insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
+                select p_view_schema, p_view_name, pg_get_indexdef(i.indexrelid)
+                from pg_index i
+                         join pg_class c on c.oid = i.indrelid
+                         join pg_namespace n on n.oid = c.relnamespace
+                where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name;
+
                 insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
                 select p_view_schema, p_view_name, 'CREATE MATERIALIZED VIEW '
                                                        || v_curr.obj_schema || '.' || v_curr.obj_name || ' AS ' || definition
@@ -167,6 +193,217 @@ begin
     delete from hafd.deps_saved_ddl
     where deps_view_schema = p_view_schema and deps_view_name = p_view_name;
 end;
+$BODY$;
+
+/**
+Objects outside the extension that `DROP SCHEMA hive CASCADE`, which starts every update script,
+would drop with the schema: the closure of pg_depend over normal, automatic and internal dependencies,
+starting from the hive schema. An internal part (a view's rewrite rule, a row type) stands for the
+object that owns it, and a column of a view for the whole view.
+*/
+CREATE OR REPLACE FUNCTION hive_update.find_hive_dependents()
+    RETURNS TABLE( classid OID, objid OID, objsubid INTEGER, object_type TEXT, object_schema TEXT, object_identity TEXT )
+    LANGUAGE sql
+    STABLE
+AS $BODY$
+WITH RECURSIVE dropped( classid, objid, objsubid ) AS (
+    SELECT 'pg_namespace'::regclass::oid, 'hive'::regnamespace::oid, 0
+    UNION
+    SELECT dependent.classid, dependent.objid, dependent.objsubid
+    FROM dropped
+    CROSS JOIN LATERAL (
+        SELECT d.classid, d.objid, d.objsubid
+        FROM pg_depend d
+        WHERE d.refclassid = dropped.classid AND d.refobjid = dropped.objid
+          AND ( dropped.objsubid = 0 OR d.refobjsubid = dropped.objsubid )
+          AND d.deptype IN ( 'n', 'a', 'i' )
+        UNION ALL
+        SELECT d.refclassid, d.refobjid, 0
+        FROM pg_depend d
+        WHERE d.classid = dropped.classid AND d.objid = dropped.objid AND d.deptype = 'i'
+    ) AS dependent
+),
+normalized AS (
+    SELECT DISTINCT
+        dropped.classid,
+        dropped.objid,
+        CASE WHEN dropped.classid = 'pg_class'::regclass AND c.relkind IN ( 'v', 'm' ) THEN 0 ELSE dropped.objsubid END AS objsubid
+    FROM dropped
+    LEFT JOIN pg_class c ON dropped.classid = 'pg_class'::regclass AND c.oid = dropped.objid
+)
+SELECT normalized.classid, normalized.objid, normalized.objsubid, o.type, s.object_schema, o.identity
+FROM normalized
+CROSS JOIN LATERAL pg_identify_object( normalized.classid, normalized.objid, normalized.objsubid ) AS o
+CROSS JOIN LATERAL pg_identify_object_as_address( normalized.classid, normalized.objid, normalized.objsubid ) AS a
+-- an object without a schema of its own (a column default, a trigger) is addressed by its table's schema first
+CROSS JOIN LATERAL ( SELECT COALESCE( o.schema, a.object_names[ 1 ] ) AS object_schema ) AS s
+WHERE s.object_schema NOT IN ( 'hive', 'hafd', 'hive_update', 'pg_toast' )
+  AND NOT EXISTS (
+      SELECT 1 FROM pg_depend part
+      WHERE part.classid = normalized.classid AND part.objid = normalized.objid AND part.deptype = 'i'
+  )
+  AND NOT EXISTS (
+      SELECT 1 FROM pg_depend member
+      JOIN pg_extension e ON e.oid = member.refobjid AND e.extname = 'hive_fork_manager'
+      WHERE member.classid = normalized.classid AND member.objid = normalized.objid
+        AND member.refclassid = 'pg_extension'::regclass AND member.deptype = 'e'
+  )
+$BODY$;
+
+/**
+Saves a function or procedure in `deps_saved_ddl`, under its schema and signature, as one statement
+list: its definition, owner, privileges and comment. Use function `deps_restore_dependencies` to restore it.
+*/
+CREATE OR REPLACE FUNCTION hive_update.deps_save_routine( _routine OID )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS $BODY$
+DECLARE
+    __kind TEXT;
+    __signature TEXT := _routine::regprocedure::text;
+BEGIN
+    SELECT CASE WHEN p.prokind = 'p' THEN 'PROCEDURE' ELSE 'FUNCTION' END INTO __kind
+    FROM pg_proc p
+    WHERE p.oid = _routine;
+
+    INSERT INTO hafd.deps_saved_ddl( deps_view_schema, deps_view_name, deps_ddl_to_run )
+    SELECT
+          n.nspname
+        , left( format( '%s(%s)', p.proname, pg_get_function_identity_arguments( p.oid ) ), 255 )
+        , concat_ws( E';\n'
+            , pg_get_functiondef( p.oid )
+            , format( 'ALTER %s %s OWNER TO %I', __kind, __signature, pg_get_userbyid( p.proowner ) )
+            , CASE WHEN p.proacl IS NOT NULL THEN
+                format( 'REVOKE ALL ON %s %s FROM PUBLIC, %I', __kind, __signature, pg_get_userbyid( p.proowner ) )
+              END
+            , (
+                SELECT string_agg(
+                      format( 'GRANT %s ON %s %s TO %s%s'
+                        , acl.privilege_type
+                        , __kind
+                        , __signature
+                        , CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE quote_ident( pg_get_userbyid( acl.grantee ) ) END
+                        , CASE WHEN acl.is_grantable THEN ' WITH GRANT OPTION' ELSE '' END )
+                    , E';\n' ORDER BY acl.ordinality )
+                FROM aclexplode( p.proacl ) WITH ORDINALITY AS acl
+              )
+            , CASE WHEN d.description IS NOT NULL THEN
+                format( 'COMMENT ON %s %s IS %L', __kind, __signature, d.description )
+              END
+          )
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    LEFT JOIN pg_description d ON d.objoid = p.oid AND d.classoid = 'pg_proc'::regclass AND d.objsubid = 0
+    WHERE p.oid = _routine;
+END;
+$BODY$;
+
+/**
+Saves in `deps_saved_ddl` every view, materialized view, function and procedure that the update would
+drop with the hive schema (see `find_hive_dependents`). They are not dropped here: the update drops them,
+and `restore_hive_dependents` recreates them afterwards. Raises an exception naming every other object
+the update would drop, because it cannot be restored. Returns a line for each saved object.
+*/
+CREATE OR REPLACE FUNCTION hive_update.save_hive_dependents()
+    RETURNS SETOF TEXT
+    LANGUAGE plpgsql
+    VOLATILE
+AS $BODY$
+DECLARE
+    __unsupported TEXT;
+    __object RECORD;
+BEGIN
+    CREATE TEMP TABLE hive_dependents ON COMMIT DROP AS
+    SELECT d.*, c.relkind, p.prokind
+    FROM hive_update.find_hive_dependents() d
+    LEFT JOIN pg_class c ON d.classid = 'pg_class'::regclass AND c.oid = d.objid
+    LEFT JOIN pg_proc p ON d.classid = 'pg_proc'::regclass AND p.oid = d.objid;
+
+    SELECT string_agg( format( '%s %s', d.object_type, d.object_identity ), ', ' ORDER BY d.object_identity ) INTO __unsupported
+    FROM hive_dependents d
+    WHERE NOT COALESCE( d.relkind IN ( 'v', 'm' ) AND d.objsubid = 0, FALSE )
+      AND NOT COALESCE( d.prokind IN ( 'f', 'p', 'w' ), FALSE )
+      -- an index of a materialized view is saved with the view
+      AND NOT EXISTS (
+          SELECT 1 FROM pg_index i JOIN pg_class m ON m.oid = i.indrelid AND m.relkind = 'm'
+          WHERE d.relkind = 'i' AND i.indexrelid = d.objid
+      );
+
+    IF __unsupported IS NOT NULL THEN
+        RAISE EXCEPTION 'The update would drop objects that depend on the hive schema and cannot be restored: %', __unsupported
+            USING HINT = 'Drop them before the update and recreate them after it.';
+    END IF;
+
+    -- deps_save_and_drop_dependencies also saves the views built on a view, so start from views built on no other saved view
+    FOR __object IN
+        SELECT v.object_schema, c.relname
+        FROM hive_dependents v
+        JOIN pg_class c ON c.oid = v.objid
+        WHERE v.relkind IN ( 'v', 'm' )
+          AND NOT EXISTS (
+              SELECT 1
+              FROM pg_rewrite r
+              JOIN pg_depend dep ON dep.classid = 'pg_rewrite'::regclass AND dep.objid = r.oid AND dep.deptype = 'n'
+              JOIN hive_dependents base ON base.classid = dep.refclassid AND base.objid = dep.refobjid AND base.relkind IN ( 'v', 'm' )
+              WHERE r.ev_class = v.objid AND base.objid <> v.objid
+          )
+        ORDER BY v.object_identity
+    LOOP
+        PERFORM hive_update.deps_save_and_drop_dependencies( __object.object_schema::VARCHAR, __object.relname::VARCHAR, FALSE );
+        RETURN NEXT format( 'Saving %s.%s', __object.object_schema, __object.relname );
+    END LOOP;
+
+    FOR __object IN
+        SELECT r.objid, r.object_identity FROM hive_dependents r WHERE r.prokind IN ( 'f', 'p', 'w' ) ORDER BY r.object_identity
+    LOOP
+        PERFORM hive_update.deps_save_routine( __object.objid );
+        RETURN NEXT format( 'Saving %s', __object.object_identity );
+    END LOOP;
+END;
+$BODY$;
+
+/**
+Restores everything saved in `deps_saved_ddl`. An object whose restore fails is retried once the others
+are restored, as it may need one of them (a function returning a view's row type, a view calling a function).
+Raises an exception naming each object that still cannot be restored, so the update fails instead of losing it.
+Returns a line for each restored object.
+*/
+CREATE OR REPLACE FUNCTION hive_update.restore_hive_dependents()
+    RETURNS SETOF TEXT
+    LANGUAGE plpgsql
+    VOLATILE
+AS $BODY$
+DECLARE
+    __saved RECORD;
+    __restored_any BOOLEAN;
+    __failures TEXT;
+BEGIN
+    LOOP
+        __restored_any := FALSE;
+        __failures := NULL;
+        FOR __saved IN
+            SELECT deps_view_schema AS object_schema, deps_view_name AS object_name
+            FROM hafd.deps_saved_ddl
+            GROUP BY deps_view_schema, deps_view_name
+            ORDER BY max( deps_id ) DESC
+        LOOP
+            BEGIN
+                PERFORM hive_update.deps_restore_dependencies( __saved.object_schema, __saved.object_name );
+                __restored_any := TRUE;
+                RETURN NEXT format( 'Restoring %s.%s', __saved.object_schema, __saved.object_name );
+            -- any error: the next pass retries the object, and the exception below reports what still fails
+            EXCEPTION WHEN OTHERS THEN
+                __failures := concat_ws( E'\n', __failures, format( '%s.%s: %s', __saved.object_schema, __saved.object_name, SQLERRM ) );
+            END;
+        END LOOP;
+        EXIT WHEN __failures IS NULL OR NOT __restored_any;
+    END LOOP;
+
+    IF __failures IS NOT NULL THEN
+        RAISE EXCEPTION E'Could not restore objects that depend on the hive schema:\n%', __failures;
+    END IF;
+END;
 $BODY$;
 
 CREATE TYPE hive_update.verify_table_schema AS(
