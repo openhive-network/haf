@@ -257,6 +257,7 @@ DECLARE
     __hive_sync_state hafd.sync_state;
     __had_prior_xact BOOLEAN;
     __block_limit INTEGER;
+    __skip_attach BOOLEAN;
 BEGIN
     -- Whether the caller invoked us with a transaction already carrying an
     -- assigned XID. This is the same condition that has always gated the
@@ -362,8 +363,22 @@ BEGIN
         -- replays: there are no reversible blocks yet, and an iteration that finds no block to
         -- process would leave them attached, with shadow-table triggers and union views, for as
         -- long as they wait for hived. hive.app_next_block takes the non-forking path for them.
+        -- A forking context that the previous analysis left in a massive stage, and that is still
+        -- behind the irreversible head, is not attached here either: hive.app_next_block gives it
+        -- only irreversible blocks while detached, and hive.update_attachment attaches it after the
+        -- analysis if that selects live. Attaching it here, only for hive.update_attachment to
+        -- detach it again, recreated its views and shadow-table triggers at every batch boundary.
+        -- The attach is still needed before hive.app_next_block for a context in the live stage
+        -- (reversible blocks and fork events are delivered only to attached contexts), one that has
+        -- caught up with the irreversible head (its next block is reversible), one never analyzed
+        -- (a context created detached has events_id 0, so hive.squash_events does not advance its
+        -- irreversible block) and a non-forking one.
+        __skip_attach := hive.app_are_forking( _contexts )
+            AND COALESCE( (__lead_context_state).current_stage != hafd.live_stage()
+                          AND (__lead_context_state).current_stage != hafd.wait_for_haf_stage(), FALSE )
+            AND hive.app_get_current_block_num( __lead_context_name ) < COALESCE( hive.get_irreversible_head_block(), 0 );
         IF NOT hive.app_context_are_attached( _contexts ) AND ( __hive_sync_state = 'LIVE' OR NOT hive.is_pruning_enabled() )
-           AND hive.is_instance_ready()
+           AND hive.is_instance_ready() AND NOT __skip_attach
         THEN
             PERFORM hive.app_context_attach( _contexts );
         END IF;
