@@ -119,6 +119,44 @@ check_hive_event_triggers_use_new_libhfm() {
     exec_sql "CREATE TABLE public.altered_after_update(id INT); ALTER TABLE public.altered_after_update ADD COLUMN v INT;"
 }
 
+# The hafd schema of the last release before hafd.custom_json_type_index_requests: without the tables,
+# columns and storage options added since, which the update has to add.
+make_hafd_schema_of_last_release() {
+    exec_sql "ALTER EXTENSION hive_fork_manager DROP TABLE hafd.custom_json_type_index_requests;
+              DROP TABLE hafd.custom_json_type_index_requests;
+              ALTER TABLE hafd.contexts DROP COLUMN early_block_processing;
+              ALTER TABLE hafd.indexes_constraints DROP COLUMN massive_sync_class;
+              ALTER TABLE hafd.vacuum_requests DROP CONSTRAINT pk_hive_vacuum_requests;
+              ALTER TABLE hafd.vacuum_requests DROP COLUMN kind, DROP COLUMN skip_count, DROP COLUMN first_skip_time;
+              ALTER TABLE hafd.vacuum_requests ADD CONSTRAINT pk_hive_vacuum_requests UNIQUE( schema_name, table_name );
+              ALTER TABLE hafd.contexts RESET ( vacuum_truncate );
+              ALTER TABLE hafd.hive_state RESET ( vacuum_truncate );
+              ALTER TABLE hafd.operations RESET ( autovacuum_vacuum_insert_scale_factor );
+              ALTER TABLE hafd.transactions RESET ( autovacuum_vacuum_insert_scale_factor );
+              ALTER TABLE hafd.blocks RESET ( autovacuum_vacuum_insert_scale_factor );"
+}
+
+# The schema hash the update verifies, and what it leaves out: owner, privileges, storage options,
+# extension membership and pg_dump registration of every hafd table, and the full definition of the
+# table the update creates.
+hafd_schema_snapshot() {
+    psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -f "/usr/share/postgresql/$POSTGRES_VERSION/extension/update.sql" > /dev/null
+    exec_sql "SELECT hive_update.create_database_hash()"
+    exec_sql "SELECT c.relname, pg_get_userbyid(c.relowner), c.relacl::text, c.reloptions::text,
+                     EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.deptype = 'e'),
+                     c.oid = ANY (SELECT unnest(extconfig) FROM pg_extension WHERE extname = 'hive_fork_manager')
+              FROM pg_class c WHERE c.relnamespace = 'hafd'::regnamespace AND c.relkind = 'r' ORDER BY 1"
+    exec_sql "\d hafd.custom_json_type_index_requests"
+}
+
+check_hafd_schema_equals() {
+    actual=$(hafd_schema_snapshot)
+    if [ "$1" != "$actual" ]; then
+        printf "TEST FAILED: the hafd schema differs from a fresh install's after the update:\nExpected:\n%s\nActual:\n%s\n" "$1" "$actual"
+        return 32
+    fi
+}
+
 check_hive_update_helpers_present() {
     if [ "$(exec_sql "SELECT count(*) FROM pg_proc WHERE oid IN ('hive_update.save_hive_dependents()'::regprocedure, 'hive_update.restore_hive_dependents()'::regprocedure)")" != "2" ]; then
         echo "TEST FAILED: a failed update left the hive_update helpers dropped"
@@ -442,6 +480,34 @@ update_database
     || { echo "TEST FAILED: the update did not add the missing hafd columns"; exit 30; }
 [ "$(deployed_version)" != "1.0" ] || { echo "TEST FAILED: the extension was not updated"; exit 31; }
 check_hive_event_triggers_use_new_libhfm
+
+printf "\nTEST: Upgrade a database with the hafd schema of the last release before hafd.custom_json_type_index_requests. The update should bring it to a fresh install's schema.\n"
+prepare_database
+fresh_schema=$(hafd_schema_snapshot)
+make_hafd_schema_of_last_release
+unship_deployed_libhfm
+update_database
+[ "$(deployed_version)" != "1.0" ] || { echo "TEST FAILED: the extension was not updated"; exit 33; }
+check_table_is_empty hafd.custom_json_type_index_requests
+check_hafd_schema_equals "$fresh_schema"
+exec_sql "CREATE SCHEMA cj_update_app;
+          SELECT hive.app_create_context('cj_update_app', 'cj_update_app');
+          SELECT hive.register_custom_json_type_index('cj_update_app', ARRAY['follow']);"
+[ "$(exec_sql "SELECT custom_json_ids::text FROM hafd.custom_json_type_index_requests")" = "{follow}" ] \
+    || { echo "TEST FAILED: hive.register_custom_json_type_index did not record its request on the updated database"; exit 34; }
+
+printf "\nTEST: Upgrade a database that already has hafd.custom_json_type_index_requests. The table and its requests should be left as they are.\n"
+prepare_database
+exec_sql "CREATE SCHEMA cj_update_app;
+          SELECT hive.app_create_context('cj_update_app', 'cj_update_app');
+          SELECT hive.register_custom_json_type_index('cj_update_app', ARRAY['follow']);"
+requests_oid=$(exec_sql "SELECT 'hafd.custom_json_type_index_requests'::regclass::oid")
+requests_before=$(exec_sql "TABLE hafd.custom_json_type_index_requests")
+update_database
+[ "$(exec_sql "SELECT 'hafd.custom_json_type_index_requests'::regclass::oid")" = "$requests_oid" ] \
+    || { echo "TEST FAILED: the update recreated hafd.custom_json_type_index_requests"; exit 35; }
+[ "$(exec_sql "TABLE hafd.custom_json_type_index_requests")" = "$requests_before" ] \
+    || { echo "TEST FAILED: the update changed the requests in hafd.custom_json_type_index_requests"; exit 36; }
 
 printf "\nTEST: Upgrade a database whose hive_account_operations_uq1 is dropped for a massive sync. Its restore command should be updated.\n"
 prepare_database

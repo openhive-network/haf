@@ -418,6 +418,9 @@ fi
 # These must run BEFORE verify_table_schema so the schema hashes match.
 run_hafd_ddl "
 DO \$\$
+DECLARE
+    __table TEXT;
+    __option TEXT;
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
@@ -462,6 +465,38 @@ BEGIN
     ) THEN
         ALTER TABLE hafd.contexts ADD COLUMN early_block_processing BOOL NOT NULL DEFAULT FALSE;
     END IF;
+
+    -- Created here, outside the extension script, so it is added to the extension explicitly; the update
+    -- script (custom_json_type_schema_update.sql) then registers it with pg_extension_config_dump, which
+    -- only an extension script may call.
+    IF to_regclass('hafd.custom_json_type_index_requests') IS NULL THEN
+        CREATE TABLE hafd.custom_json_type_index_requests (
+            context_id integer NOT NULL,
+            custom_json_ids text[] NOT NULL,
+            index_name text,
+            CONSTRAINT pk_hive_custom_json_type_index_requests PRIMARY KEY ( context_id ),
+            CONSTRAINT fk_hive_custom_json_type_index_requests_context FOREIGN KEY ( context_id ) REFERENCES hafd.contexts( id ) ON DELETE CASCADE
+        );
+        ALTER EXTENSION hive_fork_manager ADD TABLE hafd.custom_json_type_index_requests;
+    END IF;
+
+    -- Storage options the schema sources set; an option the table already has, maybe tuned by its
+    -- operator, is kept.
+    FOR __table, __option IN VALUES
+        ('hafd.contexts', 'vacuum_truncate = false'),
+        ('hafd.hive_state', 'vacuum_truncate = false'),
+        ('hafd.account_operations', 'autovacuum_vacuum_insert_scale_factor = 0.005'),
+        ('hafd.operations', 'autovacuum_vacuum_insert_scale_factor = 0.005'),
+        ('hafd.transactions', 'autovacuum_vacuum_insert_scale_factor = 0.005'),
+        ('hafd.blocks', 'autovacuum_vacuum_insert_scale_factor = 0.005')
+    LOOP
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_class c, unnest(c.reloptions) AS o
+            WHERE c.oid = __table::regclass AND split_part(o, '=', 1) = split_part(__option, ' ', 1)
+        ) THEN
+            EXECUTE format('ALTER TABLE %s SET ( %s )', __table, __option);
+        END IF;
+    END LOOP;
 
     -- Note: there is intentionally no migration for the rc_cost column of hafd.transactions
     -- and hafd.transactions_reversible - the values cannot be backfilled without a replay,

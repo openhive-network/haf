@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS hafd.custom_json_types (
 
 SELECT pg_catalog.pg_extension_config_dump('hafd.custom_json_types', '');
 
+-- The update script generator creates this table (hived_api_impl_indexes.sql on fresh installs) before
+-- the update and adds it to the extension; registering it for pg_dump has to be done in the extension script.
+SELECT pg_catalog.pg_extension_config_dump('hafd.custom_json_type_index_requests', '');
+
 DO $$
 BEGIN
     IF NOT EXISTS (
