@@ -7,6 +7,7 @@
 #include <hive/protocol/fixed_string.hpp>
 
 #include <fc/io/json.hpp>
+#include <fc/variant_object.hpp>
 #include <fc/exception/exception.hpp>
 
 #include <vector>
@@ -83,50 +84,60 @@ bool validate_delegate_rc_operation(const hive::protocol::delegate_rc_operation&
   }
 }
 
-// Parses a single operation from variant and adds rows to result vector
-// Returns true if it was a valid delegate_rc operation, false otherwise
-bool parse_single_operation(const fc::variant& v, std::vector<rc_delegation_row>& rows)
+// Legacy serialization names the op by its index in rc_custom_operation or by the name
+// get_legacy_custom_operation_name gives it; delegate_rc_operation is the only (index 0) alternative
+bool is_delegate_rc_legacy_name_or_id(const fc::variant& name_or_id)
 {
-  // Single operation format: ["delegate_rc", {operation_data}]
-  if (!v.is_array())
+  if (name_or_id.is_uint64())
+    return name_or_id.as_uint64() == 0;
+  return name_or_id.is_string() && name_or_id.as_string() == "delegate_rc";
+}
+
+// New serialization names the op by an integer (or bool) index, read with as_int64, or by the
+// name get_custom_operation_name gives it
+bool is_delegate_rc_type(const fc::variant& type)
+{
+  if (type.is_integer())
+    return type.as_int64() == 0;
+  return type.is_string() && type.as_string() == "delegate_rc_operation";
+}
+
+// Mirrors hived's custom_op_from_variant on a node that is not in control (replay, sync): extra
+// array elements and extra object keys are ignored. An array of fewer than 2 elements leaves the
+// default delegate_rc_operation, which fails validation, so it is rejected here.
+// Returns false where hived would reject the operation.
+bool parse_single_operation(const fc::variant& v, hive::protocol::delegate_rc_operation& op)
+{
+  const fc::variant* op_data = nullptr;
+
+  if (v.is_array())
+  {
+    const fc::variants& arr = v.get_array();
+    if (arr.size() < 2 || !is_delegate_rc_legacy_name_or_id(arr[0]))
+      return false;
+    op_data = &arr[1];
+  }
+  else if (v.is_object())
+  {
+    const fc::variant_object& obj = v.get_object();
+    if (!obj.contains("type") || !obj.contains("value") || !is_delegate_rc_type(obj["type"]))
+      return false;
+    op_data = &obj["value"];
+  }
+  else
+  {
+    return false;
+  }
+
+  if (!op_data->is_object())
     return false;
 
-  const fc::variants& arr = v.get_array();
-  if (arr.size() != 2)
-    return false;
-
-  // First element names the op either by its legacy name or by its index in rc_custom_operation,
-  // as in hived's custom_op_from_variant; delegate_rc_operation is the only (index 0) alternative
-  const bool is_delegate_rc = arr[0].is_uint64()
-    ? arr[0].as_uint64() == 0
-    : arr[0].is_string() && arr[0].as_string() == "delegate_rc";
-  if (!is_delegate_rc)
-    return false;
-
-  // Second element is the operation data
-  if (!arr[1].is_object())
-    return false;
-
-  hive::protocol::delegate_rc_operation op;
   {
     const truncating_account_names truncating;
-    fc::from_variant(arr[1], op);
+    fc::from_variant(*op_data, op);
   }
 
-  if (!validate_delegate_rc_operation(op))
-    return false;
-
-  // Add a row for each delegatee
-  for (const auto& delegatee : op.delegatees)
-  {
-    rc_delegation_row row;
-    row.from_account = static_cast<std::string>(op.from);
-    row.to_account = static_cast<std::string>(delegatee);
-    row.max_rc = op.max_rc;
-    rows.push_back(row);
-  }
-
-  return true;
+  return validate_delegate_rc_operation(op);
 }
 
 // Parses delegate_rc operations from JSON
@@ -143,26 +154,38 @@ std::vector<rc_delegation_row> parse_rc_delegations_from_json(const char* json_t
   {
     fc::variant v = fc::json::from_string(json_text, fc::json::format_validation_mode::relaxed);
 
-    if (!v.is_array() || v.size() == 0)
-      return rows;
+    std::vector<hive::protocol::delegate_rc_operation> ops;
 
-    const fc::variants& arr = v.get_array();
-
-    // Check if first element is an array (multiple operations) or string (single operation)
-    // This matches hived's generic_custom_operation_interpreter.hpp logic
-    if (arr[0].is_array())
+    // A list is recognised by its first element being an array, as in hived's
+    // generic_custom_operation_interpreter::apply; its later elements may use either serialization
+    if (v.is_array() && v.size() > 0 && v.get_array()[0].is_array())
     {
-      // Multiple operations format: [["delegate_rc", {...}], ["delegate_rc", {...}], ...]
-      for (const auto& op_variant : arr)
+      // hived validates every op of a list before applying any (apply_operations), and a failure
+      // of one discards the whole list, so a single rejected element yields no rows
+      for (const auto& op_variant : v.get_array())
       {
-        // Parse each operation, ignoring non-delegate_rc operations
-        parse_single_operation(op_variant, rows);
+        ops.emplace_back();
+        if (!parse_single_operation(op_variant, ops.back()))
+          return rows;
       }
     }
     else
     {
-      // Single operation format: ["delegate_rc", {...}]
-      parse_single_operation(v, rows);
+      ops.emplace_back();
+      if (!parse_single_operation(v, ops.back()))
+        return rows;
+    }
+
+    for (const auto& op : ops)
+    {
+      for (const auto& delegatee : op.delegatees)
+      {
+        rc_delegation_row row;
+        row.from_account = static_cast<std::string>(op.from);
+        row.to_account = static_cast<std::string>(delegatee);
+        row.max_rc = op.max_rc;
+        rows.push_back(row);
+      }
     }
   }
   catch (const fc::exception&)

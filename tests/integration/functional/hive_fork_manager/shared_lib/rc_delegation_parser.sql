@@ -84,17 +84,40 @@ BEGIN
     );
     ASSERT _count = 5, 'Two operations with 2+3 delegatees should return 5 rows, got ' || _count;
 
-    -- Mixed operations: only delegate_rc should be parsed
+    -- ==========================================================================
+    -- TEST: a list is applied all or nothing (hived: generic_custom_operation_interpreter.hpp,
+    -- apply_operations validates every inner op before applying any, inside one undo session;
+    -- hive_evaluator.cpp custom_json_evaluator::do_apply swallows the failure outside is_in_control())
+    -- ==========================================================================
+
+    -- An unknown op name fails custom_op_from_variant for the whole list
     SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
         '[["other_op",{"some":"data"}],["delegate_rc",{"from":"alice","delegatees":["bob"],"max_rc":1000}]]'
     );
-    ASSERT _count = 1, 'Should only parse delegate_rc, ignoring other ops, got ' || _count;
+    ASSERT _count = 0, 'Unknown op in a list should return 0 rows, got ' || _count;
 
-    -- Multiple operations where one is invalid (self-delegation) - should still parse valid ones
+    -- One invalid op (self-delegation) discards the valid one
     SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
         '[["delegate_rc",{"from":"alice","delegatees":["alice"],"max_rc":1000}],["delegate_rc",{"from":"bob","delegatees":["carol"],"max_rc":2000}]]'
     );
-    ASSERT _count = 1, 'Should skip invalid op and return 1 row for valid op, got ' || _count;
+    ASSERT _count = 0, 'Invalid op in a list should return 0 rows, got ' || _count;
+
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[["delegate_rc",{"from":"bob","delegatees":["carol"],"max_rc":2000}],["delegate_rc",{"from":"alice","delegatees":["bob"],"max_rc":-1}]]'
+    );
+    ASSERT _count = 0, 'Invalid last op in a list should return 0 rows, got ' || _count;
+
+    -- An incomplete element leaves a default delegate_rc_operation, which fails validation
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[["delegate_rc",{"from":"bob","delegatees":["carol"],"max_rc":2000}],["delegate_rc"]]'
+    );
+    ASSERT _count = 0, 'Incomplete element in a list should return 0 rows, got ' || _count;
+
+    -- An element that is neither array nor object fails is_object()
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[["delegate_rc",{"from":"bob","delegatees":["carol"],"max_rc":2000}],"delegate_rc"]'
+    );
+    ASSERT _count = 0, 'Scalar element in a list should return 0 rows, got ' || _count;
 
     -- ==========================================================================
     -- Invalid cases - should return empty set (0 rows)
@@ -111,12 +134,6 @@ BEGIN
     -- Malformed JSON
     SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation('not json at all');
     ASSERT _count = 0, 'Malformed JSON should return 0 rows';
-
-    -- JSON object instead of array (wrong format)
-    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
-        '{"type":"delegate_rc_operation","value":{"from":"alice","delegatees":["bob"],"max_rc":1000}}'
-    );
-    ASSERT _count = 0, 'Object format (not array) should return 0 rows';
 
     -- Wrong operation type
     SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
@@ -154,16 +171,112 @@ BEGIN
     );
     ASSERT _count = 0, 'Invalid delegatee account name should return 0 rows';
 
-    -- Array with wrong number of elements
+    -- Array with fewer than 2 elements (hived: custom_op_from_variant ignores it, leaving a default
+    -- delegate_rc_operation that apply_operations rejects in operation_validate)
     SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
         '["delegate_rc"]'
     );
     ASSERT _count = 0, 'Array with 1 element should return 0 rows';
 
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation('[]');
+    ASSERT _count = 0, 'Empty array should return 0 rows';
+
+    -- ==========================================================================
+    -- TEST: dangling array elements (hived: generic_custom_operation_interpreter.hpp,
+    -- custom_op_from_variant uses the first two elements outside is_in_control() and logs
+    -- "Dangling elements of custom operation ignored")
+    -- ==========================================================================
+
     SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
-        '["delegate_rc",{"from":"alice","delegatees":["bob"],"max_rc":1000},"extra"]'
+        '["delegate_rc",{"from":"alice","delegatees":["bob"],"max_rc":1000},"x"]'
     );
-    ASSERT _count = 0, 'Array with 3 elements should return 0 rows';
+    ASSERT _count = 1, 'Array with 3 elements should return 1 row, got ' || _count;
+
+    SELECT * INTO _result FROM hive.parse_rc_delegation(
+        '["delegate_rc",{"from":"alice","delegatees":["bob"],"max_rc":1000},"x"]'
+    );
+    ASSERT _result.from_account = 'alice', 'from_account should be alice';
+    ASSERT _result.to_account = 'bob', 'to_account should be bob';
+    ASSERT _result.max_rc = 1000, 'max_rc should be 1000';
+
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[[0,{"from":"alice","delegatees":["bob"],"max_rc":1000},1,{}],["delegate_rc",{"from":"alice","delegatees":["carol"],"max_rc":2000},null]]'
+    );
+    ASSERT _count = 2, 'Dangling elements in a list should return 2 rows, got ' || _count;
+
+    -- The dangling elements do not make an invalid op valid
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '["delegate_rc",{"from":"alice","delegatees":["alice"],"max_rc":1000},"x"]'
+    );
+    ASSERT _count = 0, 'Invalid op with dangling elements should return 0 rows, got ' || _count;
+
+    -- ==========================================================================
+    -- TEST: object serialization {"type","value"} (hived: generic_custom_operation_interpreter.hpp,
+    -- custom_op_from_variant takes an integer type via as_int64, or a name from the to_tag map built
+    -- by get_custom_operation_name, i.e. trim_typename_namespace of the type: "delegate_rc_operation";
+    -- extra keys are ignored outside is_in_control())
+    -- ==========================================================================
+
+    SELECT * INTO _result FROM hive.parse_rc_delegation(
+        '{"type":"delegate_rc_operation","value":{"from":"alice","delegatees":["bob"],"max_rc":1000}}'
+    );
+    ASSERT _result.from_account = 'alice', 'Object form by name: from_account should be alice';
+    ASSERT _result.to_account = 'bob', 'Object form by name: to_account should be bob';
+    ASSERT _result.max_rc = 1000, 'Object form by name: max_rc should be 1000';
+
+    SELECT * INTO _result FROM hive.parse_rc_delegation(
+        '{"type":0,"value":{"from":"alice","delegatees":["bob"],"max_rc":1000}}'
+    );
+    ASSERT _result.from_account = 'alice', 'Object form by index: from_account should be alice';
+    ASSERT _result.to_account = 'bob', 'Object form by index: to_account should be bob';
+    ASSERT _result.max_rc = 1000, 'Object form by index: max_rc should be 1000';
+
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '{"type":"delegate_rc_operation","value":{"from":"alice","delegatees":["bob"],"max_rc":1000},"extra":1}'
+    );
+    ASSERT _count = 1, 'Object form with an extra key should return 1 row, got ' || _count;
+
+    -- Object form inside a list (the list is recognised by its first element being an array)
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[["delegate_rc",{"from":"alice","delegatees":["bob"],"max_rc":1000}],{"type":"delegate_rc_operation","value":{"from":"alice","delegatees":["carol","dave"],"max_rc":2000}}]'
+    );
+    ASSERT _count = 3, 'Object form in a list should return 3 rows, got ' || _count;
+
+    -- A first element that is an object does not make a list; it is read as a legacy pair and fails
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[{"type":0,"value":{"from":"alice","delegatees":["bob"],"max_rc":1000}},["delegate_rc",{"from":"alice","delegatees":["carol"],"max_rc":2000}]]'
+    );
+    ASSERT _count = 0, 'List starting with an object should return 0 rows, got ' || _count;
+
+    -- The legacy name is not in the to_tag map
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '{"type":"delegate_rc","value":{"from":"alice","delegatees":["bob"],"max_rc":1000}}'
+    );
+    ASSERT _count = 0, 'Object form with the legacy name should return 0 rows, got ' || _count;
+
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '{"type":1,"value":{"from":"alice","delegatees":["bob"],"max_rc":1000}}'
+    );
+    ASSERT _count = 0, 'Object form with index 1 should return 0 rows, got ' || _count;
+
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '{"type":"delegate_rc_operation"}'
+    );
+    ASSERT _count = 0, 'Object form without value should return 0 rows, got ' || _count;
+
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '{"value":{"from":"alice","delegatees":["bob"],"max_rc":1000}}'
+    );
+    ASSERT _count = 0, 'Object form without type should return 0 rows, got ' || _count;
+
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '{"type":0,"value":{"from":"alice","delegatees":["alice"],"max_rc":1000}}'
+    );
+    ASSERT _count = 0, 'Object form with self-delegation should return 0 rows, got ' || _count;
+
+    -- A scalar payload is neither serialization
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation('"delegate_rc"');
+    ASSERT _count = 0, 'Scalar payload should return 0 rows, got ' || _count;
 
     -- ==========================================================================
     -- TEST: numeric operation index (hived: generic_custom_operation_interpreter.hpp,
