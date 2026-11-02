@@ -201,6 +201,23 @@ create_app_depending_on_hive() {
               GRANT SELECT ON update_test_app.ranges_view TO update_test_app_reader;
               COMMENT ON PROCEDURE update_test_app.process_blocks(hive.context_name, hive.blocks_range) IS 'processes a range';
               COMMENT ON FUNCTION update_test_app.next_range(INT) IS 'next range';
+              CREATE TYPE update_test_app.break_reason AS ENUM ('done', 'stopped');
+              CREATE PROCEDURE update_test_app.worker_loop(_context hive.context_name)
+                  LANGUAGE plpgsql SET search_path TO update_test_app
+                  AS \$\$ DECLARE __reason break_reason := 'done'; BEGIN RAISE NOTICE '% %', _context, __reason; END \$\$;
+              SET search_path TO update_test_app, public;
+              CREATE FUNCTION update_test_app.scheduler(_context hive.context_name) RETURNS TEXT
+                  LANGUAGE plpgsql AS \$\$ DECLARE __reason break_reason := 'stopped'; BEGIN RETURN _context || __reason; END \$\$;
+              RESET search_path;
+              CREATE PROCEDURE update_test_app.process_blocks_buffered(_context hive.context_name)
+                  LANGUAGE plpgsql SET temp_buffers = 2048
+                  AS \$\$ BEGIN RAISE NOTICE 'processing %', _context; END \$\$;
+              -- valid, as pg_restore creates it, but no session can apply this SET clause while creating the function
+              SET check_function_bodies = off;
+              CREATE FUNCTION update_test_app.missing_tablespace(_context hive.context_name) RETURNS TEXT
+                  LANGUAGE sql SET default_tablespace = 'update_test_missing_tablespace'
+                  AS \$\$ SELECT _context::TEXT \$\$;
+              RESET check_function_bodies;
               RESET ROLE;"
 }
 
@@ -222,7 +239,7 @@ check_app_objects_unchanged() {
         return 12
     fi
     if [ "$(exec_sql "SELECT count(*) FROM pg_class WHERE relnamespace = 'update_test_app'::regnamespace AND relkind IN ('v', 'm', 'i')")" != "4" ] \
-        || [ "$(exec_sql "SELECT count(*) FROM pg_proc WHERE pronamespace = 'update_test_app'::regnamespace")" != "3" ]; then
+        || [ "$(exec_sql "SELECT count(*) FROM pg_proc WHERE pronamespace = 'update_test_app'::regnamespace")" != "7" ]; then
         echo "TEST FAILED: update_test_app lost a view, an index or a routine"
         return 13
     fi
@@ -527,6 +544,8 @@ update_database
 check_table_is_empty hafd.deps_saved_ddl
 check_app_objects_unchanged "$app_before"
 exec_sql "CALL update_test_app.process_blocks('update_test_app', update_test_app.next_range(10))"
+exec_sql "CALL update_test_app.worker_loop('update_test_app')"
+exec_sql "CALL update_test_app.process_blocks_buffered('update_test_app')"
 
 printf "\nTEST: Upgrade while another session holds a lock on a hive object. The session should be ended and the database reopened afterwards.\n"
 prepare_database
