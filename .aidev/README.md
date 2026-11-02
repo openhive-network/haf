@@ -212,7 +212,12 @@ entrypoint checks and updates the extension in it on every start. Clones are
 `CREATE DATABASE run_<id> TEMPLATE haf_template STRATEGY FILE_COPY` through a
 `dblink` loopback (CREATE/DROP DATABASE cannot run in a function). Every 5 minutes
 a reaper drops clones older than `HAF_SHARED_RUN_TTL` (6 hours), and `run_*`
-databases no run is registered for.
+databases no run is registered for. A drop (by a consumer or the reaper)
+first terminates the clone's connections and gives up after 2 minutes, raising
+`object_in_use` with the backends that may block it: DROP DATABASE waits for
+every backend of the cluster, and one waiting for a vanished client inside COPY
+FROM STDIN never answers. The server's TCP keepalives (`shared-haf/postgresql.conf`)
+end such a backend within about a minute.
 
 AIDEV runs `docker compose` inside the session's worker container against the
 host's docker daemon, which resolves bind sources on the host. The `shared-haf/`

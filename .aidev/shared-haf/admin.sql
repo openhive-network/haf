@@ -40,14 +40,18 @@ create table if not exists haf_shared.run_databases (
     created_at timestamptz not null default now()
 );
 
-create or replace function haf_shared._loopback(_database text, _sql text)
+-- _options: the loopback session's command-line options (libpq's "options").
+-- The two-argument form of earlier versions is dropped: beside this one, its
+-- calls would be ambiguous.
+drop function if exists haf_shared._loopback(text, text);
+create or replace function haf_shared._loopback(_database text, _sql text, _options text default '')
 returns void
 language plpgsql
 set search_path = pg_catalog
 as $$
 begin
     perform dblink.dblink_exec(
-        format('dbname=%s user=postgres port=%s', _database, current_setting('port')),
+        format('dbname=%s user=postgres port=%s options=%L', _database, current_setting('port'), _options),
         _sql);
 end
 $$;
@@ -95,6 +99,49 @@ begin
 end
 $$;
 
+-- Drops a database, closing its connections first, within a bound: raises
+-- object_in_use naming the database and the backends that may block it when
+-- the drop does not finish in time.
+--
+-- DROP DATABASE waits until every backend of the cluster, in any database, has
+-- absorbed a ProcSignalBarrier. A backend waiting for its client inside COPY
+-- FROM STDIN (or sending to it) does not, until it dies, so a client that
+-- vanished mid-COPY stalls every drop. Such backends are not terminated here:
+-- from pg_stat_activity a dead client's COPY looks like a live one between
+-- two packets (active, ClientRead), and killing another run's healthy COPY
+-- would fail that run. The server's TCP keepalives (postgresql.conf) end a
+-- dead client's backend within a minute instead, well inside the bound.
+create or replace function haf_shared._drop_database(_name text)
+returns void
+language plpgsql
+set search_path = pg_catalog
+as $$
+declare
+    _bound constant text := '2min';
+    _cause text;
+    _blockers text;
+begin
+    perform pg_terminate_backend(a.pid)
+    from pg_stat_activity a
+    where a.datname = _name and a.pid <> pg_backend_pid();
+    begin
+        perform haf_shared._loopback('postgres', format('drop database if exists %I with (force)', _name),
+            format('-c lock_timeout=%s -c statement_timeout=%s', _bound, _bound));
+    exception when query_canceled or lock_not_available then
+        get stacked diagnostics _cause = message_text;
+        select string_agg(format('pid %s (datname %s, state %s, wait_event %s)',
+                                 a.pid, a.datname, a.state, a.wait_event), ', ' order by a.pid)
+        into _blockers
+        from pg_stat_activity a
+        where a.backend_type = 'client backend' and a.pid <> pg_backend_pid()
+          and (a.datname = _name or (a.state = 'active' and a.wait_event in ('ClientRead', 'ClientWrite')));
+        raise exception 'dropping database % did not finish within %; blocking backends: %',
+                _name, _bound, coalesce(_blockers, 'none left')
+            using errcode = 'object_in_use', detail = _cause;
+    end;
+end
+$$;
+
 -- Drops the run's database (closing its connections) and forgets the run.
 -- A run without a database is not an error.
 create or replace function haf_shared.drop_run_database(_run_id text)
@@ -106,7 +153,7 @@ as $$
 declare
     _name text := haf_shared._run_database_name(_run_id);
 begin
-    perform haf_shared._loopback('postgres', format('drop database if exists %I with (force)', _name));
+    perform haf_shared._drop_database(_name);
     delete from haf_shared.run_databases where run_id = _run_id;
 end
 $$;
@@ -130,7 +177,7 @@ begin
         where d.datname like 'run\_%'
           and not exists (select 1 from haf_shared.run_databases r where r.database_name = d.datname)
     loop
-        perform haf_shared._loopback('postgres', format('drop database if exists %I with (force)', _name));
+        perform haf_shared._drop_database(_name);
         delete from haf_shared.run_databases where database_name = _name;
         return next _name;
     end loop;
