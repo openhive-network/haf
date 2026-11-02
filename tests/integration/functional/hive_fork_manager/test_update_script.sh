@@ -105,6 +105,27 @@ unship_deployed_libhfm() {
     exec_sql "UPDATE pg_proc SET probin = '\$libdir/libhfm-1.0.so' WHERE probin LIKE '%/libhfm-%'"
 }
 
+check_hive_event_triggers_use_new_libhfm() {
+    if [ "$(exec_sql "SELECT count(*) FROM pg_event_trigger e JOIN pg_proc p ON p.oid = e.evtfoid
+                      WHERE p.pronamespace = 'hive'::regnamespace AND e.evtenabled = 'O'")" != "3" ]; then
+        echo "TEST FAILED: hive's event triggers are not all enabled after the update"
+        return 27
+    fi
+    if [ "$(exec_sql "SELECT probin FROM pg_proc WHERE oid = 'hive.ignore_registered_table_edition(pg_ddl_command)'::regprocedure")" = "\$libdir/libhfm-1.0.so" ]; then
+        echo "TEST FAILED: hive.ignore_registered_table_edition still references the deployed libhfm"
+        return 28
+    fi
+    # an ALTER TABLE runs hive.on_edit_registered_tables, which loads the library of hive.ignore_registered_table_edition
+    exec_sql "CREATE TABLE public.altered_after_update(id INT); ALTER TABLE public.altered_after_update ADD COLUMN v INT;"
+}
+
+check_hive_update_helpers_present() {
+    if [ "$(exec_sql "SELECT count(*) FROM pg_proc WHERE oid IN ('hive_update.save_hive_dependents()'::regprocedure, 'hive_update.restore_hive_dependents()'::regprocedure)")" != "2" ]; then
+        echo "TEST FAILED: a failed update left the hive_update helpers dropped"
+        return 29
+    fi
+}
+
 index_oid() {
     exec_sql "SELECT 'hafd.$1'::regclass::oid"
 }
@@ -411,6 +432,17 @@ check_account_operations_uq1
 [ "$(exec_sql "SELECT indisvalid FROM pg_index WHERE indexrelid = 'hafd.hive_account_operations_uq1'::regclass")" = "t" ] \
     || { echo "TEST FAILED: hive_account_operations_uq1 is not valid"; exit 11; }
 
+printf "\nTEST: Upgrade a database that lacks columns the update adds to hafd tables and whose event-trigger functions are bound to a libhfm that is not shipped. The columns should be added and the triggers bound to the new libhfm.\n"
+prepare_database
+exec_sql "ALTER TABLE hafd.vacuum_requests DROP COLUMN skip_count, DROP COLUMN first_skip_time"
+unship_deployed_libhfm
+update_database
+[ "$(exec_sql "SELECT count(*) FROM information_schema.columns WHERE table_schema = 'hafd' AND table_name = 'vacuum_requests'
+               AND column_name IN ('skip_count', 'first_skip_time')")" = "2" ] \
+    || { echo "TEST FAILED: the update did not add the missing hafd columns"; exit 30; }
+[ "$(deployed_version)" != "1.0" ] || { echo "TEST FAILED: the extension was not updated"; exit 31; }
+check_hive_event_triggers_use_new_libhfm
+
 printf "\nTEST: Upgrade a database whose hive_account_operations_uq1 is dropped for a massive sync. Its restore command should be updated.\n"
 prepare_database
 exec_sql "SELECT hive.save_and_drop_indexes_constraints('hafd', 'account_operations');
@@ -463,6 +495,7 @@ check_accepts_connections
 check_table_is_empty hafd.deps_saved_ddl
 [ "$(app_objects_snapshot)" = "$app_before" ] || { echo "TEST FAILED: a failed update changed update_test_app"; exit 21; }
 [ "$(exec_sql "SELECT hive.removed_in_new_version()")" = "1" ] || { echo "TEST FAILED: a failed update changed the hive schema"; exit 22; }
+check_hive_update_helpers_present
 
 printf "\nTEST: Upgrade a database whose app table has a column default calling a hive function. The update should fail naming it, and leave the database unchanged.\n"
 prepare_database
