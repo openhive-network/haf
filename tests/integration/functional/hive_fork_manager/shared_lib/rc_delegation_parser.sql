@@ -165,6 +165,103 @@ BEGIN
     );
     ASSERT _count = 0, 'Array with 3 elements should return 0 rows';
 
+    -- ==========================================================================
+    -- TEST: numeric operation index (hived: generic_custom_operation_interpreter.hpp,
+    -- custom_op_from_variant accepts a uint64 index into rc_custom_operation, where
+    -- delegate_rc_operation is the only alternative, index 0)
+    -- ==========================================================================
+
+    -- Mainnet block 102,303,329
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[0,{"from":"jjerryhan","delegatees":["upyourpostap"],"max_rc":2000000000000}]'
+    );
+    ASSERT _count = 1, 'Numeric index 0 should return 1 row, got ' || _count;
+
+    SELECT * INTO _result FROM hive.parse_rc_delegation(
+        '[0,{"from":"jjerryhan","delegatees":["upyourpostap"],"max_rc":2000000000000}]'
+    );
+    ASSERT _result.from_account = 'jjerryhan', 'from_account should be jjerryhan';
+    ASSERT _result.to_account = 'upyourpostap', 'to_account should be upyourpostap';
+    ASSERT _result.max_rc = 2000000000000, 'max_rc should be 2000000000000';
+
+    -- Numeric index in the multiple operations format
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[[0,{"from":"alice","delegatees":["bob"],"max_rc":1000}],["delegate_rc",{"from":"alice","delegatees":["carol"],"max_rc":2000}]]'
+    );
+    ASSERT _count = 2, 'Numeric index in a list should return 2 rows, got ' || _count;
+
+    -- Index out of rc_custom_operation range (static_variant rejects the tag)
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[1,{"from":"alice","delegatees":["bob"],"max_rc":1000}]'
+    );
+    ASSERT _count = 0, 'Numeric index 1 should return 0 rows, got ' || _count;
+
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[[1,{"from":"alice","delegatees":["bob"],"max_rc":1000}]]'
+    );
+    ASSERT _count = 0, 'Numeric index 1 in a list should return 0 rows, got ' || _count;
+
+    -- Negative numbers are int64, not uint64, so hived looks them up as names and fails
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '[-1,{"from":"alice","delegatees":["bob"],"max_rc":1000}]'
+    );
+    ASSERT _count = 0, 'Numeric index -1 should return 0 rows, got ' || _count;
+
+    -- The index as a string is not a legacy operation name
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '["0",{"from":"alice","delegatees":["bob"],"max_rc":1000}]'
+    );
+    ASSERT _count = 0, 'String "0" should return 0 rows, got ' || _count;
+
+    -- ==========================================================================
+    -- TEST: account name conversion (hived: hive_evaluator.cpp custom_json_evaluator
+    -- disables truncation_controller verification outside is_in_control(), so
+    -- fixed_string<16> (account_name_type, fixed_string.hpp) keeps the first 16 bytes)
+    -- ==========================================================================
+
+    -- Mainnet block 70,000,531: 17th character dropped
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '["delegate_rc",{"from":"deepresearch","delegatees":["patent-wynalazek\r"],"max_rc":18022221811}]'
+    );
+    ASSERT _count = 1, 'Overlong delegatee should be truncated and return 1 row, got ' || _count;
+
+    SELECT * INTO _result FROM hive.parse_rc_delegation(
+        '["delegate_rc",{"from":"deepresearch","delegatees":["patent-wynalazek\r"],"max_rc":18022221811}]'
+    );
+    ASSERT _result.from_account = 'deepresearch', 'from_account should be deepresearch';
+    ASSERT _result.to_account = 'patent-wynalazek', 'to_account should be patent-wynalazek, got ' || _result.to_account;
+    ASSERT _result.max_rc = 18022221811, 'max_rc should be 18022221811';
+
+    -- from is converted the same way
+    SELECT * INTO _result FROM hive.parse_rc_delegation(
+        '["delegate_rc",{"from":"patent-wynalazekxyz","delegatees":["bob"],"max_rc":1000}]'
+    );
+    ASSERT _result.from_account = 'patent-wynalazek', 'from_account should be patent-wynalazek, got ' || _result.from_account;
+
+    -- Names collapsing to the same 16 bytes are one delegatee (flat_set)
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '["delegate_rc",{"from":"deepresearch","delegatees":["patent-wynalazek","patent-wynalazek\r"],"max_rc":1000}]'
+    );
+    ASSERT _count = 1, 'Delegatees equal after truncation should return 1 row, got ' || _count;
+
+    -- Invalid character within the first 16 bytes is not truncated away
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '["delegate_rc",{"from":"deepresearch","delegatees":["patent-wynalaze\r"],"max_rc":1000}]'
+    );
+    ASSERT _count = 0, 'Invalid character in a 16 byte name should return 0 rows, got ' || _count;
+
+    -- The truncated name is still validated (ends with a dash)
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '["delegate_rc",{"from":"deepresearch","delegatees":["patent-wynalaze-k"],"max_rc":1000}]'
+    );
+    ASSERT _count = 0, 'Truncated name that is invalid should return 0 rows, got ' || _count;
+
+    -- Self-delegation is checked after truncation
+    SELECT COUNT(*) INTO _count FROM hive.parse_rc_delegation(
+        '["delegate_rc",{"from":"patent-wynalazek","delegatees":["patent-wynalazek\r"],"max_rc":1000}]'
+    );
+    ASSERT _count = 0, 'Self-delegation after truncation should return 0 rows, got ' || _count;
+
     RAISE NOTICE 'All RC delegation parser tests passed!';
 END;
 $BODY$
