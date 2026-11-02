@@ -66,23 +66,43 @@ issues:
 # build and unit tests, replay and system tests (CI keeps them), and `static`
 # (scripts/ has shellcheck errors today) and `system`, which AIDEV runs for no
 # project. See .aidev/README.md.
+#
+# The functional tests' failures are reported under their own ids
+# (hfm-functional::<folder>/<test>; the step's own case then reads skipped), so
+# `.aidev/known_failures.txt` can pardon them (honor_quarantine) and aidev's
+# flake layers re-run them through `run-checks.sh ... --rerun <id>...`. Any other
+# failing case (a step that crashed, hfm/libhfm-symbols) has no rerun rule and
+# blocks. No `files:` template: the ids name no file, so repeat-new-tests has
+# nothing to narrow to.
 verification:
   quick:
     adapter: command
     args: [".aidev/run-checks.sh", "quick", "hfm-smoke", "cxx-scope"]
     artifacts: ["test-results/quick/"]
+    honor_quarantine: true
+    rerun: &hfm_rerun
+      classify: true
+      match: "^hfm-functional::(hive_fork_manager|query_supervisor)/"
+      file_pattern: "^hfm-functional$"
+      ids: ["--rerun", "{ids}"]
   full:
     adapter: command
     args: [".aidev/run-checks.sh", "full", "hfm-functional", "cxx-scope"]
     artifacts: ["test-results/full/"]
+    honor_quarantine: true
+    rerun: *hfm_rerun
   baseline:
     adapter: command
     args: [".aidev/run-checks.sh", "baseline", "hfm-functional"]
     artifacts: ["test-results/baseline/"]
+    honor_quarantine: true
+    rerun: *hfm_rerun
   canary:
     adapter: command
     args: [".aidev/run-checks.sh", "canary", "hfm-functional", "cxx-scope"]
     artifacts: ["test-results/canary/"]
+    honor_quarantine: true
+    rerun: *hfm_rerun
   # No coverage measurement for SQL; AIDEV runs `coverage` only in the
   # post-implementation scan.
   coverage:

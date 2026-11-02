@@ -11,7 +11,20 @@ for AIDEV branches (`ai/*`, `session/*`, pushes to `aidev/integration`); see
 
 `.aidev/run-checks.sh <suite> <step>...` runs the named steps and writes
 `test-results/<suite>/junit.xml`, one test case per step, plus
-`test-results/<suite>/hfm-functional.xml`, one case per functional test.
+`test-results/<suite>/hfm-functional.xml`, one case per functional test
+(`hfm-functional::<folder>/<test>`). A step whose failing tests
+`hfm-functional.xml` records is reported skipped in `junit.xml`, pointing there, so
+each failure is reported once, under the test's own id; a step that fails with no
+failing test recorded (a crash, a broken setup) fails as itself.
+
+`.aidev/run-checks.sh <suite> <step>... --rerun <id>...` re-runs only the named
+functional tests, through the listed step that owns them, and reports to
+`test-results/<suite>-rerun/<n>/`, leaving the original run's reports in place.
+An argument is a reported id, a test's `.sql` path, or a Perl regex over the
+names (`HFM_TEST_FILTER`); a literal id that names no test fails the re-run.
+The gate slots declare this as their `rerun:` (aidev's isolation re-run and
+same-SHA flake detection) and `honor_quarantine: true`: a failing test listed in
+`known_failures.txt` (`aidev test quarantine <id> --reason "see #N"`) is pardoned.
 
 | Step | What |
 |---|---|
