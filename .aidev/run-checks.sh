@@ -25,8 +25,13 @@
 # (.aidev/junit_cases.py), so a failing test is reported once, under its own id.
 #
 # --rerun runs only the named functional tests, through the listed step that
-# owns them (cxx-scope is not run), and reports to test-results/<suite>-rerun/<n>/,
-# leaving the run it re-runs intact. Each argument is a reported test id
+# owns them (cxx-scope is not run), and reports to test-results/<suite>/rerun/<n>/,
+# leaving the run it re-runs intact. That is under the slot's declared artifacts
+# path, so aidev's causality check reads a re-run on the base tree as a verdict:
+# an id its report does not name is absent on base. aidev reads a report only
+# when written after the run it grades started, and reads and keeps the run's
+# own reports before re-running any of its failures, so a re-run's report never
+# joins them; the next run's rm -rf removes it. Each argument is a reported test id
 # (hfm-functional::hive_fork_manager/<folder>/<test>, with or without the
 # `hfm-functional::`), a test's .sql path, or a Perl regex over the ids' names
 # (aidev's rendered `(?:a|b)` titles). The exit status is 0 only when every
@@ -48,10 +53,10 @@ if [ ${#rerun[@]} -eq 0 ]; then
     out="test-results/$suite"
     rm -rf "$out"; mkdir -p "$out"
 else
-    mkdir -p "test-results/$suite-rerun"
+    mkdir -p "test-results/$suite/rerun"
     n=1
-    until mkdir "test-results/$suite-rerun/$n" 2>/dev/null; do n=$((n + 1)); done
-    out="test-results/$suite-rerun/$n"
+    until mkdir "test-results/$suite/rerun/$n" 2>/dev/null; do n=$((n + 1)); done
+    out="test-results/$suite/rerun/$n"
 fi
 cases="$out/cases.tsv"; : > "$cases"
 
