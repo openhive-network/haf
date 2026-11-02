@@ -19,7 +19,13 @@ failing test recorded (a crash, a broken setup) fails as itself.
 
 `.aidev/run-checks.sh <suite> <step>... --rerun <id>...` re-runs only the named
 functional tests, through the listed step that owns them, and reports to
-`test-results/<suite>-rerun/<n>/`, leaving the original run's reports in place.
+`test-results/<suite>/rerun/<n>/`, leaving the original run's reports in place.
+That is under the slot's declared `artifacts:` path, so aidev's causality check
+reads a re-run on the base tree: an id its report does not name is absent on
+base, a new test, not a pre-existing failure. aidev reads only reports written
+after the run it grades started, and reads and keeps a run's reports before
+re-running its failures, so a re-run never adds to the run it re-runs; the suite's
+next run (`rm -rf test-results/<suite>`) removes it.
 An argument is a reported id, a test's `.sql` path, or a Perl regex over the
 names (`HFM_TEST_FILTER`); a literal id that names no test fails the re-run.
 The gate slots declare this as their `rerun:` (aidev's isolation re-run and
