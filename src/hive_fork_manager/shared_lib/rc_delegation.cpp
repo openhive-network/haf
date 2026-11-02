@@ -4,6 +4,7 @@
 
 #include <hive/protocol/hive_custom_operations.hpp>
 #include <hive/protocol/config.hpp>
+#include <hive/protocol/fixed_string.hpp>
 
 #include <fc/io/json.hpp>
 #include <fc/exception/exception.hpp>
@@ -24,6 +25,28 @@ struct rc_delegation_row
   std::string from_account;
   std::string to_account;
   int64_t max_rc;
+};
+
+// hived's custom_json_evaluator applies operations of blocks it is not producing (nor validating as
+// a new transaction) with fixed_string truncation verification disabled, so an account name longer
+// than account_name_type's 16 bytes is cut to its first 16 bytes instead of being rejected
+class truncating_account_names
+{
+  using truncation_controller = hive::protocol::details::truncation_controller;
+
+public:
+  truncating_account_names()
+    : old_verify_status(truncation_controller::is_verifying_enabled())
+  {
+    truncation_controller::set_verify(false);
+  }
+  ~truncating_account_names() { truncation_controller::set_verify(old_verify_status); }
+
+  truncating_account_names(const truncating_account_names&) = delete;
+  truncating_account_names& operator=(const truncating_account_names&) = delete;
+
+private:
+  const bool old_verify_status;
 };
 
 // Validates a single delegate_rc operation (stateless validation)
@@ -72,8 +95,12 @@ bool parse_single_operation(const fc::variant& v, std::vector<rc_delegation_row>
   if (arr.size() != 2)
     return false;
 
-  // First element must be "delegate_rc"
-  if (!arr[0].is_string() || arr[0].as_string() != "delegate_rc")
+  // First element names the op either by its legacy name or by its index in rc_custom_operation,
+  // as in hived's custom_op_from_variant; delegate_rc_operation is the only (index 0) alternative
+  const bool is_delegate_rc = arr[0].is_uint64()
+    ? arr[0].as_uint64() == 0
+    : arr[0].is_string() && arr[0].as_string() == "delegate_rc";
+  if (!is_delegate_rc)
     return false;
 
   // Second element is the operation data
@@ -81,7 +108,10 @@ bool parse_single_operation(const fc::variant& v, std::vector<rc_delegation_row>
     return false;
 
   hive::protocol::delegate_rc_operation op;
-  fc::from_variant(arr[1], op);
+  {
+    const truncating_account_names truncating;
+    fc::from_variant(arr[1], op);
+  }
 
   if (!validate_delegate_rc_operation(op))
     return false;
