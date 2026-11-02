@@ -22,6 +22,8 @@ CREATE OR REPLACE FUNCTION hive_update.deps_save_and_drop_dependencies(
     LANGUAGE 'plpgsql'
     COST 100
     VOLATILE
+    -- the saved definitions name every object with its schema, so they do not depend on the restoring session's search_path
+    SET search_path = ''
 AS $BODY$
 /**
 From http://pretius.com/postgresql-stop-worrying-about-table-and-view-dependencies/
@@ -172,6 +174,11 @@ CREATE OR REPLACE FUNCTION hive_update.deps_restore_dependencies(
     LANGUAGE 'plpgsql'
     COST 100
     VOLATILE
+    -- Like pg_restore: a routine body is not validated, and its SET clauses are not applied to the restoring session
+    -- (which may refuse them, e.g. temp_buffers once it has used a temporary table). Both settings, and the
+    -- search_path set below, are reverted when the function returns.
+    SET check_function_bodies = off
+    SET search_path = pg_catalog
 AS $BODY$
 /**
 From http://pretius.com/postgresql-stop-worrying-about-table-and-view-dependencies/
@@ -181,6 +188,7 @@ Restores dependencies dropped by function `deps_save_and_drop_dependencies`.
 declare
     v_curr record;
 begin
+    perform set_config( 'search_path', format( '%I, hive, hafd, public', p_view_schema ), true );
     for v_curr in
         (
             select deps_ddl_to_run
@@ -258,6 +266,8 @@ CREATE OR REPLACE FUNCTION hive_update.deps_save_routine( _routine OID )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
+    -- the saved definition names every object outside pg_catalog with its schema
+    SET search_path = ''
 AS $BODY$
 DECLARE
     __kind TEXT;
