@@ -15,7 +15,8 @@
 #    does, HFM_TEST_JOBS at a time, and records one case per test.
 #
 # Environment: HFM_TEST_OUT (report dir, required), HFM_TEST_FILTER (optional
-# extended regex over test paths), HFM_TEST_JOBS (default 4).
+# Perl regex over the test names the cases are reported under,
+# <folder>/<path without .sql>; selecting no test fails), HFM_TEST_JOBS (default 4).
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 src="$PWD"
@@ -73,12 +74,17 @@ export src out port
 # The ADD_SQL_FUNCTIONAL_TEST lines ctest would register (commented-out ones
 # are not tests), and the ones a SET_TESTS_PROPERTIES block marks RUN_SERIAL,
 # which ctest never runs alongside another test.
+# PCRE because aidev renders re-run titles as a (?:a|b) alternation.
 for folder in hive_fork_manager query_supervisor; do
     grep -E '^[[:space:]]*ADD_SQL_FUNCTIONAL_TEST\(' "$folder/CMakeLists.txt" \
-        | sed -E 's/.*\( *([^ )]+).*/\1/' \
-        | grep -E "${HFM_TEST_FILTER:-.}" \
-        | sed "s#^#$folder #"
-done > "$out/hfm/tests.txt"
+        | sed -E "s/.*\\( *([^ )]+)\\.sql.*/$folder\\/\\1/"
+done | grep -P "${HFM_TEST_FILTER:-.}" | sed -E 's#^([^/]+)/(.*)$#\1 \2.sql#' > "$out/hfm/tests.txt"
+if [ ! -s "$out/hfm/tests.txt" ]; then
+    msg="no functional test matches HFM_TEST_FILTER '${HFM_TEST_FILTER:-.}'"
+    echo "$msg" | tee "$out/hfm/selection.log"
+    printf 'case\thfm/selection\tfail\t0\t%s\t%s\n' "$msg" "$out/hfm/selection.log" >> "$cases"
+    exit 1
+fi
 for folder in hive_fork_manager query_supervisor; do
     awk '/SET_TESTS_PROPERTIES\(/ {blk=""; inb=1} inb {blk=blk" "$0} inb && /\)/ {if (blk ~ /RUN_SERIAL TRUE/) print blk; inb=0}' "$folder/CMakeLists.txt" \
         | grep -oE "test\.functional\.$folder\.[A-Za-z0-9_.]+" \

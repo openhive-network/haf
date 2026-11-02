@@ -1,0 +1,6 @@
+# Quarantine ledger: tests listed here won't block merges on the slots that
+# declare honor_quarantine (.aidev/project.yaml). One test id per line, as the
+# junit reports name it (hfm-functional::hive_fork_manager/<folder>/<test>);
+# add one with `aidev test quarantine <id> --reason "see #N"` so its tracking
+# issue is recorded. Remove entries when the tests are fixed.
+# Empty file = all failures block.
