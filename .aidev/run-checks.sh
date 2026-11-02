@@ -11,8 +11,10 @@
 #   - hfm-functional  every hive_fork_manager and query_supervisor functional test
 #                     ctest registers, one junit case each
 #   - cxx-scope       a skipped case naming the candidate's changed C++/CMake/hive
-#                     files: these checks run the candidate's SQL against the C++
-#                     of the pinned HAF image, so such changes are not verified here
+#                     files other than libhfm's and libquery_supervisor's sources:
+#                     the image is built with those two libraries from the
+#                     candidate's sources (.aidev/runtime/Dockerfile.source), but
+#                     hived and the C++ unit tests are not run here
 #
 # The functional tests run inside the HAF image (this project's runtime) through
 # its own entrypoint, which starts PostgreSQL and then runs .aidev/hfm-functional.sh
@@ -99,9 +101,10 @@ cxx_scope() {
         printf 'case\tcxx-scope\tskip\t0\tchanged files unknown (no AIDEV_CHANGED_FILES_FILE)\n' >> "$cases"
         return
     fi
-    files="$(grep -E '(\.(c|cc|cpp|cxx|h|hpp|ipp|in)$|CMakeLists\.txt$|\.cmake$|^hive$|^hive/)' "$changed" | tr '\n' ' ')"
+    files="$(grep -E '(\.(c|cc|cpp|cxx|h|hpp|ipp|in)$|CMakeLists\.txt$|\.cmake$|^hive$|^hive/)' "$changed" \
+        | grep -vE '^src/(hive_fork_manager/shared_lib|query_supervisor)/' | tr '\n' ' ')"
     if [ -n "$files" ]; then
-        echo "not verified here (C++ of the pinned HAF image is used): $files"
+        echo "not verified here (only libhfm and libquery_supervisor are the candidate's build): $files"
         printf 'case\tcxx-scope\tskip\t0\tC++/CMake changes not verified by these checks: %s\n' "${files:0:400}" >> "$cases"
     else
         printf 'case\tcxx-scope\tpass\t0\t\n' >> "$cases"

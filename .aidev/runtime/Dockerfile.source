@@ -1,0 +1,76 @@
+# The image AIDEV builds when a tree's newest native-source commit has no CI image
+# (`environment.source_image.build` in .aidev/project.yaml): the pinned test image
+# (`environment.image`, handed in as BASE_IMAGE) with its libhfm and
+# libquery_supervisor replaced by ones compiled from the candidate's checkout.
+#
+# AIDEV tags the result by that source commit and reuses it, so this reads only
+# `source_image.paths` from the context, and nothing those paths exclude reaches
+# the image: no extension SQL is installed (the suites install the candidate's
+# own, .aidev/hfm-functional.sh). Each library keeps the file name the base image
+# gives it, so the base's extension files still name it.
+#
+# The builder is the `ci-base-image` stage of ../../Dockerfile: the CI toolchain
+# image it starts from, pinned by digest, plus setup_ubuntu.sh --dev. Only the two
+# libraries and what they link (hive_protocol, fc, pq_utils, psql_utils) are
+# built, with CI's flags (scripts/build.sh: Release, Ninja, mainnet), against the
+# same Ubuntu, PostgreSQL and boost as the base. The context is the checkout,
+# whose `hive` submodule AIDEV checks out with the worktree.
+ARG BASE_IMAGE
+
+FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-ubuntu@sha256:febc0ed876e69369891a8d567494d78f292c7cc2ba88ae733e2e9c30b14deb79 AS builder
+
+ENV POSTGRES_VERSION=18
+SHELL ["/bin/bash", "-c"]
+
+USER root
+WORKDIR /usr/local/src
+COPY hive/scripts/openssl.conf hive/scripts/setup_ubuntu.sh hive/scripts/
+COPY scripts/setup_ubuntu.sh scripts/
+RUN ./scripts/setup_ubuntu.sh --dev --hived-account="hived" && rm -rf /var/lib/apt/lists/*
+
+USER hived
+WORKDIR /home/hived/source
+COPY --chown=hived:users CMakeLists.txt ./
+COPY --chown=hived:users cmake/ cmake/
+COPY --chown=hived:users common_includes/ common_includes/
+COPY --chown=hived:users src/ src/
+COPY --chown=hived:users hive/ hive/
+
+# The submodules' .git files name directories outside the context, but fc, hive
+# and hive's vendor CMake read a git HEAD (and fc its timestamp) at configure time:
+# an empty commit with a fixed date stands in for the checkout and each submodule
+# (it only versions the build). tests/ and scripts/get_postgres_port.sh are not
+# source paths, so stand-ins answer configure's ADD_SUBDIRECTORY(tests) and server
+# port lookup, neither of which the libraries use.
+RUN test -f hive/CMakeLists.txt || { echo "the hive submodule is not checked out in the build context"; exit 1; } \
+    && repos="$(find . -mindepth 2 -name .git -printf '%h\n')" \
+    && find . -mindepth 2 -name .git -exec rm -rf {} + \
+    && for repo in . $repos; do \
+        git -C "$repo" init -q \
+        && GIT_AUTHOR_DATE="1970-01-02T00:00:00Z" GIT_COMMITTER_DATE="1970-01-02T00:00:00Z" \
+            git -C "$repo" -c user.name=aidev -c user.email=aidev@localhost commit -q --allow-empty -m "candidate sources" \
+        || exit 1; \
+    done \
+    && mkdir tests && : > tests/CMakeLists.txt \
+    && mkdir -p scripts && echo 'echo 5432' > scripts/get_postgres_port.sh
+
+RUN cmake -S . -B /home/hived/build -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_HIVE_TESTNET=OFF \
+        -DENABLE_SMT_SUPPORT=OFF -DHIVE_CONVERTER_BUILD=OFF -DHIVE_LINT=OFF \
+    && hfm_target="$(ninja -C /home/hived/build -t targets all | grep -oE '^hfm-[^:]+' | sort -u)" \
+    && [ "$(wc -w <<< "$hfm_target")" -eq 1 ] \
+    && ninja -C /home/hived/build -j "$(nproc)" "$hfm_target" query_supervisor \
+    && mkdir -p /home/hived/out \
+    && cp /home/hived/build/lib/libhfm-*.so /home/hived/out/libhfm.so \
+    && cp /home/hived/build/lib/libquery_supervisor.so /home/hived/out/
+
+FROM ${BASE_IMAGE}
+
+RUN --mount=from=builder,source=/home/hived/out,target=/tmp/candidate-libs \
+    set -e; libdir="/usr/lib/postgresql/${POSTGRES_VERSION:-18}/lib"; \
+    base_so=("$libdir"/libhfm-*.so); \
+    [ "${#base_so[@]}" -eq 1 ] && [ -e "${base_so[0]}" ] || { echo "expected one libhfm-*.so in $libdir, found: ${base_so[*]}"; exit 1; }; \
+    sudo -n install -m 755 -o hived -g users /tmp/candidate-libs/libhfm.so "${base_so[0]}"; \
+    sudo -n install -m 755 -o hived -g users /tmp/candidate-libs/libquery_supervisor.so "$libdir/libquery_supervisor.so"
+
+ENTRYPOINT []
+CMD ["bash"]

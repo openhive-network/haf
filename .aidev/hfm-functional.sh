@@ -6,8 +6,8 @@
 #
 # 1. Installs the candidate's hive_fork_manager extension SQL into PostgreSQL
 #    the way Dockerfile.sql-overlay does (scripts/generate_extension_sql.sh, then
-#    the control file's libhfm-<version>.so pointed at the image's own libhfm):
-#    the image's C++ is the pinned base commit's, so only SQL is the candidate's.
+#    the control file's libhfm-<version>.so pointed at the image's own libhfm,
+#    which under aidev is built from the tree's own sources, .aidev/README.md).
 #    When that SQL declares a C symbol the image's libhfm lacks, records one
 #    failing case (hfm/libhfm-symbols) naming them and runs no test.
 # 2. Runs every ADD_SQL_FUNCTIONAL_TEST of tests/integration/functional/
@@ -45,7 +45,7 @@ sudo -n chmod 644 "/usr/share/postgresql/$pg_version/extension/"hive_fork_manage
 # CREATE EXTENSION in every test; report it once as a stale image instead.
 missing="$(python3 .aidev/missing_c_symbols.py "$libdir/$base_so" "$ext"/hive_fork_manager*.sql)" || exit 1
 if [ -n "$missing" ]; then
-    msg="$base_so lacks C symbols the candidate SQL declares: $(echo "$missing" | tr '\n' ' ')- re-pin .aidev/runtime/Dockerfile to a HAF image built from a commit carrying them (.aidev/README.md, The test runtime image)"
+    msg="$base_so lacks C symbols the candidate SQL declares: $(echo "$missing" | tr '\n' ' ')- the image was not built from these sources (.aidev/README.md, The test runtime image)"
     echo "$msg" | tee "$out/hfm/libhfm-symbols.log"
     printf 'case\thfm/libhfm-symbols\tfail\t0\t%s\t%s\n' "$msg" "$out/hfm/libhfm-symbols.log" >> "$cases"
     exit 1

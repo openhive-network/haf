@@ -36,7 +36,7 @@ same-SHA flake detection) and `honor_quarantine: true`: a failing test listed in
 |---|---|
 | `hfm-smoke` | the functional tests under `hive_fork_manager/context_rewind/` and `hive_fork_manager/app_api/` (194) |
 | `hfm-functional` | every `hive_fork_manager` and `query_supervisor` functional test ctest registers (421); `RUN_SERIAL` tests run alone after the rest |
-| `cxx-scope` | a skipped case naming the candidate's changed C++/CMake/`hive` files, which these checks do not verify |
+| `cxx-scope` | a skipped case naming the candidate's changed C++/CMake/`hive` files other than libhfm's (`src/hive_fork_manager/shared_lib/`) and libquery_supervisor's (`src/query_supervisor/`), which these checks do not verify |
 
 How the functional tests run (`.aidev/hfm-functional.sh`): inside the HAF image, as the
 maintenance script of `/home/hived/docker_entrypoint.sh` (which starts PostgreSQL), the
@@ -45,7 +45,8 @@ It installs the candidate's extension SQL as `Dockerfile.sql-overlay` does
 (`scripts/generate_extension_sql.sh`, then `libhfm-<version>.so` pointed at the image's own
 `libhfm`). If that SQL declares a C function the image's `libhfm` does not export
 (`.aidev/missing_c_symbols.py`), it records a single failing case `hfm/libhfm-symbols`
-naming the symbols and runs no test: the image is stale, see *The test runtime image*.
+naming the symbols and runs no test: the image's libhfm was not built from these sources,
+see *The test runtime image*.
 Otherwise it reads the test list from the `ADD_SQL_FUNCTIONAL_TEST` lines and `RUN_SERIAL`
 properties of `tests/integration/functional/{hive_fork_manager,query_supervisor}/CMakeLists.txt`,
 and runs each through `tools/test.sh` (8 at a time; `HFM_TEST_JOBS`), so no CMake configure
@@ -59,7 +60,7 @@ sudo-capable `hived` user, uid 1000 — the uid AIDEV's pull hosts and workers r
 | full, canary | hfm-functional, cxx-scope |
 | baseline | hfm-functional |
 
-Not covered yet: the C++ build and unit tests, `test.functional.update.*` (needs the
+Not covered yet: hived's C++ build (only libhfm and libquery_supervisor are built), the C++ unit tests, `test.functional.update.*` (needs the
 built update-script generator), replay, system, forking and application tests, and
 shellcheck (`scripts/` has 8 error-severity findings today). They stay in GitLab CI.
 
@@ -73,10 +74,67 @@ docker run --rm --network none --user 1000:1000 -v "$PWD:/work" -w /work \
 
 ## The test runtime image (`runtime/`)
 
-The HAF image `hive/haf:6f476cfd` (develop 46558ea2e) with its entrypoint cleared, pinned by digest. A C++
-change reaches these checks only through a new base: when one lands on `develop`,
-re-pin the `FROM` to that commit's `hive/haf:<commit>` image, rebuild and re-pin **in
-the same commit**:
+AIDEV picks the image each slot runs in from the tree's native sources
+(`environment.source_image`; aidev `docs/operations/project-source-image.md`). It
+finds the newest commit that changed `source_image.paths` (outside `exclude`), then:
+
+1. **CI built it**: the registry holds `hive/haf:<commit[:8]>`. That image runs,
+   entrypoint cleared, and nothing is built.
+2. **CI did not**: the usual case, since CI runs no pipeline for `ai/*`,
+   `session/*` or `aidev/integration` pushes. AIDEV builds
+   `runtime/Dockerfile.source` from the candidate's checkout, handing it the pinned
+   `environment.image` as `BASE_IMAGE`, pushes it to its runtime registry as
+   `aidev-runtime/haf-source:<commit[:8]>-<recipe digest>`, and runs it. The phase
+   log's runtime line names it `aidev-built`. A later slot or attempt on the same
+   source commit and recipe reuses that tag rather than building again (on the
+   same host, with AIDEV's default host-local registry).
+3. **No commit touched the paths**: the pinned `environment.image` runs.
+
+`Dockerfile.source` compiles only what the functional suites load from C++:
+libhfm (`src/hive_fork_manager/shared_lib`) and libquery_supervisor
+(`src/query_supervisor`), with what they link from `hive` (hive_protocol, fc). Its
+builder is the `ci-base-image` stage of `Dockerfile` (the CI toolchain image pinned
+by digest, plus `scripts/setup_ubuntu.sh --dev`), configured as CI's
+`scripts/build.sh` does (Release, Ninja, mainnet). The final stage is the pinned
+image with both libraries overwritten in place, keeping the base's file names so
+the base's extension files still load them, and its entrypoint cleared. hived and
+the rest of the image stay the pinned base's.
+
+Because the image is reused by source commit, the recipe reads only source paths:
+`CMakeLists.txt`, `cmake/`, `common_includes/`, `src/`, `hive/` and the two
+`setup_ubuntu.sh` scripts. It installs no extension SQL (`*.sql` is excluded; the
+suites install the candidate's own). The root `CMakeLists.txt` adds `tests/`, which
+is not a source path, so the build configures with an empty stand-in. The `hive`
+submodule reaches the context because AIDEV checks out a candidate worktree with
+its submodules; the build fails at once, as the candidate's build failure, when
+`hive/` is empty. A step that fails on the candidate's sources is
+`source_image_build_failed` and goes to a fix round; a build that cannot run at all
+(daemon, registry, the 3600 s build bound outside a `RUN`/`COPY` step) is
+`unverifiable_runtime`.
+
+Build time, against aidev's 3600 s bound on `docker build`: on steem-11 (32 cores),
+with both `FROM` images already pulled, 177 s with no layer cache (84 s for
+`setup_ubuntu.sh --dev`, 90 s to configure and compile the two libraries); about
+90 s once the toolchain layer is cached, since any source change reruns the
+compile; 1 s when nothing changed. A host that has neither image first pulls the
+3.6 GB toolchain image and the pinned base.
+
+To build it by hand:
+
+```bash
+docker build --build-arg BASE_IMAGE="$(grep -o 'registry[^"]*aidev-tests@sha256:[0-9a-f]*' .aidev/project.yaml)" \
+    -f .aidev/runtime/Dockerfile.source -t haf-source .
+```
+
+### The pinned base (`environment.image`)
+
+The HAF image `hive/haf:6f476cfd` (develop 46558ea2e) with its entrypoint cleared,
+pinned by digest: what case 3 runs, the base case 2 builds on, and what the by-hand
+run above uses. Its hived, PostgreSQL and extension layout reach every slot, so
+re-pin it when those should follow `develop` (and when the base's Ubuntu or
+PostgreSQL changes, re-pin the builder `FROM` in `Dockerfile.source` with it, so the
+libraries are built against the same system): re-pin the `FROM` to that commit's
+`hive/haf:<commit>` image, rebuild and re-pin **in the same commit**:
 
 ```bash
 .aidev/runtime/build.sh --push   # registry digest if aidev-<input hash> exists, else build + push

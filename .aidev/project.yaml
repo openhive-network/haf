@@ -30,10 +30,11 @@ environment:
   # .aidev/runtime/build.sh from .aidev/runtime/Dockerfile (its only input).
   image: "registry.gitlab.syncad.com/hive/haf/aidev-tests@sha256:7fbd227a73fa8b180389312f9f8e80d7497b3513b50bc4bc9ac7c69ce343771b"
   inputs: [".aidev/runtime/Dockerfile"]
-  # Run each tree in the CI image built from its own native sources, so a new
-  # libhfm C function needs no hand re-pin once CI has published its image. The
-  # pinned image above remains the fallback for a tree CI never built (any ai/ or
-  # session/ branch that changes these sources, since CI skips those branches).
+  # Run each tree in the CI image built from its own native sources. A tree whose
+  # newest source commit has no CI image (CI runs no pipeline for ai/, session/ or
+  # aidev/integration pushes) runs in the image `build` makes from its checkout:
+  # the pinned image above (BASE_IMAGE) with libhfm and libquery_supervisor
+  # compiled from the candidate. See .aidev/README.md.
   source_image:
     repository: "registry.gitlab.syncad.com/hive/haf"
     # Must match scripts/ci-helpers/source-patterns.sh (CI's rebuild patterns).
@@ -42,6 +43,9 @@ environment:
             "scripts/generate_extension_sql.sh", "common_includes/", ".gitmodules"]
     # The suites install these themselves, so they need no new image.
     exclude: ["*.sql", "*.md"]
+    # Reads only the paths above from the checkout; a cold build takes ~3 minutes.
+    build:
+      dockerfile: ".aidev/runtime/Dockerfile.source"
 
 issues:
   intake_label: todo
@@ -59,10 +63,11 @@ issues:
 # different things.
 #
 # SQL path first: the candidate's hive_fork_manager SQL is installed into the
-# pinned HAF image (as CI's Dockerfile.sql-overlay does) and the SQL functional
+# test image (as CI's Dockerfile.sql-overlay does) and the SQL functional
 # tests ctest registers run against it (.aidev/hfm-functional.sh). The image's
-# C++ (libhfm, hived) is the base commit's, so `cxx-scope` reports a candidate's
-# C++/CMake/hive changes as a skipped, unverified case. Unbound for now: the C++
+# libhfm and libquery_supervisor are built from the tree's own sources
+# (environment.source_image); hived is the pinned base's, so `cxx-scope` reports a
+# candidate's other C++/CMake/hive changes as a skipped case. Unbound for now: the C++
 # build and unit tests, replay and system tests (CI keeps them), and `static`
 # (scripts/ has shellcheck errors today) and `system`, which AIDEV runs for no
 # project. See .aidev/README.md.
