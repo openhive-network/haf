@@ -199,17 +199,20 @@ same across its versions:
 - `app-roles/btracker.sql`: balance_tracker's `btracker_owner` and `btracker_user`;
 - `app-roles/reptracker.sql`: reputation_tracker's `reptracker_owner` and
   `reptracker_user`;
+- `app-roles/l2_framework.sql`: l2_framework's `l2_framework_owner` and
+  `l2_framework_user`;
 - `app-roles/hafbe.sql`: haf_block_explorer's `hafbe_owner` and `hafbe_user`,
-  members of the three apps' owner and user roles above;
+  members of hafah's, btracker's and reptracker's owner and user roles above,
+  and `hafbe_user` also of `l2_framework_user`;
 - `app-roles/haf_stats.sql`: haf_stats' `haf_stats_owner` and `haf_stats_user`
   (NOINHERIT, in no HAF group);
 - `app-roles/haf_fyp.sql`: haf_fyp's `haf_fyp_owner` and `haf_fyp_user` (in no
   HAF group, which haf_fyp's install asserts).
 
 An app's roles may be members of another app's, so `serve.sh` applies the files
-in the explicit order of its `app_roles` list (hafbe after hafah, btracker and
-reptracker), and refuses to serve when `app-roles/` or `app-grants/` holds a file
-that list does not name.
+in the explicit order of its `app_roles` list (hafbe after hafah, btracker,
+reptracker and l2_framework), and refuses to serve when `app-roles/` or
+`app-grants/` holds a file that list does not name.
 
 An app whose user role is NOINHERIT (or in no HAF group) gets no HAF data through
 group membership: its install grants the role its reads per database, which the
