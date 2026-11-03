@@ -537,6 +537,7 @@ AS
 $BODY$
 DECLARE
     __max_block hafd.blocks.num%TYPE;
+    __max_irreversible_block hafd.blocks.num%TYPE;
     __last_pruning integer;
     __existing_lite_mode boolean;
     __existing_lite_schema boolean;
@@ -593,6 +594,16 @@ BEGIN
             DELETE FROM hafd.blocks WHERE num > _block_num;
         END IF;
     ELSE
+        -- hived's last irreversible block is never above its head block, so irreversible
+        -- data above the head means the database and the hived state do not belong together
+        -- (e.g. --force-replay over a populated database). back_from_fork rewinds only
+        -- reversible data, so continuing would write around the existing irreversible blocks.
+        SELECT COALESCE( MAX(num), 0 ) INTO __max_irreversible_block FROM hafd.blocks;
+        IF __max_irreversible_block > _block_num THEN
+            RAISE EXCEPTION 'HAF database irreversible top block % is above hived head block %: the database does not match the hived state. Drop and recreate the HAF database, or restore a hived state file that matches it.',
+                __max_irreversible_block, _block_num;
+        END IF;
+
         -- Log the state for diagnostics; both HAF-ahead (reversible blocks from
         -- prior session) and HAF-behind (replay-blockchain past consistent_block)
         -- are valid scenarios handled by back_from_fork below.
