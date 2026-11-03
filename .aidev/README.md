@@ -34,8 +34,8 @@ same-SHA flake detection) and `honor_quarantine: true`: a failing test listed in
 
 | Step | What |
 |---|---|
-| `hfm-smoke` | the functional tests under `hive_fork_manager/context_rewind/` and `hive_fork_manager/app_api/` (194) |
-| `hfm-functional` | every `hive_fork_manager` and `query_supervisor` functional test ctest registers (421); `RUN_SERIAL` tests run alone after the rest |
+| `hfm-smoke` | the functional tests under `hive_fork_manager/context_rewind/` and `hive_fork_manager/app_api/` (200) |
+| `hfm-functional` | every `hive_fork_manager` and `query_supervisor` functional test ctest registers (441) and `hive_fork_manager/test_update_script`; `RUN_SERIAL` tests run alone after the rest, `test_update_script` last |
 | `cxx-scope` | a skipped case naming the candidate's changed C++/CMake/`hive` files other than libhfm's (`src/hive_fork_manager/shared_lib/`) and libquery_supervisor's (`src/query_supervisor/`), which these checks do not verify |
 
 How the functional tests run (`.aidev/hfm-functional.sh`): inside the HAF image, as the
@@ -54,14 +54,26 @@ and no `hive` submodule checkout is needed. The entrypoint needs the image's
 sudo-capable `hived` user, uid 1000 — the uid AIDEV's pull hosts and workers run as;
 `run-checks.sh` fails with that reason under any other uid.
 
+When `hive_fork_manager/CMakeLists.txt` registers `test_update_script` (CI's ctest runs it
+after the functional tests), `hfm-functional` runs `test_update_script.sh` too, alone after
+every other test, as `hfm-functional::hive_fork_manager/test_update_script`: it updates the
+extension the step installed (about 2 minutes), with the update-script generator
+`generate_extension_sql.sh` writes from the candidate's
+`hive_fork_manager_update_script_generator.sh.in`. So every `full`, `canary` and `baseline`
+run covers the update path, whatever the candidate changed; `quick` does not. To run it alone:
+
+```bash
+aidev test run --slot full -- --rerun hfm-functional::hive_fork_manager/test_update_script
+```
+
 | Slot | Steps |
 |---|---|
 | quick, coverage | hfm-smoke (+ cxx-scope on quick) |
 | full, canary | hfm-functional, cxx-scope |
 | baseline | hfm-functional |
 
-Not covered yet: hived's C++ build (only libhfm and libquery_supervisor are built), the C++ unit tests, `test.functional.update.*` (needs the
-built update-script generator), replay, system, forking and application tests, and
+Not covered yet: hived's C++ build (only libhfm and libquery_supervisor are built), the C++ unit tests, `test.functional.update.*` (each functional
+test re-run on a database updated by the generator; CI runs them on develop and master only), replay, system, forking and application tests, and
 shellcheck (`scripts/` has 8 error-severity findings today). They stay in GitLab CI.
 
 To run by hand:

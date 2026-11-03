@@ -9,7 +9,7 @@
 #   - hfm-smoke       the hive_fork_manager functional tests under context_rewind/
 #                     and app_api/ (.aidev/hfm-functional.sh), one junit case each
 #   - hfm-functional  every hive_fork_manager and query_supervisor functional test
-#                     ctest registers, one junit case each
+#                     ctest registers, and test_update_script, one junit case each
 #   - cxx-scope       a skipped case naming the candidate's changed C++/CMake/hive
 #                     files other than libhfm's and libquery_supervisor's sources:
 #                     the image is built with those two libraries from the
