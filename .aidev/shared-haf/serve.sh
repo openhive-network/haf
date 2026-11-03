@@ -33,8 +33,9 @@ select 'create database haf_shared' where not exists (select 1 from pg_database 
 EOF
 psql_pg -d haf_shared -f "$here/admin.sql"
 # An app's roles may be members of another app's, so they are applied after
-# those: hafbe's roles are members of btracker's, reptracker's and hafah's.
-app_roles=(hafah btracker reptracker hafbe haf_stats haf_fyp)
+# those: hafbe's roles are members of btracker's, reptracker's, hafah's and
+# l2_framework's.
+app_roles=(hafah btracker reptracker l2_framework hafbe haf_stats haf_fyp)
 shopt -s nullglob
 for file in "$here"/app-roles/*.sql "$here"/app-grants/*.sql; do
     app="$(basename "$file" .sql)"
