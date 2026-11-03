@@ -22,29 +22,6 @@ namespace {
 
 namespace hive { namespace plugins { namespace sql_serializer {
 
-class data_processing_status_notifier
-{
-public:
-  data_processing_status_notifier(std::atomic_bool* is_processing_flag, std::mutex* mtx, std::condition_variable* notifier) :
-  _lk(*mtx),
-  _is_processing_flag(is_processing_flag),
-  _notifier(notifier)
-  {
-    _is_processing_flag->store(true);
-  }
-
-  ~data_processing_status_notifier()
-  {
-    _is_processing_flag->store(false);
-    _notifier->notify_one();
-  }
-
-private:
-  std::unique_lock<std::mutex> _lk;
-  std::atomic_bool* _is_processing_flag;
-  std::condition_variable* _notifier;
-};
-
 data_processor::data_processor( std::string description, std::string short_description, const data_processing_fn& dataProcessor, std::shared_ptr< block_num_rendezvous_trigger > api_trigger) :
   _description(std::move(description)),
   _short_description(std::move(short_description)),
@@ -70,25 +47,27 @@ data_processor::data_processor( std::string description, std::string short_descr
         _cv.notify_one();
       }
 
-      while(_continue.load())
+      for(;;)
       {
         dlog("${d} data processor is waiting for DATA-READY signal...", ("d", _description));
         std::unique_lock<std::mutex> lk(_mtx);
-        _cv.wait(lk, [this] {return _dataPtr.valid() || _continue.load() == false; });
+        _cv.wait(lk, [this] {return !_queue.empty() || _continue.load() == false; });
 
         dlog("${d} data processor resumed by DATA-READY signal...", ("d", _description));
 
-        if(_continue.load() == false) {
+        /// join() drains the already queued chunks, cancel() drops them
+        if(_continue.load() == false && (_queue.empty() || _cancel.load())) {
           dlog("${d} data processor _continue.load() == false", ("d", _description));
           break;
         }
 
-        fc::optional<data_chunk_ptr> dataPtr(std::move(_dataPtr));
-        uint32_t last_block_num_in_stage = _last_block_num;
+        data_chunk_ptr dataPtr = std::move(_queue.front().first);
+        const uint32_t last_block_num_in_stage = _queue.front().second;
+        _queue.pop_front();
 
         lk.unlock();
         dlog("${d} data processor consumed data - notifying trigger process...", ("d", _description));
-        _cv.notify_one();
+        _queue_space_cv.notify_one();
 
         // NOTE: We do NOT exit early on _cancel here to prevent data loss.
         // We must process the data and report to rendezvous so execute_push_block() gets called with valid data.
@@ -96,23 +75,23 @@ data_processor::data_processor( std::string description, std::string short_descr
 
         dlog("${d} data processor starts a data processing...", ("d", _description));
 
-        {
-          data_processing_status_notifier notifier(&_is_processing_data, &_data_processing_mtx, &_data_processing_finished_cv);
+        dataProcessor(dataPtr);
 
-          dataProcessor(*dataPtr);
+        if ( _randezvous_trigger && last_block_num_in_stage )
+          _randezvous_trigger->report_complete_thread_stage( last_block_num_in_stage );
 
-          if ( _randezvous_trigger && last_block_num_in_stage )
-            _randezvous_trigger->report_complete_thread_stage( last_block_num_in_stage );
-        }
+        notify_processing_finished_if_drained();
 
         dlog("${d} data processor finished processing a data chunk...", ("d", _description));
       }
     }
     catch(...)
     {
+      notify_processing_finished();
       auto current_exception = std::current_exception();
       handle_exception( current_exception );
     }
+    notify_processing_finished();
     dlog("Leaving data processor thread: ${d}", ("d", _description));
   };
 
@@ -127,31 +106,31 @@ data_processor::~data_processor()
 void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
 {
   const bool is_canceled = _cancel.load();
-  if ( !is_canceled )
-  {
-    /// Set immediately data processing flag only if not canceled
-    _is_processing_data = true;
-  }
+  bool queued = false;
 
   {
-  dlog("Trying to trigger data processor: ${d}...", ("d", _description));
-  std::lock_guard<std::mutex> lk(_mtx);
-  _dataPtr = std::move(dataPtr);
-  _last_block_num = last_blocknum;
-  dlog("Data processor: ${d} triggerred...", ("d", _description));
-  }
-  _cv.notify_one();
-
-  /// wait for the worker
-  {
-    dlog("Waiting until data_processor ${d} will consume a data...", ("d", _description));
+    dlog("Trying to trigger data processor: ${d}...", ("d", _description));
     std::unique_lock<std::mutex> lk(_mtx);
-    _cv.wait(lk, [this] {return _dataPtr.valid() == false || _cancel; });
+    /// The bounded queue is the back-pressure between the serializer and this processor.
+    _queue_space_cv.wait(lk, [this] { return _queue.size() < MAX_QUEUED_CHUNKS || _cancel.load() || _continue.load() == false; });
+
+    if ( _continue.load() && _queue.size() < MAX_QUEUED_CHUNKS )
+    {
+      _queue.emplace_back( std::move(dataPtr), last_blocknum );
+      _is_processing_data = true;
+      queued = true;
+      dlog("Data processor: ${d} triggerred...", ("d", _description));
+    }
+    else
+      wlog("Data processor: ${d} is stopping, dropping data of batch ending at block ${b}", ("d", _description)("b", last_blocknum));
   }
+
+  if ( queued )
+    _cv.notify_one();
 
   dlog("Leaving trigger of data data processor: ${d}...", ("d", _description));
 
-  if ( is_canceled )
+  if ( is_canceled || !queued )
     only_report_batch_finished( last_blocknum );
 }
 
@@ -164,6 +143,21 @@ data_processor::only_report_batch_finished( uint32_t block_num ) try {
 } catch(...) {
   auto current_exception = std::current_exception();
   handle_exception( current_exception );
+}
+
+void data_processor::notify_processing_finished()
+{
+  std::lock_guard<std::mutex> lk(_data_processing_mtx);
+  _is_processing_data = false;
+  _data_processing_finished_cv.notify_all();
+}
+
+void data_processor::notify_processing_finished_if_drained()
+{
+  /// _mtx is held while clearing the flag so a concurrent trigger cannot queue a chunk in between
+  std::lock_guard<std::mutex> lk(_mtx);
+  if ( _queue.empty() )
+    notify_processing_finished();
 }
 
 void data_processor::complete_data_processing()
@@ -198,6 +192,7 @@ void data_processor::join()
     dlog("Data processor: ${d} resumed...", ("d", _description));
   }
   _cv.notify_one();
+  _queue_space_cv.notify_all();
 
   try {
     if (_future.valid())
@@ -220,6 +215,7 @@ data_processor::handle_exception( std::exception_ptr exception_ptr ) {
       _cancel.store(true);
       _continue.store(false);
       _cv.notify_one();
+      _queue_space_cv.notify_all();
       std::rethrow_exception( exception_ptr );
     }
   }
