@@ -1706,7 +1706,15 @@ prepare_haf_data:
     HIVE_NETWORK_TYPE: mainnet
     BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
+  # Replaces the template's after_script, which would also delete the extracted
+  # DATA_CACHE_DIR before phase-2 consumers register. The lock release must stay
+  # first: build_data.sh leaves replay_running behind when the job fails, and later
+  # runs on this commit wait on it until it is an hour old.
   after_script:
+    - |
+      rm -f "${DATA_CACHE_DIR}/replay_running" && echo "Lock file removed: ${DATA_CACHE_DIR}/replay_running" || echo "Lock file removal failed or not present"
+    - |
+      rm -f "${DATA_CACHE_DIR}/consumers/${CI_JOB_ID}" 2>/dev/null || true
     - echo "Cleanup complete"
   tags:
     - public-runner-docker
@@ -1727,7 +1735,15 @@ prepare_haf_data_pg17:
     HAF_CACHE_TYPE: "haf17"
     DATA_CACHE_HAF_PREFIX: "/cache/haf17"
     DATA_CACHE_DIR: "/cache/haf17_${HAF_COMMIT}"
+  # Replaces the template's after_script, which would also delete the extracted
+  # DATA_CACHE_DIR before phase-2 consumers register. The lock release must stay
+  # first: build_data.sh leaves replay_running behind when the job fails, and later
+  # runs on this commit wait on it until it is an hour old.
   after_script:
+    - |
+      rm -f "${DATA_CACHE_DIR}/replay_running" && echo "Lock file removed: ${DATA_CACHE_DIR}/replay_running" || echo "Lock file removal failed or not present"
+    - |
+      rm -f "${DATA_CACHE_DIR}/consumers/${CI_JOB_ID}" 2>/dev/null || true
     - echo "Cleanup complete"
   tags:
     - public-runner-docker
