@@ -13,6 +13,8 @@
 # 2. Runs every ADD_SQL_FUNCTIONAL_TEST of tests/integration/functional/
 #    {hive_fork_manager,query_supervisor} through tools/test.sh, as CI's ctest
 #    does, HFM_TEST_JOBS at a time, and records one case per test.
+# 3. Runs test_update_script.sh (hive_fork_manager/test_update_script) after
+#    them, alone, as CI's ctest does after the functional tests.
 #
 # Environment: HFM_TEST_OUT (report dir, required), HFM_TEST_FILTER (optional
 # Perl regex over the test names the cases are reported under,
@@ -57,10 +59,15 @@ port="${POSTGRES_PORT:-5432}"
 
 run_one() {  # folder relpath
     local folder="$1" rel="$2" name log t0 rc
-    name="${folder}/${rel%.sql}"
+    name="${folder}/${rel%.*}"
     log="$out/hfm/$(echo "$name" | tr '/' '.').log"
     t0=$(date +%s)
-    tools/test.sh "$src/src/$folder" "$folder/$rel" "$src/scripts/" "$port" > "$log" 2>&1 < /dev/null
+    if [ "$rel" = test_update_script.sh ]; then
+        # in a directory of its own: a failed schema check leaves its diff files in the working directory
+        (cd "$(mktemp -d)" && "$src/tests/integration/functional/$folder/$rel" --haf_binaries_dir="$src") > "$log" 2>&1 < /dev/null
+    else
+        tools/test.sh "$src/src/$folder" "$folder/$rel" "$src/scripts/" "$port" > "$log" 2>&1 < /dev/null
+    fi
     rc=$?
     if [ "$rc" -eq 0 ]; then
         printf 'case\t%s\tpass\t%s\t\n' "$name" "$(( $(date +%s) - t0 ))"
@@ -77,8 +84,16 @@ export src out port
 # PCRE because aidev renders re-run titles as a (?:a|b) alternation.
 for folder in hive_fork_manager query_supervisor; do
     grep -E '^[[:space:]]*ADD_SQL_FUNCTIONAL_TEST\(' "$folder/CMakeLists.txt" \
-        | sed -E "s/.*\\( *([^ )]+)\\.sql.*/$folder\\/\\1/"
-done | grep -P "${HFM_TEST_FILTER:-.}" | sed -E 's#^([^/]+)/(.*)$#\1 \2.sql#' > "$out/hfm/tests.txt"
+        | sed -E "s/.*\\( *([^ )]+)\\.sql.*/$folder\\/\\1 \\1.sql/"
+done > "$out/hfm/registered.txt"
+# test_update_script, which CI's ctest runs after the functional tests; it updates the installed extension
+# in place, so it runs alone (serial.txt)
+update_test="hive_fork_manager test_update_script.sh"
+if grep -qE '^ADD_TEST\( NAME test_update_script$' hive_fork_manager/CMakeLists.txt; then
+    echo "hive_fork_manager/test_update_script test_update_script.sh" >> "$out/hfm/registered.txt"
+fi
+cut -d' ' -f1 "$out/hfm/registered.txt" | grep -P "${HFM_TEST_FILTER:-.}" \
+    | awk 'NR == FNR {selected[$1]; next} $1 in selected {sub(/\/.*/, "", $1); print}' - "$out/hfm/registered.txt" > "$out/hfm/tests.txt"
 if [ ! -s "$out/hfm/tests.txt" ]; then
     msg="no functional test matches HFM_TEST_FILTER '${HFM_TEST_FILTER:-.}'"
     echo "$msg" | tee "$out/hfm/selection.log"
@@ -90,6 +105,7 @@ for folder in hive_fork_manager query_supervisor; do
         | grep -oE "test\.functional\.$folder\.[A-Za-z0-9_.]+" \
         | sed -E "s/^test\.functional\.$folder\.//; s#\.#/#; s/$/.sql/; s#^#$folder #"
 done | sort -u > "$out/hfm/serial.txt"
+echo "$update_test" >> "$out/hfm/serial.txt"
 grep -vxF -f "$out/hfm/serial.txt" "$out/hfm/tests.txt" > "$out/hfm/parallel.txt"
 grep -xF -f "$out/hfm/serial.txt" "$out/hfm/tests.txt" > "$out/hfm/serial-selected.txt"
 

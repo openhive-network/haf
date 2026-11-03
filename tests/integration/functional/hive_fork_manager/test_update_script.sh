@@ -22,13 +22,33 @@ print_help () {
     echo
 }
 
+EXTENSION_DIR="/usr/share/postgresql/$POSTGRES_VERSION/extension"
+
+# The install script of the version CREATE EXTENSION installs by default, not the newest file: the
+# scripts this test writes are newer.
+default_sql_script() {
+    echo "$EXTENSION_DIR/hive_fork_manager--$(sed -nE "s/^default_version = '(.*)'$/\1/p" "$EXTENSION_DIR/hive_fork_manager.control").sql"
+}
+
 prepare_sql_script() {
     version="$1"
     # remove any existing sql script with given version
-    sudo rm -f "/usr/share/postgresql/$POSTGRES_VERSION/extension/hive_fork_manager--$version.sql"
-    # copy the newest hive_fork_manager--\*.sql script as hive_fork_manager--${version}.sql
-    (cd "/usr/share/postgresql/$POSTGRES_VERSION/extension/" && \
-        sudo cp "$(find ./ -maxdepth 1 -iname hive_fork_manager--\*.sql -type f -printf '%T@ %p\n' | sort -nr | head -1 | awk '{print $2}')" "hive_fork_manager--$version.sql")
+    sudo rm -f "$EXTENSION_DIR/hive_fork_manager--$version.sql"
+    sudo cp "$(default_sql_script)" "$EXTENSION_DIR/hive_fork_manager--$version.sql"
+}
+
+# A version that still has the KEYAUTH state provider: the current install script without the refusal in
+# hive.app_state_provider_import, and with the provider's functions as the last version having it shipped them.
+prepare_pre_keyauth_removal_sql_script() {
+    version="$1"
+    script="$EXTENSION_DIR/hive_fork_manager--$version.sql"
+    sudo rm -f "$script"
+    sed "/^    IF _state_provider = 'KEYAUTH' THEN$/,/^    END IF;$/d" "$(default_sql_script)" \
+        | cat - "$SCRIPTPATH/pre_417_keyauth_provider.sql" | sudo tee "$script" > /dev/null
+    if grep -q "The KEYAUTH state provider was removed from HAF" "$script"; then
+        echo "TEST FAILED: could not remove the KEYAUTH refusal from hive.app_state_provider_import"
+        exit 42
+    fi
 }
 
 prepare_database() {
@@ -452,16 +472,17 @@ exec_sql "CREATE SCHEMA workaround;
           "
 update_database
 
-printf "\nTEST: Upgrade a database where a context still has the removed KEYAUTH state provider registered. The update should refuse naming the context and leave the database unchanged.\n"
-prepare_database
-# the deployed version can no longer import KEYAUTH, so its registration is written as an older version left it
+printf "\nTEST: Upgrade from a version having the KEYAUTH state provider a database where a context imported it. The update should refuse naming the context and leave the database unchanged.\n"
+prepare_pre_keyauth_removal_sql_script 1111111111111111111111111111111111111111
+prepare_database --version="1111111111111111111111111111111111111111"
 exec_sql "CREATE SCHEMA workaround;
           SELECT hive.app_create_context('workaround', 'workaround');
           SELECT hive.app_state_provider_import( 'METADATA', 'workaround' );
-          CREATE TABLE hafd.workaround_keyauth_a( account_id INTEGER );
-          INSERT INTO hafd.state_providers_registered( context_id, state_provider, tables, owner )
-          SELECT id, 'KEYAUTH', ARRAY[ 'workaround_keyauth_a' ], current_user FROM hafd.contexts WHERE name = 'workaround';
-          "
+          SELECT hive.app_state_provider_import( 'KEYAUTH', 'workaround' );
+          SELECT hive.app_context_detach( 'workaround' );
+          SELECT hive.app_state_providers_update( 1, 1, 'workaround' );"
+keyauth_tables="SELECT count(*) FROM pg_class WHERE relnamespace = 'hafd'::regnamespace AND relkind = 'r' AND relname LIKE 'workaround\_%auth%'"
+[ "$(exec_sql "$keyauth_tables")" = "4" ] || { echo "TEST FAILED: the deployed version did not create the KEYAUTH tables"; exit 43; }
 update_output=$(failswith 6 update_database 2>&1) || { echo "$update_output"; exit 37; }
 echo "$update_output"
 grep -q "contexts still having KEYAUTH registered: workaround" <<< "$update_output" \
@@ -470,14 +491,20 @@ grep -q "contexts still having KEYAUTH registered: workaround" <<< "$update_outp
 [ "$(deployed_version)" = "1.0" ] || { echo "TEST FAILED: a refused update left version $(deployed_version) deployed"; exit 39; }
 check_accepts_connections
 [ "$(exec_sql "SELECT count(*) FROM hafd.state_providers_registered WHERE state_provider = 'KEYAUTH'")" = "1" ] \
-    && [ -n "$(exec_sql "SELECT to_regclass('hafd.workaround_keyauth_a')")" ] \
+    && [ "$(exec_sql "$keyauth_tables")" = "4" ] \
+    && [ -n "$(exec_sql "SELECT to_regprocedure('hive.workaround_insert_into_keyauth_a(integer, integer)')")" ] \
     || { echo "TEST FAILED: a refused update changed the KEYAUTH registration"; exit 40; }
+# the context still runs its providers on the deployed version
+exec_sql "SELECT hive.app_state_providers_update( 1, 1, 'workaround' );" > /dev/null
 
-printf "\nTEST: Upgrade the same database once the operator dropped the KEYAUTH registration. This should pass.\n"
-exec_sql "DELETE FROM hafd.state_providers_registered WHERE state_provider = 'KEYAUTH';
-          DROP TABLE hafd.workaround_keyauth_a;"
+printf "\nTEST: Upgrade the same database once the operator dropped the KEYAUTH provider on the deployed version. This should pass.\n"
+exec_sql "SELECT hive.app_state_provider_drop( 'KEYAUTH', 'workaround' );"
 update_database
 [ "$(deployed_version)" != "1.0" ] || { echo "TEST FAILED: the extension was not updated"; exit 41; }
+[ "$(exec_sql "$keyauth_tables")" = "0" ] \
+    && [ "$(exec_sql "SELECT array_agg(state_provider)::text FROM hafd.state_providers_registered")" = "{METADATA}" ] \
+    && [ -z "$(exec_sql "SELECT to_regproc('hive.start_provider_keyauth')")" ] \
+    || { echo "TEST FAILED: the updated database still has KEYAUTH objects"; exit 44; }
 exec_sql "SELECT hive.app_state_providers_update( 1, 1, 'workaround' );" > /dev/null
 
 printf "\nTEST: Upgrade a database whose hive_account_operations_uq1 lacks INCLUDE (op_type_id) and whose deployed libhfm is not shipped. The index should be rebuilt in place.\n"
