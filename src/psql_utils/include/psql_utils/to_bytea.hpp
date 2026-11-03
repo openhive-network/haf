@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdlib>
+#include <cstring>
 #include "psql_utils/postgres_includes.hpp"
 
 #include <memory>
