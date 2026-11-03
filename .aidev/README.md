@@ -231,8 +231,8 @@ grants the app's roles the database:
 -- in run_<run id>, as haf_shared_consumer
 -- HAfAH:
 grant create, connect on database run_<run id> to hafah_owner, hafah_user;
--- haf_block_explorer (with balance_tracker and reputation_tracker):
-grant create, connect on database run_<run id> to hafbe_owner, hafbe_user, btracker_owner, btracker_user, reptracker_owner, reptracker_user;
+-- haf_block_explorer (with balance_tracker, reputation_tracker and l2_framework):
+grant create, connect on database run_<run id> to hafbe_owner, hafbe_user, btracker_owner, btracker_user, reptracker_owner, reptracker_user, l2_framework_owner, l2_framework_user;
 -- haf_stats:
 grant create, connect on database run_<run id> to haf_stats_owner, haf_stats_user;
 -- haf_fyp:
@@ -242,7 +242,8 @@ grant create, connect on database run_<run id> to haf_fyp_owner, haf_fyp_user;
 then runs the app's install as the consumer, skipping its own role-creation step
 (HAfAH: `scripts/install_app.sh` without `db/builtin_roles.sql`;
 haf_block_explorer: `scripts/install_app.sh` without the `db/builtin_roles.sql`
-of itself, balance_tracker and reputation_tracker; haf_stats and haf_fyp: their
+of itself, balance_tracker, reputation_tracker and l2_framework, installing
+l2_framework's `l2` schema as `l2_framework_owner`; haf_stats and haf_fyp: their
 `db/builtin_roles.sql` also makes per-database grants and assertions, so their
 installs need a step the consumer can run in place of it; haf_stats' grants are in
 `app-grants/`). A new consumer app
