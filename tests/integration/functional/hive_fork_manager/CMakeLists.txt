@@ -165,6 +165,8 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( hived_api/are_fk_dropped_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/autodetach.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/connect_test_not_remove_reversible.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/connect_irreversible_ahead_negative_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/connect_reversible_ahead_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/set_sync_state.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/get_sync_state.sql )
 
