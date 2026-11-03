@@ -5,7 +5,7 @@ $BODY$
 BEGIN
     CREATE SCHEMA a;
     PERFORM hive.app_create_context( 'context', _schema => 'a', _is_forking => FALSE );
-    PERFORM hive.app_state_provider_import( 'KEYAUTH', 'context' );
+    PERFORM hive.app_state_provider_import( 'ACCOUNTS', 'context' );
     PERFORM hive.app_state_provider_import( 'METADATA', 'context' );
     DELETE FROM hafd.vacuum_requests;
 END;
@@ -31,10 +31,7 @@ BEGIN
         SELECT array_agg( format( '%s.%s:%s:%s', schema_name, table_name, kind, status ) ORDER BY table_name )
         FROM hafd.vacuum_requests
     ) = ARRAY[
-          'hafd.context_accountauth_a:freeze:requested'
-        , 'hafd.context_authority_definition:freeze:requested'
-        , 'hafd.context_keyauth_a:freeze:requested'
-        , 'hafd.context_keyauth_k:freeze:requested'
+          'hafd.context_accounts:freeze:requested'
         , 'hafd.context_metadata:freeze:requested'
     ], 'app_restore_indexes(context) should request a freeze vacuum of every state-provider table of the context';
 END;

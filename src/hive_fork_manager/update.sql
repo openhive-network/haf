@@ -557,7 +557,9 @@ BEGIN
         SELECT
               sp.* as provider
             , hive_update.calculate_state_provider_hash(sp.*) as hash
-        FROM unnest(include_providers) as sp;
+        FROM unnest(include_providers) as sp
+        -- a provider removed from HAF (KEYAUTH) stays in hafd.state_providers, as an enum value cannot be dropped
+        WHERE to_regproc(format('hive.start_provider_%s', sp)) IS NOT NULL;
 END;
 $BODY$;
 

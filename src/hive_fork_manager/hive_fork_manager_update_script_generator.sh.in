@@ -384,6 +384,26 @@ migrate_account_operations_uq1() {
   echo "hafd.hive_account_operations_uq1 was ${uq1_state}, it is now (or will be restored as) ${uq1_definition}"
 }
 
+# The KEYAUTH state provider was removed. Its tables are registered in the app's context and may back the
+# app's own views, so the update does not drop them: the operator upgrades the app (which then drops the
+# provider on the deployed version) or removes its context, and runs the update again.
+refuse_contexts_with_keyauth() {
+  local contexts
+  contexts=$(db_sql "
+    SELECT string_agg(hc.name, ', ' ORDER BY hc.name)
+    FROM hafd.state_providers_registered spr
+    JOIN hafd.contexts hc ON hc.id = spr.context_id
+    WHERE spr.state_provider = 'KEYAUTH'")
+  if [ -n "$contexts" ]; then
+    echo "ERROR: the KEYAUTH state provider was removed from HAF, l2_framework (https://gitlab.syncad.com/hive/l2_framework) replaces it."
+    echo "ERROR: contexts still having KEYAUTH registered: $contexts"
+    echo "ERROR: upgrade the applications owning them first, or drop the provider on the deployed HAF version with"
+    echo "ERROR:   SELECT hive.app_state_provider_drop('KEYAUTH', '<context>');"
+    echo "ERROR: and run the update again. The database was not changed."
+    exit 6
+  fi
+}
+
 check_functions_were_updated() {
   echo
   echo "Checking that all C functions were properly updated..."
@@ -408,6 +428,8 @@ reopen_connections_left_closed
 psql_do -d "$DB_NAME" -q -t -A --single-transaction -f "$SCRIPTPATH/update.sql"
 
 get_deployed_version
+
+refuse_contexts_with_keyauth
 
 if [ "$COMMIT_PREV_ID" != "$COMMIT_NEW_ID" ]; then
   open_update_session

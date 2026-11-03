@@ -752,6 +752,10 @@ $BODY$
 DECLARE
     __context_id hafd.contexts.id%TYPE;
 BEGIN
+    -- the enum keeps 'KEYAUTH' because PostgreSQL cannot drop an enum value
+    IF _state_provider = 'KEYAUTH' THEN
+        RAISE EXCEPTION 'The KEYAUTH state provider was removed from HAF; use the l2_framework HAF application (https://gitlab.syncad.com/hive/l2_framework), which keeps block-versioned authority tables, instead';
+    END IF;
 
     SELECT hac.id, hive.check_owner( hac.name, hac.owner )
     FROM hafd.contexts hac

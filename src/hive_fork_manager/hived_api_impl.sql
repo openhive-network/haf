@@ -1080,21 +1080,4 @@ BEGIN
 END;
 $BODY$
 ;
-
-CREATE OR REPLACE FUNCTION hive.test_vacuum_functions()
-RETURNS void
-LANGUAGE plpgsql
-AS
-$BODY$
-BEGIN
-    -- Request a vacuum for the table hafbe_app_keyauth_a
-    PERFORM hive.app_request_table_vacuum('hafbe_app_keyauth_a', '1 hour'::INTERVAL);
-
-    -- Wait for the vacuum to complete
-    PERFORM hive.app_wait_for_table_vacuum('hafbe_app_keyauth_a');
-
-    RAISE NOTICE 'Test for vacuum functions on table hafbe_app_keyauth_a completed successfully.';
-END;
-$BODY$
-;
 */
