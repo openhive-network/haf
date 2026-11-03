@@ -29,7 +29,6 @@ namespace hive::plugins::sql_serializer {
     void cancel();
   private:
     std::unique_ptr< queries_commit_data_processor > _data_processor;
-    uint32_t _block_number;
     std::mutex _trigger_mtx;
   };
 

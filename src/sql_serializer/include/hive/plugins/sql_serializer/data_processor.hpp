@@ -9,6 +9,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstddef>
+#include <deque>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -44,15 +45,21 @@ public:
   data_processor(const data_processor&) = delete;
   data_processor& operator=(const data_processor&) = delete;
 
+  /// Queues a chunk for the processing thread and returns without waiting for it to be processed.
+  /// Blocks only while MAX_QUEUED_CHUNKS chunks are already waiting behind the one being processed.
   void trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum);
   //where there the chunk is empty, only confirms that the bunch of blocks was processed by the processor
   void only_report_batch_finished( uint32_t _block_num );
-  /// Allows to hold execution of calling thread, until data processing thread will consume data and starts awaiting for another trigger call.
+  /// Holds execution of calling thread until every triggered chunk has been processed.
   void complete_data_processing();
   void cancel();
   void join();
 private:
+  static constexpr std::size_t MAX_QUEUED_CHUNKS = 2;
+
   void handle_exception( std::exception_ptr exception_ptr );
+  void notify_processing_finished();
+  void notify_processing_finished_if_drained();
 
 private:
   std::string _description;
@@ -65,9 +72,10 @@ private:
   std::mutex _mtx;
   std::mutex _data_processing_mtx;
   std::condition_variable _cv;
+  std::condition_variable _queue_space_cv;
   std::condition_variable _data_processing_finished_cv;
-  fc::optional<data_chunk_ptr> _dataPtr;
-  uint32_t _last_block_num = 0;
+  /// chunks waiting for the processing thread, paired with the last block number of their batch
+  std::deque< std::pair< data_chunk_ptr, uint32_t > > _queue;
 
   size_t _total_processed_records;
 
