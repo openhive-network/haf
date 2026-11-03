@@ -14,7 +14,7 @@ namespace PsqlTools::PsqlUtils {
     bytea_ptr toBytea( _Data* _data ) {
 
       bytea_ptr result( static_cast<bytea*>( std::malloc(sizeof(_Data) + VARHDRSZ) ), &std::free );
-      SET_VARSIZE( result.get(), sizeof( _Data ) );
+      SET_VARSIZE( result.get(), sizeof( _Data ) + VARHDRSZ );
       std::memcpy( VARDATA_ANY( result.get() ), _data, sizeof( _Data ) );
 
       return result;
