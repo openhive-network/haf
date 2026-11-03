@@ -1706,13 +1706,25 @@ prepare_haf_data:
     HIVE_NETWORK_TYPE: mainnet
     BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
+    # build_data.sh from this ref records the job id in replay_running
+    COMMON_CI_REF: "e58b0bfdb5d55825fe17d976c13233aba3411138"
   # Replaces the template's after_script, which would also delete the extracted
   # DATA_CACHE_DIR before phase-2 consumers register. The lock release must stay
   # first: build_data.sh leaves replay_running behind when the job fails, and later
-  # runs on this commit wait on it until it is an hour old.
+  # runs on this commit wait on it until it is an hour old. The release is
+  # owner-checked, so it needs a build_data.sh that writes CI_JOB_ID into the lock
+  # (COMMON_CI_REF above).
   after_script:
     - |
-      rm -f "${DATA_CACHE_DIR}/replay_running" && echo "Lock file removed: ${DATA_CACHE_DIR}/replay_running" || echo "Lock file removal failed or not present"
+      # Only the job whose id build_data.sh wrote into the lock releases it; a job that only waited leaves it
+      LOCK_FILE="${DATA_CACHE_DIR}/replay_running"
+      if [[ ! -f "$LOCK_FILE" ]]; then
+        echo "Lock file not present: $LOCK_FILE"
+      elif [[ -n "${CI_JOB_ID:-}" ]] && [[ "$(cat "$LOCK_FILE" 2>/dev/null)" == "${CI_JOB_ID}" ]]; then
+        rm -f "$LOCK_FILE" && echo "Lock file removed: $LOCK_FILE" || echo "Lock file removal failed: $LOCK_FILE"
+      else
+        echo "Lock file $LOCK_FILE belongs to another job ($(cat "$LOCK_FILE" 2>/dev/null || true)), not ${CI_JOB_ID:-}; leaving it"
+      fi
     - |
       rm -f "${DATA_CACHE_DIR}/consumers/${CI_JOB_ID}" 2>/dev/null || true
     - echo "Cleanup complete"
@@ -1732,16 +1744,28 @@ prepare_haf_data_pg17:
     HIVE_NETWORK_TYPE: mainnet
     BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
     CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
+    # build_data.sh from this ref records the job id in replay_running
+    COMMON_CI_REF: "e58b0bfdb5d55825fe17d976c13233aba3411138"
     HAF_CACHE_TYPE: "haf17"
     DATA_CACHE_HAF_PREFIX: "/cache/haf17"
     DATA_CACHE_DIR: "/cache/haf17_${HAF_COMMIT}"
   # Replaces the template's after_script, which would also delete the extracted
   # DATA_CACHE_DIR before phase-2 consumers register. The lock release must stay
   # first: build_data.sh leaves replay_running behind when the job fails, and later
-  # runs on this commit wait on it until it is an hour old.
+  # runs on this commit wait on it until it is an hour old. The release is
+  # owner-checked, so it needs a build_data.sh that writes CI_JOB_ID into the lock
+  # (COMMON_CI_REF above).
   after_script:
     - |
-      rm -f "${DATA_CACHE_DIR}/replay_running" && echo "Lock file removed: ${DATA_CACHE_DIR}/replay_running" || echo "Lock file removal failed or not present"
+      # Only the job whose id build_data.sh wrote into the lock releases it; a job that only waited leaves it
+      LOCK_FILE="${DATA_CACHE_DIR}/replay_running"
+      if [[ ! -f "$LOCK_FILE" ]]; then
+        echo "Lock file not present: $LOCK_FILE"
+      elif [[ -n "${CI_JOB_ID:-}" ]] && [[ "$(cat "$LOCK_FILE" 2>/dev/null)" == "${CI_JOB_ID}" ]]; then
+        rm -f "$LOCK_FILE" && echo "Lock file removed: $LOCK_FILE" || echo "Lock file removal failed: $LOCK_FILE"
+      else
+        echo "Lock file $LOCK_FILE belongs to another job ($(cat "$LOCK_FILE" 2>/dev/null || true)), not ${CI_JOB_ID:-}; leaving it"
+      fi
     - |
       rm -f "${DATA_CACHE_DIR}/consumers/${CI_JOB_ID}" 2>/dev/null || true
     - echo "Cleanup complete"
