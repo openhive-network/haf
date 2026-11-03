@@ -47,8 +47,9 @@ public:
 
   /// Queues a chunk for the processing thread and returns without waiting for it to be processed.
   /// Blocks only while MAX_QUEUED_CHUNKS chunks are already waiting behind the one being processed.
+  /// A chunk that cannot be queued because the processor is stopping or has failed is dropped and not reported.
   void trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum);
-  //where there the chunk is empty, only confirms that the bunch of blocks was processed by the processor
+  /// Queues a report of an empty batch, so it reaches the rendezvous only after the chunks triggered before it were processed.
   void only_report_batch_finished( uint32_t _block_num );
   /// Holds execution of calling thread until every triggered chunk has been processed.
   void complete_data_processing();
@@ -57,6 +58,14 @@ public:
 private:
   static constexpr std::size_t MAX_QUEUED_CHUNKS = 2;
 
+  struct queued_batch
+  {
+    data_chunk_ptr data;
+    uint32_t last_block_num;
+    bool report_only;
+  };
+
+  void enqueue( queued_batch&& batch );
   void handle_exception( std::exception_ptr exception_ptr );
   void notify_processing_finished();
   void notify_processing_finished_if_drained();
@@ -74,8 +83,8 @@ private:
   std::condition_variable _cv;
   std::condition_variable _queue_space_cv;
   std::condition_variable _data_processing_finished_cv;
-  /// chunks waiting for the processing thread, paired with the last block number of their batch
-  std::deque< std::pair< data_chunk_ptr, uint32_t > > _queue;
+  /// batches waiting for the processing thread
+  std::deque< queued_batch > _queue;
 
   size_t _total_processed_records;
 

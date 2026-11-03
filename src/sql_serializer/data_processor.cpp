@@ -61,8 +61,7 @@ data_processor::data_processor( std::string description, std::string short_descr
           break;
         }
 
-        data_chunk_ptr dataPtr = std::move(_queue.front().first);
-        const uint32_t last_block_num_in_stage = _queue.front().second;
+        queued_batch batch = std::move(_queue.front());
         _queue.pop_front();
 
         lk.unlock();
@@ -73,12 +72,17 @@ data_processor::data_processor( std::string description, std::string short_descr
         // We must process the data and report to rendezvous so execute_push_block() gets called with valid data.
         // The cancel will be handled after processing completes.
 
-        dlog("${d} data processor starts a data processing...", ("d", _description));
+        if ( !batch.report_only )
+        {
+          dlog("${d} data processor starts a data processing...", ("d", _description));
+          dataProcessor(batch.data);
+        }
 
-        dataProcessor(dataPtr);
-
-        if ( _randezvous_trigger && last_block_num_in_stage )
-          _randezvous_trigger->report_complete_thread_stage( last_block_num_in_stage );
+        if ( _randezvous_trigger && batch.last_block_num )
+        {
+          dlog( "${i} commited by ${d}",("i", batch.last_block_num )("d", _description) );
+          _randezvous_trigger->report_complete_thread_stage( batch.last_block_num );
+        }
 
         notify_processing_finished_if_drained();
 
@@ -105,7 +109,16 @@ data_processor::~data_processor()
 
 void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
 {
-  const bool is_canceled = _cancel.load();
+  enqueue( { std::move(dataPtr), last_blocknum, false } );
+}
+
+void data_processor::only_report_batch_finished( uint32_t block_num )
+{
+  enqueue( { data_chunk_ptr(), block_num, true } );
+}
+
+void data_processor::enqueue( queued_batch&& batch )
+{
   bool queued = false;
 
   {
@@ -116,33 +129,20 @@ void data_processor::trigger(data_chunk_ptr dataPtr, uint32_t last_blocknum)
 
     if ( _continue.load() && _queue.size() < MAX_QUEUED_CHUNKS )
     {
-      _queue.emplace_back( std::move(dataPtr), last_blocknum );
+      _queue.emplace_back( std::move(batch) );
       _is_processing_data = true;
       queued = true;
       dlog("Data processor: ${d} triggerred...", ("d", _description));
     }
     else
-      wlog("Data processor: ${d} is stopping, dropping data of batch ending at block ${b}", ("d", _description)("b", last_blocknum));
+      /// Not reported to the rendezvous: the batch was not written, so the consistent block must not move past it.
+      wlog("Data processor: ${d} is stopping, dropping data of batch ending at block ${b}", ("d", _description)("b", batch.last_block_num));
   }
 
   if ( queued )
     _cv.notify_one();
 
   dlog("Leaving trigger of data data processor: ${d}...", ("d", _description));
-
-  if ( is_canceled || !queued )
-    only_report_batch_finished( last_blocknum );
-}
-
-void
-data_processor::only_report_batch_finished( uint32_t block_num ) try {
-  if ( _randezvous_trigger ) {
-    dlog( "${i} commited by ${d}",("i", block_num )("d", _description) );
-    _randezvous_trigger->report_complete_thread_stage( block_num );
-  }
-} catch(...) {
-  auto current_exception = std::current_exception();
-  handle_exception( current_exception );
 }
 
 void data_processor::notify_processing_finished()
