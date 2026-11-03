@@ -3,12 +3,15 @@
 #include <hive/plugins/sql_serializer/data_processor.hpp>
 #include <hive/plugins/sql_serializer/block_num_rendezvous_trigger.hpp>
 
+#include <algorithm>
 #include <chrono>
+#include <csignal>
 #include <cstdint>
 #include <deque>
 #include <future>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
 #include <vector>
 
 using hive::plugins::sql_serializer::data_processor;
@@ -35,8 +38,11 @@ namespace {
       , _processor( "test data processor", "test", [this]( const data_processor::data_chunk_ptr& chunk ) {
           _first_chunk_started.set_value_once();
           _released.wait();
+          const uint32_t number = static_cast< const numbered_chunk& >( *chunk )._number;
+          if ( number == _failing_number )
+            throw std::runtime_error( "simulated processing failure" );
           std::lock_guard< std::mutex > lk( _mtx );
-          _processed.push_back( static_cast< const numbered_chunk& >( *chunk )._number );
+          _processed.push_back( number );
           return data_processor::data_processing_status();
         }, _rendezvous )
     {}
@@ -52,6 +58,14 @@ namespace {
     {
       _triggers.push_back( std::async( std::launch::async, [this, number] {
         _processor.trigger( std::make_unique< numbered_chunk >( number ), number );
+      } ) );
+      return _triggers.back();
+    }
+
+    std::future< void >& report_empty_async( uint32_t number )
+    {
+      _triggers.push_back( std::async( std::launch::async, [this, number] {
+        _processor.only_report_batch_finished( number );
       } ) );
       return _triggers.back();
     }
@@ -74,6 +88,7 @@ namespace {
       void set_value_once() { std::call_once( flag, [this] { promise.set_value(); } ); }
     };
 
+    uint32_t _failing_number = 0;
     std::mutex _mtx;
     std::vector< uint32_t > _processed;
     std::vector< uint32_t > _reported;
@@ -84,6 +99,14 @@ namespace {
     std::shared_ptr< block_num_rendezvous_trigger > _rendezvous;
     data_processor _processor;
     std::deque< std::future< void > > _triggers;
+  };
+
+  /// A processing failure stops the node with SIGINT, which would end the test run.
+  struct sigint_ignored
+  {
+    sigint_ignored() : _previous( std::signal( SIGINT, SIG_IGN ) ) {}
+    ~sigint_ignored() { std::signal( SIGINT, _previous ); }
+    void (*_previous)( int );
   };
 }
 
@@ -149,6 +172,75 @@ BOOST_AUTO_TEST_CASE( join_processes_already_queued_chunks )
   const std::vector< uint32_t > expected{ 1, 2, 3 };
   const auto reported = p.reported();
   BOOST_CHECK_EQUAL_COLLECTIONS( reported.begin(), reported.end(), expected.begin(), expected.end() );
+}
+
+BOOST_AUTO_TEST_CASE( empty_batch_is_reported_after_the_batches_queued_before_it )
+{
+  gated_processor p;
+
+  BOOST_REQUIRE( p.trigger_async( 1 ).wait_for( 10s ) == std::future_status::ready );
+  p.wait_until_first_chunk_is_processing();
+  BOOST_REQUIRE( p.report_empty_async( 2 ).wait_for( 10s ) == std::future_status::ready );
+  BOOST_REQUIRE( p.trigger_async( 3 ).wait_for( 10s ) == std::future_status::ready );
+  BOOST_CHECK( p.reported().empty() );
+
+  p.release();
+  p._processor.complete_data_processing();
+
+  const std::vector< uint32_t > expected_processed{ 1, 3 };
+  const std::vector< uint32_t > expected_reported{ 1, 2, 3 };
+  const auto processed = p.processed();
+  const auto reported = p.reported();
+  BOOST_CHECK_EQUAL_COLLECTIONS( processed.begin(), processed.end(), expected_processed.begin(), expected_processed.end() );
+  BOOST_CHECK_EQUAL_COLLECTIONS( reported.begin(), reported.end(), expected_reported.begin(), expected_reported.end() );
+}
+
+BOOST_AUTO_TEST_CASE( batches_of_a_failed_processor_are_not_reported )
+{
+  sigint_ignored guard;
+  gated_processor p;
+  p._failing_number = 1;
+
+  BOOST_REQUIRE( p.trigger_async( 1 ).wait_for( 10s ) == std::future_status::ready );
+  p.wait_until_first_chunk_is_processing();
+  BOOST_REQUIRE( p.trigger_async( 2 ).wait_for( 10s ) == std::future_status::ready );
+
+  p.release();
+  BOOST_CHECK_THROW( p._processor.join(), std::runtime_error );
+
+  BOOST_CHECK( p.trigger_async( 3 ).wait_for( 10s ) == std::future_status::ready );
+  BOOST_CHECK( p.report_empty_async( 4 ).wait_for( 10s ) == std::future_status::ready );
+
+  BOOST_CHECK( p.processed().empty() );
+  BOOST_CHECK( p.reported().empty() );
+}
+
+BOOST_AUTO_TEST_CASE( cancelled_processor_reports_each_batch_at_most_once )
+{
+  gated_processor p;
+
+  BOOST_REQUIRE( p.trigger_async( 1 ).wait_for( 10s ) == std::future_status::ready );
+  p.wait_until_first_chunk_is_processing();
+  BOOST_REQUIRE( p.trigger_async( 2 ).wait_for( 10s ) == std::future_status::ready );
+  BOOST_REQUIRE( p.report_empty_async( 3 ).wait_for( 10s ) == std::future_status::ready );
+  auto& dropped = p.trigger_async( 4 );
+  BOOST_REQUIRE( dropped.wait_for( 200ms ) == std::future_status::timeout );
+
+  auto cancelled = std::async( std::launch::async, [&p] { p._processor.cancel(); } );
+  BOOST_REQUIRE( dropped.wait_for( 10s ) == std::future_status::ready );
+
+  p.release();
+  BOOST_REQUIRE( cancelled.wait_for( 10s ) == std::future_status::ready );
+  cancelled.get();
+
+  const auto processed = p.processed();
+  const auto reported = p.reported();
+  BOOST_CHECK_EQUAL( std::count( reported.begin(), reported.end(), 1u ), 1 );
+  for ( uint32_t number : { 2u, 3u } )
+    BOOST_CHECK_LE( std::count( reported.begin(), reported.end(), number ), 1 );
+  BOOST_CHECK_EQUAL( std::count( reported.begin(), reported.end(), 4u ), 0 );
+  for ( uint32_t number : processed )
+    BOOST_CHECK_EQUAL( std::count( reported.begin(), reported.end(), number ), 1 );
 }
 
 BOOST_AUTO_TEST_SUITE_END()

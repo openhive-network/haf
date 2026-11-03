@@ -36,13 +36,8 @@ namespace sql_serializer {
     void
     end_massive_sync_processor::trigger_block_number( uint32_t last_dumped_block ) {
       // Serializes concurrent callers so their batches are queued in the order they arrive.
-      // Contention is extremely rare — it requires two conditions simultaneously: (1) a
-      // writer has no data to dump for its batch (e.g. few operations split among many
-      // threads in early blockchain), causing the main thread to report via
-      // only_report_batch_finished() which bypasses the normal trigger/pickup
-      // synchronization, AND (2) the OS thread scheduler delays the worker that is inside
-      // trigger_block_number() for batch N long enough for the main thread to complete
-      // batch N+1 and fire its rendezvous.
+      // The rendezvous for consecutive batches can fire on different writers' threads, so
+      // the caller for batch N may be delayed long enough for batch N+1 to arrive here.
       std::lock_guard<std::mutex> guard(_trigger_mtx);
       _data_processor->trigger( std::make_unique< block_number_chunk >( last_dumped_block ), 0 );
     }
