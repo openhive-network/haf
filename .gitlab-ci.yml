@@ -1421,29 +1421,6 @@ replay_with_update:
   tags:
     - public-runner-docker
 
-replay_with_keyauths:
-  extends: .job-defaults
-  image:
-    name: $HAF_IMAGE_NAME
-    entrypoint: [""]
-  stage: build_and_test_phase_2
-  needs:
-    - job: haf_image_build
-      artifacts: true
-  variables:
-    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
-  script:
-    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_keyauth.sh
-  artifacts:
-    paths:
-      - "replay_with_keyauths.log"
-      - "node_logs.log"
-      - "node_logs1.log"
-      - "pg_logs/"
-    when: always
-  tags:
-    - public-runner-docker
-
 replay_with_json_metadata:
   extends: .job-defaults
   image:

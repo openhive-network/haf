@@ -12,7 +12,7 @@ def main():
     parser.add_argument("--user", default="haf_admin", help="PostgreSQL user (default: haf_admin)")
     parser.add_argument("--password", default="", help="PostgreSQL password (default: empty)")
     parser.add_argument("--debug", action="store_true", help="Run in debug mode (default: false)")
-    parser.add_argument("--data_type", default="", help="Possible values: `keyauth` or `metadata`")
+    parser.add_argument("--data_type", default="", help="Possible value: `metadata`")
 
     args = parser.parse_args()
     
@@ -49,12 +49,10 @@ def main():
 
         cursor = connection.cursor()
 
-        if args.data_type == 'keyauth':
-            query = "SELECT keyauth_live.dump_current_account_stats(%s)"
-        elif args.data_type == 'metadata':
+        if args.data_type == 'metadata':
             query = "SELECT metadata_live.dump_current_account_stats(%s)"
         else:
-            raise Exception("Incorrect type of data. Possible values: `keyauth` or `metadata`")
+            raise Exception("Incorrect type of data. Possible value: `metadata`")
 
         # Iterate over objects inside 'accounts[]'
         for account in accounts:

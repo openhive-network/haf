@@ -516,6 +516,8 @@ During import, new tables are created and registered in the app's context. Next,
 
 The import of 'state providers' must be done by an app before any call of its massive sync or hive.app_next_block (in other words, the state providers must be imported before any blocks are processed). Repeating an import more than once does nothing.
 
+The available state providers are `ACCOUNTS` and `METADATA`. The `KEYAUTH` state provider was removed: importing it raises an error. Apps that need account authorities use the [l2_framework](https://gitlab.syncad.com/hive/l2_framework) HAF app, which keeps block-versioned authority tables. The authority extraction functions `hive.get_keyauths`, `hive.get_genesis_keyauths` and `hive.get_hf09_keyauths`, `hive.get_hf21_keyauths`, `hive.get_hf24_keyauths` remain available.
+
 ### A state provider structure
 Each state provider is a SQL file placed in the `state_providers` folder and defines these functions:
 
@@ -638,6 +640,11 @@ When using HAF database, you may want to update already installed extension inst
 To use this script you have to rebuild the project and then run `hive_fork_manager_update_script_generator.sh`. If you did not build your PostgreSQL server and HAF database with recommended methods (setup scripts) you may need to use flags `--haf-admin-account=NAME` and `--haf-db-name=NAME` to change default values (haf_admin, haf_block_log).
 
 #### How the Update Works
+
+0. **Refuse contexts with the removed KEYAUTH state provider**
+   When any context still has `KEYAUTH` registered in `hafd.state_providers_registered`, the script exits with code 6 and names those contexts, without changing the database.
+   The update does not drop the provider's tables itself, because they are registered in the app's context and the app's own objects may depend on them.
+   The operator upgrades the applications owning these contexts first (or drops the provider on the deployed version with `SELECT hive.app_state_provider_drop('KEYAUTH', '<context>')`, or removes the context), then runs the update again.
 
 1. **Determine Update Feasibility**
    The script first checks if the update is possible by creating a temporary database with the new version of the `hive_fork_manager`.

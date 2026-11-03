@@ -408,9 +408,9 @@ prepare_database
 exec_sql "CREATE FUNCTION hafd.bad_function() RETURNS VOID VOLATILE AS '/lib/postgresql/${POSTGRES_VERSION}/lib/tablefunc.so', 'crosstab' language c;"
 failswith 3 update_database
 
-printf "\nTEST: Change keyauth state provider, but not use it. This should pass\n"
+printf "\nTEST: Change metadata state provider, but not use it. This should pass\n"
 prepare_database
-exec_sql "CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.context_name )
+exec_sql "CREATE OR REPLACE FUNCTION hive.start_provider_metadata( _context hafd.context_name )
              RETURNS TEXT[]
              LANGUAGE plpgsql
              VOLATILE
@@ -423,13 +423,13 @@ exec_sql "CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.
              ;"
 update_database
 
-printf "\nTEST: Change keyauth state provider, and not use it. This should fail\n"
+printf "\nTEST: Change metadata state provider, and use it. This should fail\n"
 prepare_database
 exec_sql "CREATE SCHEMA workaround;
           SELECT hive.app_create_context('workaround', 'workaround');
-          SELECT hive.app_state_provider_import( 'KEYAUTH', 'workaround' );
+          SELECT hive.app_state_provider_import( 'METADATA', 'workaround' );
           "
-exec_sql "CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.context_name )
+exec_sql "CREATE OR REPLACE FUNCTION hive.start_provider_metadata( _context hafd.context_name )
              RETURNS TEXT[]
              LANGUAGE plpgsql
              VOLATILE
@@ -443,13 +443,42 @@ exec_sql "CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.
 failswith 1 update_database
 
 
-printf "\nTEST: Use state provider. This should pass\n"
+printf "\nTEST: Use state providers. This should pass\n"
 prepare_database
 exec_sql "CREATE SCHEMA workaround;
           SELECT hive.app_create_context('workaround', 'workaround');
-          SELECT hive.app_state_provider_import( 'KEYAUTH', 'workaround' );
+          SELECT hive.app_state_provider_import( 'ACCOUNTS', 'workaround' );
+          SELECT hive.app_state_provider_import( 'METADATA', 'workaround' );
           "
 update_database
+
+printf "\nTEST: Upgrade a database where a context still has the removed KEYAUTH state provider registered. The update should refuse naming the context and leave the database unchanged.\n"
+prepare_database
+# the deployed version can no longer import KEYAUTH, so its registration is written as an older version left it
+exec_sql "CREATE SCHEMA workaround;
+          SELECT hive.app_create_context('workaround', 'workaround');
+          SELECT hive.app_state_provider_import( 'METADATA', 'workaround' );
+          CREATE TABLE hafd.workaround_keyauth_a( account_id INTEGER );
+          INSERT INTO hafd.state_providers_registered( context_id, state_provider, tables, owner )
+          SELECT id, 'KEYAUTH', ARRAY[ 'workaround_keyauth_a' ], current_user FROM hafd.contexts WHERE name = 'workaround';
+          "
+update_output=$(failswith 6 update_database 2>&1) || { echo "$update_output"; exit 37; }
+echo "$update_output"
+grep -q "contexts still having KEYAUTH registered: workaround" <<< "$update_output" \
+    && grep -q "l2_framework" <<< "$update_output" \
+    || { echo "TEST FAILED: the refusal does not name the context and l2_framework"; exit 38; }
+[ "$(deployed_version)" = "1.0" ] || { echo "TEST FAILED: a refused update left version $(deployed_version) deployed"; exit 39; }
+check_accepts_connections
+[ "$(exec_sql "SELECT count(*) FROM hafd.state_providers_registered WHERE state_provider = 'KEYAUTH'")" = "1" ] \
+    && [ -n "$(exec_sql "SELECT to_regclass('hafd.workaround_keyauth_a')")" ] \
+    || { echo "TEST FAILED: a refused update changed the KEYAUTH registration"; exit 40; }
+
+printf "\nTEST: Upgrade the same database once the operator dropped the KEYAUTH registration. This should pass.\n"
+exec_sql "DELETE FROM hafd.state_providers_registered WHERE state_provider = 'KEYAUTH';
+          DROP TABLE hafd.workaround_keyauth_a;"
+update_database
+[ "$(deployed_version)" != "1.0" ] || { echo "TEST FAILED: the extension was not updated"; exit 41; }
+exec_sql "SELECT hive.app_state_providers_update( 1, 1, 'workaround' );" > /dev/null
 
 printf "\nTEST: Upgrade a database whose hive_account_operations_uq1 lacks INCLUDE (op_type_id) and whose deployed libhfm is not shipped. The index should be rebuilt in place.\n"
 prepare_database

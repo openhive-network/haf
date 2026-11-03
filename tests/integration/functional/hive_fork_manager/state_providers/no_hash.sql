@@ -12,8 +12,8 @@ BEGIN
     ASSERT ( SELECT 1 FROM hive_update.calculate_state_provider_hashes( ARRAY['KEYAUTH', 'METADATA']::hafd.state_providers[] ) WHERE provider = 'ACCOUNTS' ) IS NULL
         , 'ACCOUNTS hashed';
 
-    ASSERT ( SELECT 1 FROM hive_update.calculate_state_provider_hashes( ARRAY['KEYAUTH', 'METADATA']::hafd.state_providers[] ) WHERE provider = 'KEYAUTH' ) IS NOT NULL
-        , 'KEYAUTH not hashed';
+    ASSERT ( SELECT 1 FROM hive_update.calculate_state_provider_hashes( ARRAY['KEYAUTH', 'METADATA']::hafd.state_providers[] ) WHERE provider = 'KEYAUTH' ) IS NULL
+        , 'removed KEYAUTH hashed';
 
     ASSERT ( SELECT 1 FROM hive_update.calculate_state_provider_hashes( ARRAY['KEYAUTH', 'METADATA']::hafd.state_providers[] ) WHERE provider = 'METADATA' ) IS NOT NULL
         , 'METADATA not hashed';
@@ -22,7 +22,7 @@ BEGIN
 
     SELECT hive_update.create_database_hash(ARRAY['METADATA']::hafd.state_providers[])  INTO __database_hash_before;
 
-    EXECUTE format( 'CREATE OR REPLACE FUNCTION hive.start_provider_keyauth( _context hafd.context_name )
+    EXECUTE format( 'CREATE OR REPLACE FUNCTION hive.start_provider_accounts( _context hafd.context_name )
     RETURNS TEXT[]
     LANGUAGE plpgsql
     VOLATILE

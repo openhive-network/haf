@@ -7,12 +7,12 @@ NAME="${1:?}"
 sudo apt-get update
 sudo apt-get install -y git python3 python3-pip
 
-if [ "${NAME}" = "keyauth" ]; then
-  TYPE="KEYAUTH"
-  TABLE_NAME="keys"
-else
+if [ "${NAME}" = "metadata" ]; then
   TYPE="METADATA"
   TABLE_NAME="jsons"
+else
+  echo "ERROR: unknown state provider test '${NAME}'"
+  exit 1
 fi
 
 CURRENT_PROJECT_DIR="$CI_PROJECT_DIR/tests/integration/state_provider"

@@ -53,7 +53,6 @@ ADD_PSQL_EXTENSION(
             block_day_stats_view.sql
             block_day_stats_all_op_view.sql
             blocks_views_for_contexts.sql
-            state_providers/keyauth.sql
             get_keyauths.sql
             get_required_authorities.sql
             get_metadata.sql
