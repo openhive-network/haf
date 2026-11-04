@@ -47,8 +47,13 @@ mapfile -t tests < "$selection"
 echo "== running ${#tests[@]} selected system test(s) ${HAF_SYSTEM_JOBS:-4} at a time"
 cd "$tests_dir" || exit 1
 rc=0
-# The binaries and HELPY_* settings are CI's (ci_common.sh, .gitlab-ci.yml haf_system_tests).
+# The binaries and HELPY_* settings are CI's (ci_common.sh, .gitlab-ci.yml haf_system_tests), and
+# so is the live-mode timeout (.gitlab-ci.yml's global variables; test_tools defaults to 30 s).
+# A node that takes longer than one block interval (3 s) to start leaves witness production
+# disabled, so the network's first block waits for InitNode's stale-production slot, which
+# block_log_12_8 puts 30 s after launch: under load the 30 s default times out on it.
 env PYTHONPATH="$src/tests/integration/haf-local-tools" PYTHONDONTWRITEBYTECODE=1 \
+    TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT=60 \
     DB_URL="postgresql://haf_admin@127.0.0.1:5432/haf_block_log" \
     HIVED_PATH=/home/hived/bin/hived CLI_WALLET_PATH=/home/hived/bin/cli_wallet \
     GET_DEV_KEY_PATH=/home/hived/bin/get_dev_key COMPRESS_BLOCK_LOG_PATH=/home/hived/bin/compress_block_log \

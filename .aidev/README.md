@@ -110,8 +110,8 @@ not a red.
 | unknown (no changed-files list or base ref, e.g. a by-hand run) | the core modules |
 
 A changed module is run whole, under the image's testnet hived, as CI's job runs it
-(`-m "not mirrornet"`, its binaries and `HELPY_*` settings, `PG_ACCESS` trusting
-127.0.0.1).
+(`-m "not mirrornet"`, its binaries, `HELPY_*` settings and 60 s
+`TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT`, `PG_ACCESS` trusting 127.0.0.1).
 
 **The candidate's SQL.** `.aidev/haf-system.sh`, the entrypoint's maintenance script,
 installs the candidate's hive_fork_manager SQL with `.aidev/install-candidate-hfm.sh`
