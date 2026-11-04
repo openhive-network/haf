@@ -364,7 +364,7 @@ succeeded, with that directory bind-mounted directly at the image's
 `/home/hived/datadir/haf_db_store`. It must not be a symlink: the image's
 `setup_postgres.sh` compares the tablespace's resolved location with the
 unresolved expected path, aborting when they differ. `start.sh` (the `haf` entrypoint) checks the
-mount, sets `file_copy_method = clone` and runs the HAF entrypoint with
+mount, sets `file_copy_method = clone`, sizes PostgreSQL's memory (below) and runs the HAF entrypoint with
 `serve.sh` as its maintenance script. `serve.sh` installs
 `admin.sql` into the `haf_shared` database, applies `app-roles/`, and once per version freezes
 `haf_template`, a clone of `haf_block_log` with its head block recorded, that
@@ -379,6 +379,35 @@ first terminates the clone's connections and gives up after 2 minutes, raising
 every backend of the cluster, and one waiting for a vanished client inside COPY
 FROM STDIN never answers. The server's TCP keepalives (`shared-haf/postgresql.conf`)
 end such a backend within about a minute.
+
+**Memory.** The service runs under the dev-stack container's memory limit (5.5 GB
+with no swap on steem-18), which AIDEV assigns per host and stack; the image's
+`shared_buffers = 16GB` exceeds it. Shared buffers are charged to the container's
+cgroup as they are touched and cannot be reclaimed, so past the limit the kernel
+OOM-kills a backend, and the crash recovery empties the UNLOGGED tables of every
+clone. On every start `start.sh` therefore reads `/sys/fs/cgroup/memory.max`
+(`MemTotal` when the container has no limit) and writes
+`haf_postgresql_conf.d/60-haf-shared-memory.conf`:
+
+| setting | share of the limit | floor | cap | at 5.5 GB |
+|---|---|---|---|---|
+| `shared_buffers` | 1/4 | 256MB | 16GB | 1408MB |
+| `effective_cache_size` | 1/2 | 512MB | 32GB | 2816MB |
+| `work_mem` | 1/128 | 4MB | 64MB | 44MB |
+| `maintenance_work_mem` | 1/16 | 64MB | 1GB | 352MB |
+| `autovacuum_work_mem` | 1/4 of `maintenance_work_mem` | 16MB | 256MB | 88MB |
+
+`shared-haf/postgresql.conf` fixes `wal_buffers = 16MB` (the image's 512MB is
+shared memory too) and bounds parallelism to `max_parallel_workers = 4`, 2 per
+gather and 2 per index build, as every worker takes its own `work_mem`. At 5.5 GB
+shared memory is about 1.45 GB, leaving about 4.1 GB to backends: e.g. four
+consumers' queries each running three processes with two hash nodes
+(`hash_mem_multiplier = 2`) take about 2.1 GB, an index build 352MB and the five
+autovacuum workers at most 440MB. The settings take effect when the `haf`
+container restarts (its entrypoint is `start.sh`), with the scripts of the hosting
+session's checkout; `docker logs` shows the limit and `shared_buffers` it chose,
+and inside the container
+`psql -c 'show shared_buffers'` and `cat /sys/fs/cgroup/memory.max` confirm them.
 
 AIDEV runs `docker compose` inside the session's worker container against the
 host's docker daemon, which resolves bind sources on the host. The `shared-haf/`
