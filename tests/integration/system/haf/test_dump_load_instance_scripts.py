@@ -14,7 +14,7 @@ from sqlalchemy.pool import NullPool
 
 
 from test_tools.__private import paths_to_executables
-from haf_local_tools import query_all
+from haf_local_tools import get_head_block, get_irreversible_block, query_all
 
 from test_tools import complex_networks as ttcn
 
@@ -26,6 +26,14 @@ SQL_TABLE_COUNT: Final[str] = """
 SELECT COUNT(*)
 FROM hafd.{table};
 """
+
+SQL_MAX_BLOCK_NUM: Final[str] = """
+SELECT COALESCE(MAX(num), 0)
+FROM hafd.{table};
+"""
+
+LIVE_SYNC_START_BLOCK: Final[int] = 110
+REVERSIBLE_BLOCKS_BEFORE_STOP: Final[int] = 5
 
 class Test:
     @pytest.mark.parametrize(
@@ -58,7 +66,7 @@ class Test:
 
         ]
     )
-    def test_dump_load_instance_scripts(self, prepared_networks_and_database_1, database, first_run : int, dump_exit_before_sync : bool, dump_stop_replay_at_block : int, load_exit_before_sync : bool, load_stop_replay_at_block : int, after_dump : int, after_load : int):
+    def test_dump_load_instance_scripts(self, prepared_networks_and_database_1, database, first_run : int, dump_exit_before_sync : bool, dump_stop_replay_at_block : int, load_exit_before_sync : bool, load_stop_replay_at_block : int, after_dump : int, after_load : int) -> None:
         # GIVEN
         self.run_node_with_db(prepared_networks_and_database_1, database, first_run)
         
@@ -80,27 +88,65 @@ class Test:
         self.assert_loaded(after_load)
         
 
-    def run_node_with_db(self, prepared_networks_and_database_1, database, stop_at_block : int):
-        node, session, self.db_url = prepared_networks_and_database_1(database)
+    def test_dump_load_instance_scripts_live_synced(self, prepared_networks_and_database_12_8: tuple[ttcn.NetworksBuilder, Session]) -> None:
+        # GIVEN
+        networks_builder, session = prepared_networks_and_database_12_8
+        self.db_url = session.get_bind().url
+        node_under_test = networks_builder.networks[1].node('ApiNode0')
+        node_under_test.wait_for_block_with_number(LIVE_SYNC_START_BLOCK)
 
+        # Without the 8 witnesses of WitnessNode1 the rest stay below the irreversibility threshold,
+        # so the node under test keeps receiving reversible blocks above a stalled irreversible head.
+        networks_builder.networks[1].node('WitnessNode1').close()
+        irreversible_block = get_irreversible_block(node_under_test)
+        node_under_test.wait_for_block_with_number(irreversible_block + REVERSIBLE_BLOCKS_BEFORE_STOP)
+        hived_head_block = get_head_block(node_under_test)
+
+        for node in networks_builder.nodes:
+            node.close()
+        session.close()
+
+        session = create_session(self.db_url)
+        haf_head_block = query_max_block_num(session, 'blocks')
+        assert query_max_block_num(session, 'blocks_reversible') > haf_head_block
+        session.close()
+        assert hived_head_block > haf_head_block
+        tt.logger.info(f"Stopped with hived head block {hived_head_block} and HAF head block {haf_head_block}")
+
+        self.use_node_data_dir(node_under_test.directory)
+        os.chdir(tt.context.get_current_directory())
+
+        # WHEN
+        self.dump_instance('')
+        self.assert_dumped(haf_head_block)
+        self.load_instance(self.generate_additional_command_line(True, 0))
+
+        # THEN
+        self.assert_loaded(haf_head_block)
+
+    def run_node_with_db(self, prepared_networks_and_database_1, database, stop_at_block : int) -> None:
+        node, session, self.db_url = prepared_networks_and_database_1(database)
+        self.use_node_data_dir(node.directory)
+
+        node.run(replay_from=ttcn.create_block_log_directory_name("block_log"), stop_at_block=stop_at_block, exit_before_synchronization=True)
+        session.close()
+
+    def use_node_data_dir(self, data_dir: Path) -> None:
         self.hived_executable_path =paths_to_executables.get_path_of("hived")
 
 
-        self.hived_data_dir=node.directory
+        self.hived_data_dir=data_dir
         self.backup_dir = self.hived_data_dir/'backup'
 
 
-        scripts_path=Path(os.getenv('SETUP_SCRIPTS_PATH'))
+        scripts_path=Path(os.environ['SETUP_SCRIPTS_PATH'])
         
 
         self.dump_instance_script=scripts_path/'dump_instance.sh'
         self.load_instance_script=scripts_path/'load_instance.sh'
 
-        node.run(replay_from=ttcn.create_block_log_directory_name("block_log"), stop_at_block=stop_at_block, exit_before_synchronization=True)
-        session.close()
 
-
-    def dump_instance(self, additional_command_line : str):
+    def dump_instance(self, additional_command_line : str) -> None:
         command = f"{self.dump_instance_script} \
         --backup-dir={self.backup_dir} \
         --hived-executable-path={self.hived_executable_path} \
@@ -115,12 +161,12 @@ class Test:
         tt.logger.info(f"Attempting to execute command: `{command}'")
         shell(command)
 
-    def assert_dumped(self, at_block : int):
+    def assert_dumped(self, at_block : int) -> None:
         session = create_session(self.db_url)
         assert query_count(session, 'blocks') == at_block
         session.close()
 
-    def load_instance(self, additional_command_line : str):
+    def load_instance(self, additional_command_line : str) -> None:
         command = f"{self.load_instance_script} \
         --backup-dir={self.backup_dir} \
         --hived-executable-path={self.hived_executable_path} \
@@ -134,7 +180,7 @@ class Test:
         tt.logger.info(f"Attempting to execute command: `{command}'")
         shell(command)
 
-    def assert_loaded(self, after_load : int):
+    def assert_loaded(self, after_load : int) -> None:
         session = create_session(self.db_url)
         assert query_count(session, 'blocks') == after_load
         session.close()
@@ -155,6 +201,9 @@ def query_count(session, table):
     sql_raw = SQL_TABLE_COUNT.format(table=table)
     count = query_all(session, sql_raw)
     return count[0][0]
+
+def query_max_block_num(session: Session, table: str) -> int:
+    return int(query_all(session, SQL_MAX_BLOCK_NUM.format(table=table))[0][0])
 
 def create_session(url: str) -> Session:
     engine = sqlalchemy.create_engine(url, echo=False, poolclass=NullPool)
