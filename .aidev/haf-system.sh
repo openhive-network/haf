@@ -47,6 +47,9 @@ mapfile -t tests < "$selection"
 echo "== running ${#tests[@]} selected system test(s) ${HAF_SYSTEM_JOBS:-4} at a time"
 cd "$tests_dir" || exit 1
 rc=0
+# AIDEV reads every *.xml under the suite's artifacts as junit, so pytest's own report, whose ids
+# lack the haf-system:: prefix known_failures.txt pardons, must not end in .xml.
+raw_junit="$out/pytest.junit"
 # The binaries and HELPY_* settings are CI's (ci_common.sh, .gitlab-ci.yml haf_system_tests), and
 # so is the live-mode timeout (.gitlab-ci.yml's global variables; test_tools defaults to 30 s).
 # A node that takes longer than one block interval (3 s) to start leaves witness production
@@ -59,7 +62,7 @@ env PYTHONPATH="$src/tests/integration/haf-local-tools" PYTHONDONTWRITEBYTECODE=
     GET_DEV_KEY_PATH=/home/hived/bin/get_dev_key COMPRESS_BLOCK_LOG_PATH=/home/hived/bin/compress_block_log \
     BLOCK_LOG_UTIL_PATH=/home/hived/bin/block_log_util OP_BODY_FILTER_PATH=/home/hived/bin/op_body_filter \
     HELPY_COMMUNICATION_MAX_RETRIES=15 HELPY_COMMUNICATION_PERIOD_BETWEEN_RETRIES_SECS=10 \
-    "$venv/bin/python" -m pytest -p no:cacheprovider --junitxml "$out/pytest.xml" \
+    "$venv/bin/python" -m pytest -p no:cacheprovider --junitxml "$raw_junit" \
     -n "${HAF_SYSTEM_JOBS:-4}" -m "not mirrornet" "${tests[@]}" || rc=$?
 
 # test_tools writes each module's nodes beside it; keep them with the report instead of in the checkout.
@@ -67,7 +70,7 @@ mkdir -p "$out/generated"
 for dir in generated_during_* generated_by_package_fixtures; do
     [ -e "$dir" ] && mv "$dir" "$out/generated/"
 done
-if [ -f "$out/pytest.xml" ]; then
-    python3 "$src/.aidev/system_test_cases.py" "$out/pytest.xml" "$out/tests" >> "$cases" || rc=1
+if [ -f "$raw_junit" ]; then
+    python3 "$src/.aidev/system_test_cases.py" "$raw_junit" "$out/tests" >> "$cases" || rc=1
 fi
 exit "$rc"
