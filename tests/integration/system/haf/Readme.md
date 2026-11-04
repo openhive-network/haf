@@ -16,3 +16,6 @@ If test envinronment is not prepared by cmake, following environment variables s
 PYTHONPATH - pointing test_tools and local_tools
 HIVE_BUILD_ROOT_PATH  - pointing to folder where were fuild following executables: hived, cli_wallet, get_dev_key.
 LIBFAKETIME_PATH - optionally pointing to libfaketime shared object, not required if libfaketime is installed in location '/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1'.
+
+# Under AIDEV
+AIDEV's `full` slot runs the tests a change selects, in the testnet HAF image, as its `haf_system` suite: see `.aidev/README.md`, *The haf-system suite*.
