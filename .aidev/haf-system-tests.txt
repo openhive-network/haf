@@ -1,7 +1,9 @@
 # The core HAF system tests (tests/integration/system/haf/) the `haf-system` suite
 # runs for a change to hived's side of HAF that names no test module:
 # src/hive_fork_manager/hived_api.sql, src/sql_serializer/, the haf-local-tools,
-# or a non-test file of the system tests (.aidev/haf-system-select.sh). One test
+# a non-test file of the system tests, or the suite's own files
+# (.aidev/haf-system-select.sh, haf-system.sh, run-haf-system.sh, this list,
+# system_test_cases.py, install-candidate-hfm.sh, runtime/Dockerfile.system). One test
 # module per line: one per way hived feeds the database, each about 40-100 s in
 # CI's haf_system_tests.
 test_replay_restart_over_populated_db.py

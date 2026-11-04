@@ -105,7 +105,7 @@ not a red.
 | The change touches | Tests run |
 |---|---|
 | `tests/integration/system/haf/test_<x>.py` (still present) | that module |
-| any other path under `tests/integration/system/haf/` or `tests/integration/haf-local-tools/`, `src/hive_fork_manager/hived_api.sql`, `src/sql_serializer/` | the core modules in `.aidev/haf-system-tests.txt` (about 5 minutes, 4 at a time; `HAF_SYSTEM_JOBS`) |
+| any other path under `tests/integration/system/haf/` or `tests/integration/haf-local-tools/`, `src/hive_fork_manager/hived_api.sql`, `src/sql_serializer/`, or the suite's own files (`.aidev/haf-system-select.sh`, `haf-system.sh`, `run-haf-system.sh`, `haf-system-tests.txt`, `system_test_cases.py`, `install-candidate-hfm.sh`, `runtime/Dockerfile.system`) | the core modules in `.aidev/haf-system-tests.txt` (about 5 minutes, 4 at a time; `HAF_SYSTEM_JOBS`) |
 | none of these | none: the select exits 77 and the suite is reported skipped, its reason `the change touches none of …` |
 | unknown (no changed-files list or base ref, e.g. a by-hand run) | the core modules |
 

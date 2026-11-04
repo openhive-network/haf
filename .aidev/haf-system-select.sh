@@ -10,6 +10,10 @@
 #   tests/integration/system/haf/   tests/integration/haf-local-tools/
 #   src/hive_fork_manager/hived_api.sql   src/sql_serializer/
 #
+# or to the suite's own files (.aidev/haf-system-select.sh, haf-system.sh,
+# run-haf-system.sh, haf-system-tests.txt, system_test_cases.py,
+# install-candidate-hfm.sh, runtime/Dockerfile.system),
+#
 # and then only the tests that change matches: each changed test module
 # (test_*.py directly in tests/integration/system/haf/) that still exists, plus,
 # for any other path above, the core tests listed in .aidev/haf-system-tests.txt.
@@ -24,7 +28,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 tests_dir=tests/integration/system/haf
-trigger='^(tests/integration/system/haf/|tests/integration/haf-local-tools/|src/hive_fork_manager/hived_api\.sql$|src/sql_serializer/)'
+trigger='^(tests/integration/system/haf/|tests/integration/haf-local-tools/|src/hive_fork_manager/hived_api\.sql$|src/sql_serializer/|\.aidev/(haf-system-select\.sh|haf-system\.sh|run-haf-system\.sh|haf-system-tests\.txt|system_test_cases\.py|install-candidate-hfm\.sh|runtime/Dockerfile\.system)$)'
 module="^$tests_dir/(test_[^/]*\\.py)\$"
 
 core() {
@@ -61,7 +65,7 @@ while IFS= read -r line; do
 done <<< "$changes"
 
 if [ ${#selected[@]} -eq 0 ] && [ "$wants_core" -eq 0 ]; then
-    echo "skipped: the change touches none of tests/integration/system/haf/, tests/integration/haf-local-tools/, src/hive_fork_manager/hived_api.sql, src/sql_serializer/"
+    echo "skipped: the change touches none of tests/integration/system/haf/, tests/integration/haf-local-tools/, src/hive_fork_manager/hived_api.sql, src/sql_serializer/, the suite's own .aidev/ files"
     exit 77
 fi
 {
