@@ -25,7 +25,7 @@ namespace hive::plugins::sql_serializer {
         size_t applied_hardforks;
     };
 
-    sizes_stash stash;
+    sizes_stash stash{};
 
     explicit cached_data_t(const size_t reservation_size) : total_size{ 0ul }
     {
