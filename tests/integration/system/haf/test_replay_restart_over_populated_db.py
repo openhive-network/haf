@@ -2,6 +2,7 @@ import os
 import re
 import signal
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -30,6 +31,23 @@ def row_counts(haf_node: HafNode) -> dict[str, int]:
 def hived_log(haf_node: HafNode) -> str:
     log: str = (haf_node.directory / "stderr.log").read_text(errors="replace")
     return log
+
+
+def hived_pid(haf_node: HafNode) -> int:
+    """The pid of the hived process running on haf_node's data directory (test_tools keeps its process private)."""
+    data_dir = str(haf_node.directory)
+    pids = []
+    for proc in Path("/proc").iterdir():
+        if not proc.name.isdigit():
+            continue
+        try:
+            cmdline = (proc / "cmdline").read_bytes().split(b"\0")
+        except (FileNotFoundError, ProcessLookupError, PermissionError):
+            continue
+        if Path(cmdline[0].decode()).name == "hived" and data_dir.encode() in cmdline:
+            pids.append(int(proc.name))
+    assert len(pids) == 1, f"expected one hived on {data_dir}, found pids {pids}"
+    return pids[0]
 
 
 def replay_to(haf_node: HafNode, init_node: tt.InitNode, block_num: int) -> None:
@@ -118,7 +136,7 @@ def test_replay_blockchain_after_sigkill_restarts(haf_node: HafNode) -> None:
     haf_node.wait_for_transaction_in_database(transaction_0)
     assert_are_blocks_sync_with_haf_db(haf_node, first_stop_block)
 
-    os.kill(haf_node.pid, signal.SIGKILL)
+    os.kill(hived_pid(haf_node), signal.SIGKILL)
     tt.Time.wait_for(lambda: not haf_node.is_running(), timeout=30)
     haf_node.close()
 
