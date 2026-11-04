@@ -66,7 +66,7 @@ class Test:
 
         ]
     )
-    def test_dump_load_instance_scripts(self, prepared_networks_and_database_1, database, first_run : int, dump_exit_before_sync : bool, dump_stop_replay_at_block : int, load_exit_before_sync : bool, load_stop_replay_at_block : int, after_dump : int, after_load : int):
+    def test_dump_load_instance_scripts(self, prepared_networks_and_database_1, database, first_run : int, dump_exit_before_sync : bool, dump_stop_replay_at_block : int, load_exit_before_sync : bool, load_stop_replay_at_block : int, after_dump : int, after_load : int) -> None:
         # GIVEN
         self.run_node_with_db(prepared_networks_and_database_1, database, first_run)
         
@@ -124,7 +124,7 @@ class Test:
         # THEN
         self.assert_loaded(haf_head_block)
 
-    def run_node_with_db(self, prepared_networks_and_database_1, database, stop_at_block : int):
+    def run_node_with_db(self, prepared_networks_and_database_1, database, stop_at_block : int) -> None:
         node, session, self.db_url = prepared_networks_and_database_1(database)
         self.use_node_data_dir(node.directory)
 
@@ -146,7 +146,7 @@ class Test:
         self.load_instance_script=scripts_path/'load_instance.sh'
 
 
-    def dump_instance(self, additional_command_line : str):
+    def dump_instance(self, additional_command_line : str) -> None:
         command = f"{self.dump_instance_script} \
         --backup-dir={self.backup_dir} \
         --hived-executable-path={self.hived_executable_path} \
@@ -161,12 +161,12 @@ class Test:
         tt.logger.info(f"Attempting to execute command: `{command}'")
         shell(command)
 
-    def assert_dumped(self, at_block : int):
+    def assert_dumped(self, at_block : int) -> None:
         session = create_session(self.db_url)
         assert query_count(session, 'blocks') == at_block
         session.close()
 
-    def load_instance(self, additional_command_line : str):
+    def load_instance(self, additional_command_line : str) -> None:
         command = f"{self.load_instance_script} \
         --backup-dir={self.backup_dir} \
         --hived-executable-path={self.hived_executable_path} \
@@ -180,7 +180,7 @@ class Test:
         tt.logger.info(f"Attempting to execute command: `{command}'")
         shell(command)
 
-    def assert_loaded(self, after_load : int):
+    def assert_loaded(self, after_load : int) -> None:
         session = create_session(self.db_url)
         assert query_count(session, 'blocks') == after_load
         session.close()
