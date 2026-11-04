@@ -354,6 +354,7 @@ SET_TESTS_PROPERTIES(
  ADD_SQL_FUNCTIONAL_TEST( state_providers/accounts_update_state_provider.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/keyauth_import_refused.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/keyauth_extraction.sql )
+ ADD_SQL_FUNCTIONAL_TEST( state_providers/genesis_keyauths.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/restore_indexes_freezes_state_provider_tables.sql )
  ADD_SQL_FUNCTIONAL_TEST( state_providers/metadata_start_state_provider.sql)
  ADD_SQL_FUNCTIONAL_TEST( state_providers/metadata_update_state_provider.sql )
