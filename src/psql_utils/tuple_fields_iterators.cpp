@@ -13,7 +13,7 @@ TuplesFieldIterator::TuplesFieldIterator( bytea* _tuple_in_copy_format ) {
   }
 
   m_tuple_bytes = (uint8_t*)VARDATA_ANY( _tuple_in_copy_format );
-  m_tuple_size = VARSIZE_ANY( _tuple_in_copy_format );
+  m_tuple_size = VARSIZE_ANY_EXHDR( _tuple_in_copy_format );
 
   if ( m_tuple_bytes == nullptr ) {
     THROW_INITIALIZATION_ERROR( "Null tuple passed" );

@@ -1,16 +1,20 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdlib>
+#include <cstring>
 #include "psql_utils/postgres_includes.hpp"
 
 #include <memory>
 
 namespace PsqlTools::PsqlUtils {
+    using bytea_ptr = std::unique_ptr< bytea, decltype(&std::free) >;
 
     template< typename _Data >
-    std::unique_ptr< bytea > toBytea( _Data* _data ) {
-      std::unique_ptr< bytea > result( ( bytea* )new uint8_t[ sizeof( _Data ) + VARHDRSZ ] );
-      SET_VARSIZE( result.get(), sizeof( _Data ) );
+    bytea_ptr toBytea( _Data* _data ) {
+
+      bytea_ptr result( static_cast<bytea*>( std::malloc(sizeof(_Data) + VARHDRSZ) ), &std::free );
+      SET_VARSIZE( result.get(), sizeof( _Data ) + VARHDRSZ );
       std::memcpy( VARDATA_ANY( result.get() ), _data, sizeof( _Data ) );
 
       return result;
