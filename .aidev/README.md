@@ -105,12 +105,13 @@ not a red.
 | The change touches | Tests run |
 |---|---|
 | `tests/integration/system/haf/test_<x>.py` (still present) | that module |
+| `scripts/dump_instance.sh`, `scripts/load_instance.sh`, `scripts/dump_load_common.sh` | `test_dump_load_instance_scripts.py` |
 | any other path under `tests/integration/system/haf/` or `tests/integration/haf-local-tools/`, `src/hive_fork_manager/hived_api.sql`, `src/sql_serializer/` | the core modules in `.aidev/haf-system-tests.txt` (about 5 minutes, 4 at a time; `HAF_SYSTEM_JOBS`) |
 | none of these | none: the select exits 77 and the suite is reported skipped, its reason `the change touches none of …` |
 | unknown (no changed-files list or base ref, e.g. a by-hand run) | the core modules |
 
 A changed module is run whole, under the image's testnet hived, as CI's job runs it
-(`-m "not mirrornet"`, its binaries, `HELPY_*` settings and 60 s
+(`-m "not mirrornet"`, its binaries, `SETUP_SCRIPTS_PATH`, `HELPY_*` settings and 60 s
 `TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT`, `PG_ACCESS` trusting 127.0.0.1).
 
 **The candidate's SQL.** `.aidev/haf-system.sh`, the entrypoint's maintenance script,

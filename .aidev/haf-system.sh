@@ -54,7 +54,7 @@ rc=0
 # block_log_12_8 puts 30 s after launch: under load the 30 s default times out on it.
 env PYTHONPATH="$src/tests/integration/haf-local-tools" PYTHONDONTWRITEBYTECODE=1 \
     TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT=60 \
-    DB_URL="postgresql://haf_admin@127.0.0.1:5432/haf_block_log" \
+    DB_URL="postgresql://haf_admin@127.0.0.1:5432/haf_block_log" SETUP_SCRIPTS_PATH="$src/scripts" \
     HIVED_PATH=/home/hived/bin/hived CLI_WALLET_PATH=/home/hived/bin/cli_wallet \
     GET_DEV_KEY_PATH=/home/hived/bin/get_dev_key COMPRESS_BLOCK_LOG_PATH=/home/hived/bin/compress_block_log \
     BLOCK_LOG_UTIL_PATH=/home/hived/bin/block_log_util OP_BODY_FILTER_PATH=/home/hived/bin/op_body_filter \
