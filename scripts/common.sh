@@ -4,6 +4,8 @@ set -euo pipefail
 
 # Redirect output to log file if LOG_FILE is set
 if [[ -n "${LOG_FILE:-}" ]]; then
+  # tee starts asynchronously, so create the file here: callers chmod it right away
+  touch "${LOG_FILE}"
   exec > >(tee -i "${LOG_FILE}") 2>&1
 fi
 
