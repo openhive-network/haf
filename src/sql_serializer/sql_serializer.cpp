@@ -18,6 +18,7 @@
 #include <hive/chain/util/supplement_operations.hpp>
 #include <hive/chain/util/type_registrar_definition.hpp>
 
+#include <hive/chain/database_exceptions.hpp>
 #include <hive/chain/notifications.hpp>
 #include <hive/chain/detail/state/reward_fund_object.hpp>
 #include <hive/chain/detail/state/witness_objects.hpp>
@@ -427,6 +428,7 @@ public:
 
   indexation_state _indexation_state;
   bool _is_database_initialized;
+  bool _is_hfm_informed_about_starting = false;
   vacuum_cleaner _vacuum_cleaner;
   custom_json_type_cache _custom_json_cache;
 
@@ -638,8 +640,25 @@ void sql_serializer_plugin_impl::disconnect_signals()
 
 void sql_serializer_plugin_impl::on_pre_apply_block(const block_notification& note)
 {
-  static std::once_flag inform_hfm_flag;
-  std::call_once(inform_hfm_flag, [&]{ replay_wal_if_necessary(); inform_hfm_about_starting(); } );
+  // Not std::call_once: an exception unwinding through its pthread_once frame aborts hived.
+  if ( !_is_hfm_informed_about_starting )
+  {
+    // plugin_exception is the only one HIVE_TRY_NOTIFY rethrows, so the chain stops instead of applying blocks HAF refused
+    try
+    {
+      replay_wal_if_necessary();
+      inform_hfm_about_starting();
+    }
+    catch( const fc::exception& e )
+    {
+      FC_THROW_EXCEPTION( hive::chain::plugin_exception, "HAF failed to start: ${e}", ("e", e.to_string()) );
+    }
+    catch( const std::exception& e )
+    {
+      FC_THROW_EXCEPTION( hive::chain::plugin_exception, "HAF failed to start: ${e}", ("e", e.what()) );
+    }
+    _is_hfm_informed_about_starting = true;
+  }
 
   _indexation_state.on_block( note.block_num );
   if (need_initialize_database(note.block_num) ) {

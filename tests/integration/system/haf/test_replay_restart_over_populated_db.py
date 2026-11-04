@@ -63,10 +63,13 @@ def test_force_replay_over_populated_database_is_refused(haf_node: HafNode) -> N
         )
     process_error = refused.value.__cause__
     assert isinstance(process_error, subprocess.CalledProcessError)
-    assert process_error.returncode != 0
+    # hived's main returns -1 when startup throws; a crash is a negative status (killed by a signal) or 128 + signal through a shell
+    assert process_error.returncode == 255
 
-    guard = GUARD_MESSAGE.search(hived_log(haf_node))
+    log = hived_log(haf_node)
+    guard = GUARD_MESSAGE.search(log)
     assert guard is not None, "hived did not log the full-mode hive.connect guard"
+    assert "exited cleanly" in log, "hived did not shut down in order after the refusal"
     assert int(guard.group(1)) == top_irreversible_block
     assert int(guard.group(2)) == 0
 
