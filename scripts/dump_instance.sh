@@ -35,7 +35,38 @@ validate_environment(){
   fi
 }
 
+haf_head_block(){
+  psql "${POSTGRES_ACCESS}" -v ON_ERROR_STOP=1 -tAc "SELECT COALESCE(MAX(num), 0) FROM hafd.blocks;"
+}
+
 dump_snapshot(){
+
+  # hived refuses to open a state that is behind its block log unless it replays. Replaying up to the
+  # head HAF already holds applies no block, so the dumped state stays where it is.
+  local head_block
+  head_block=$(haf_head_block)
+  if [ "${head_block}" -eq 0 ];
+  then
+    echo "The HAF database holds no blocks, there is no state to dump."
+    exit 1
+  fi
+
+  local hived_options=()
+  local option
+  for option in "${ADDITIONAL_HIVED_OPTIONS[@]}"; do
+    case "${option}" in
+      --force-replay)
+        echo "${option} would wipe the state that is to be dumped, exiting..."
+        exit 1
+        ;;
+      --stop-at-block=*|--exit-at-block=*|--exit-before-sync|--replay-blockchain)
+        echo "Ignoring ${option}: the dump stops at HAF's head block ${head_block} and exits."
+        ;;
+      *)
+        hived_options+=("${option}")
+        ;;
+    esac
+  done
 
   local hived_args=()
   hived_args+=(--data-dir="${DATA_DIR}")
@@ -44,7 +75,10 @@ dump_snapshot(){
   hived_args+=(--plugin=state_snapshot)
   hived_args+=(--snapshot-root-dir="${BACKUP_DIR}")
   hived_args+=(--dump-snapshot=hived)
-  hived_args+=("${ADDITIONAL_HIVED_OPTIONS[@]}")
+  hived_args+=(--replay-blockchain)
+  hived_args+=(--stop-at-block="${head_block}")
+  hived_args+=(--exit-before-sync)
+  hived_args+=("${hived_options[@]}")
 
   echo "Using HIVED_DB_ROLE: ${HIVED_DB_ROLE}, POSTGRES_USER: ${POSTGRES_USER}."
 
