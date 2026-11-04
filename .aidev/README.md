@@ -387,15 +387,26 @@ cgroup as they are touched and cannot be reclaimed, so past the limit the kernel
 OOM-kills a backend, and the crash recovery empties the UNLOGGED tables of every
 clone. On every start `start.sh` therefore reads `/sys/fs/cgroup/memory.max`
 (`MemTotal` when the container has no limit) and writes
-`haf_postgresql_conf.d/60-haf-shared-memory.conf`:
+`haf_postgresql_conf.d/60-haf-shared-memory.conf`, sized from that limit but
+from at most 5.5 GB (`sizing_bound_mb`). AIDEV also changes the limit of a
+running container (steem-18's fixture went from 5.5 GB to 40 GB without a
+restart), and shared memory cannot shrink without one: sized from a 40 GB limit,
+`shared_buffers` would be 10GB, and a later in-place decrease back to 5.5 GB
+would bring the OOM back. Sizing from the smallest limit the container may be
+lowered to keeps the shared memory under any limit it is given while it runs,
+without restarting PostgreSQL under its consumers. A larger limit leaves its
+excess to the kernel's page cache, which serves the clones' reads and, unlike
+shared buffers, is reclaimed when the limit drops. AIDEV has no way to declare a
+memory floor for a shared service; if the dev-stack's smallest limit falls
+below 5.5 GB, lower `sizing_bound_mb` with it.
 
-| setting | share of the limit | floor | cap | at 5.5 GB |
-|---|---|---|---|---|
-| `shared_buffers` | 1/4 | 256MB | 16GB | 1408MB |
-| `effective_cache_size` | 1/2 | 512MB | 32GB | 2816MB |
-| `work_mem` | 1/128 | 4MB | 64MB | 44MB |
-| `maintenance_work_mem` | 1/16 | 64MB | 1GB | 352MB |
-| `autovacuum_work_mem` | 1/4 of `maintenance_work_mem` | 16MB | 256MB | 88MB |
+| setting | share of the sizing limit | floor | at 5.5 GB and above |
+|---|---|---|---|
+| `shared_buffers` | 1/4 | 256MB | 1408MB |
+| `effective_cache_size` | 1/2 | 512MB | 2816MB |
+| `work_mem` | 1/128 | 4MB | 44MB |
+| `maintenance_work_mem` | 1/16 | 64MB | 352MB |
+| `autovacuum_work_mem` | 1/4 of `maintenance_work_mem` | 16MB | 88MB |
 
 `shared-haf/postgresql.conf` fixes `wal_buffers = 16MB` (the image's 512MB is
 shared memory too) and bounds parallelism to `max_parallel_workers = 4`, 2 per
@@ -405,7 +416,7 @@ consumers' queries each running three processes with two hash nodes
 (`hash_mem_multiplier = 2`) take about 2.1 GB, an index build 352MB and the five
 autovacuum workers at most 440MB. The settings take effect when the `haf`
 container restarts (its entrypoint is `start.sh`), with the scripts of the hosting
-session's checkout; `docker logs` shows the limit and `shared_buffers` it chose,
+session's checkout; `docker logs` shows the limit, the sizing limit and `shared_buffers` it chose,
 and inside the container
 `psql -c 'show shared_buffers'` and `cat /sys/fs/cgroup/memory.max` confirm them.
 
