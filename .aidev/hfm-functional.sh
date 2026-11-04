@@ -5,11 +5,11 @@
 #   /home/hived/docker_entrypoint.sh --execute-maintenance-script=/work/.aidev/hfm-functional.sh
 #
 # 1. Installs the candidate's hive_fork_manager extension SQL into PostgreSQL
-#    the way Dockerfile.sql-overlay does (scripts/generate_extension_sql.sh, then
-#    the control file's libhfm-<version>.so pointed at the image's own libhfm,
-#    which under aidev is built from the tree's own sources, .aidev/README.md).
-#    When that SQL declares a C symbol the image's libhfm lacks, records one
-#    failing case (hfm/libhfm-symbols) naming them and runs no test.
+#    (.aidev/install-candidate-hfm.sh: as Dockerfile.sql-overlay does, against the
+#    image's own libhfm, which under aidev is built from the tree's own sources,
+#    .aidev/README.md). When that SQL declares a C symbol the image's libhfm
+#    lacks, records one failing case (hfm/libhfm-symbols) naming them and runs no
+#    test.
 # 2. Runs every ADD_SQL_FUNCTIONAL_TEST of tests/integration/functional/
 #    {hive_fork_manager,query_supervisor} through tools/test.sh, as CI's ctest
 #    does, HFM_TEST_JOBS at a time, and records one case per test.
@@ -25,33 +25,13 @@ src="$PWD"
 out="${HFM_TEST_OUT:?HFM_TEST_OUT must name the report directory}"
 mkdir -p "$out/hfm"
 cases="$out/hfm-functional.tsv"; : > "$cases"
-pg_version="${POSTGRES_VERSION:-18}"
-version="aidev$(date +%s)"
-
-echo "== installing candidate hive_fork_manager SQL as version $version"
-ext="$(mktemp -d)"
-bash scripts/generate_extension_sql.sh "$version" "$ext" "$pg_version" > "$out/hfm/generate.log" 2>&1 \
-    || { cat "$out/hfm/generate.log"; exit 1; }
-sudo -n cp -r "$ext"/. "/usr/share/postgresql/$pg_version/extension/" || exit 1
-libdir="/usr/lib/postgresql/$pg_version/lib"
-base_so=""
-for so in "$libdir"/libhfm-*.so; do
-    case "$so" in */libhfm-aidev*) ;; *) [ -e "$so" ] && { base_so="${so##*/}"; break; } ;; esac
-done
-[ -n "$base_so" ] || { echo "no libhfm-*.so in $libdir"; exit 1; }
-sudo -n ln -sf "$base_so" "$libdir/libhfm-$version.so" || exit 1
-sudo -n chmod 644 "/usr/share/postgresql/$pg_version/extension/"hive_fork_manager*.sql \
-    "/usr/share/postgresql/$pg_version/extension/hive_fork_manager.control" || exit 1
-
-# A C function the candidate SQL declares but the image's libhfm lacks fails
-# CREATE EXTENSION in every test; report it once as a stale image instead.
-missing="$(python3 .aidev/missing_c_symbols.py "$libdir/$base_so" "$ext"/hive_fork_manager*.sql)" || exit 1
-if [ -n "$missing" ]; then
-    msg="$base_so lacks C symbols the candidate SQL declares: $(echo "$missing" | tr '\n' ' ')- the image was not built from these sources (.aidev/README.md, The test runtime image)"
-    echo "$msg" | tee "$out/hfm/libhfm-symbols.log"
-    printf 'case\thfm/libhfm-symbols\tfail\t0\t%s\t%s\n' "$msg" "$out/hfm/libhfm-symbols.log" >> "$cases"
+rc=0
+bash .aidev/install-candidate-hfm.sh "$out/hfm" || rc=$?
+if [ "$rc" -eq 3 ]; then
+    printf 'case\thfm/libhfm-symbols\tfail\t0\t%s\t%s\n' "$(< "$out/hfm/libhfm-symbols.log")" "$out/hfm/libhfm-symbols.log" >> "$cases"
     exit 1
 fi
+[ "$rc" -eq 0 ] || exit 1
 
 # test.sh connects as these roles through localhost with password 'test'
 cd tests/integration/functional || exit 1

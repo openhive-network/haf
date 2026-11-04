@@ -1,33 +1,48 @@
 #!/usr/bin/env bash
-# Build (and with --push, publish) the test runtime image of .aidev/runtime/Dockerfile
-# and print the digest-pinned reference to put in .aidev/project.yaml's
-# `environment.image`. See .aidev/README.md.
+# Build (and with --push, publish) one of the test runtime images and print the
+# digest-pinned reference to put in .aidev/project.yaml. See .aidev/README.md.
 #
-# The tag is `aidev-<hash>`, the hash of the image input (the Dockerfile; every
-# FROM is digest-pinned); the registry cleanup policy keeps `aidev-*` tags. When
-# <repository>:aidev-<hash> is already in the registry nothing is built: the script
-# prints that image's digest.
+#   (default)  .aidev/runtime/Dockerfile, `environment.image`
+#   --system   .aidev/runtime/Dockerfile.system, the `haf-system` suite's `image:`
+#              in `verification.full`
 #
-#   .aidev/runtime/build.sh           # registry digest, or build locally and print the local tag
-#   .aidev/runtime/build.sh --push    # registry digest, or build + push and print repo@sha256:<digest>
-#   .aidev/runtime/build.sh --tag     # print the input-hash tag only
+# The tag is `aidev-<hash>`, the hash of the image's inputs (its Dockerfile, plus
+# for --system the haf-local-tools pyproject.toml and poetry.lock it installs from;
+# every FROM is digest-pinned); the registry cleanup policy keeps `aidev-*` tags.
+# When <repository>:aidev-<hash> is already in the registry nothing is built: the
+# script prints that image's digest.
+#
+#   .aidev/runtime/build.sh [--system]           # registry digest, or build locally and print the local tag
+#   .aidev/runtime/build.sh [--system] --push    # registry digest, or build + push and print repo@sha256:<digest>
+#   .aidev/runtime/build.sh [--system] --tag     # print the input-hash tag only
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
-REPOSITORY="${AIDEV_RUNTIME_REPOSITORY:-registry.gitlab.syncad.com/hive/haf/aidev-tests}"
+usage() { echo "usage: $0 [--system] [--push|--tag]" >&2; exit 2; }
 
-# The Dockerfile copies nothing from the tree: it is the only input.
+dockerfile=.aidev/runtime/Dockerfile
+repository=registry.gitlab.syncad.com/hive/haf/aidev-tests
+inputs=()
+if [ "${1:-}" = --system ]; then
+    shift
+    dockerfile=.aidev/runtime/Dockerfile.system
+    repository=registry.gitlab.syncad.com/hive/haf/aidev-system-tests
+    inputs=(tests/integration/haf-local-tools/pyproject.toml tests/integration/haf-local-tools/poetry.lock)
+fi
+REPOSITORY="${AIDEV_RUNTIME_REPOSITORY:-$repository}"
+
 input_hash() {
-    sha256sum .aidev/runtime/Dockerfile | sha256sum | cut -c1-16
+    sha256sum "$dockerfile" "${inputs[@]}" | sha256sum | cut -c1-16
 }
 TAG="aidev-$(input_hash)"
 
 case "${1:-}" in
     --tag) echo "$TAG"; exit 0 ;;
     ""|--push) ;;
-    *) echo "usage: $0 [--push|--tag]" >&2; exit 2 ;;
+    *) usage ;;
 esac
+[ $# -le 1 ] || usage
 
 # Digest of <repository>:<tag> in the registry, empty when the tag doesn't exist.
 registry_digest() {
@@ -43,9 +58,10 @@ if [ -n "$digest" ]; then
 fi
 echo "$REPOSITORY:$TAG is not in the registry; building it" >&2
 
-# The Dockerfile copies nothing from the tree, so the context is empty.
+# The context holds only the image's inputs besides its Dockerfile (none for the default image).
 context="$(mktemp -d)"
 trap 'rm -rf "$context"' EXIT
+for input in "${inputs[@]}"; do cp "$input" "$context/"; done
 
 # Optionally build through a pull-through registry cache near the build host, so FROM
 # stays canonical and the build doesn't compete for the uplink. Set
@@ -83,7 +99,7 @@ builder="$(region_builder)"
 
 # The FROM is digest-pinned, so no --pull. No provenance, so the pushed digest is a
 # plain image manifest.
-build=(docker buildx build ${builder:+--builder "$builder"} --provenance=false -f .aidev/runtime/Dockerfile -t "$REPOSITORY:$TAG")
+build=(docker buildx build ${builder:+--builder "$builder"} --provenance=false -f "$dockerfile" -t "$REPOSITORY:$TAG")
 if [ "${1:-}" != "--push" ]; then
     "${build[@]}" --load "$context" >&2
     echo "$REPOSITORY:$TAG"

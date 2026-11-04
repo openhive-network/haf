@@ -67,8 +67,9 @@ issues:
 # tests ctest registers run against it (.aidev/hfm-functional.sh). The image's
 # libhfm and libquery_supervisor are built from the tree's own sources
 # (environment.source_image); hived is the pinned base's, so `cxx-scope` reports a
-# candidate's other C++/CMake/hive changes as a skipped case. Unbound for now: the C++
-# build and unit tests, replay and system tests (CI keeps them), and `static`
+# candidate's other C++/CMake/hive changes as a skipped case. `full` also runs the
+# HAF system tests a change selects (below). Unbound for now: the C++ build and
+# unit tests, replay, forking and the rest of the system tests (CI keeps them), and `static`
 # (scripts/ has shellcheck errors today) and `system`, which AIDEV runs for no
 # project. See .aidev/README.md.
 #
@@ -90,12 +91,34 @@ verification:
       match: "^hfm-functional::(hive_fork_manager|query_supervisor)/"
       file_pattern: "^hfm-functional$"
       ids: ["--rerun", "{ids}"]
+  # `full` adds the HAF system tests a change to hived's side of HAF selects, in
+  # their own testnet image (.aidev/run-haf-system.sh); for any other change that
+  # suite reports skipped by its `select`. Its ids are
+  # haf-system::<module>.py::<test>, re-run by node id. A slot with several suites
+  # takes pass-through arguments only with `--suite`. See .aidev/README.md.
   full:
-    adapter: command
-    args: [".aidev/run-checks.sh", "full", "hfm-functional", "cxx-scope"]
-    artifacts: ["test-results/full/"]
-    honor_quarantine: true
-    rerun: *hfm_rerun
+    suites:
+      - name: hfm_functional
+        adapter: command
+        args: [".aidev/run-checks.sh", "full", "hfm-functional", "cxx-scope"]
+        artifacts: ["test-results/full/"]
+        honor_quarantine: true
+        rerun: *hfm_rerun
+      - name: haf_system
+        adapter: command
+        args: [".aidev/run-haf-system.sh"]
+        # The testnet HAF image of develop 46558ea2e (the mainnet base's source) with
+        # the haf-local-tools venv: .aidev/runtime/build.sh --system --push.
+        image: "registry.gitlab.syncad.com/hive/haf/aidev-system-tests@sha256:4e7697731bb2d46e5cf591549f0b54bdc4ec58b076293f29f1296d91a702469b"
+        select: [".aidev/haf-system-select.sh"]
+        artifacts: ["test-results/haf-system/"]
+        timeout: 1800
+        honor_quarantine: true
+        rerun:
+          classify: true
+          match: "^haf-system::"
+          file_pattern: "^haf-system$"
+          ids: ["--rerun", "{ids}"]
   baseline:
     adapter: command
     args: [".aidev/run-checks.sh", "baseline", "hfm-functional"]

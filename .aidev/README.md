@@ -60,21 +60,24 @@ every other test, as `hfm-functional::hive_fork_manager/test_update_script`: it 
 extension the step installed (about 2 minutes), with the update-script generator
 `generate_extension_sql.sh` writes from the candidate's
 `hive_fork_manager_update_script_generator.sh.in`. So every `full`, `canary` and `baseline`
-run covers the update path, whatever the candidate changed; `quick` does not. To run it alone:
+run covers the update path, whatever the candidate changed; `quick` does not. To run it alone
+(`full` has two suites, so pass-through arguments name one with `--suite`):
 
 ```bash
-aidev test run --slot full -- --rerun hfm-functional::hive_fork_manager/test_update_script
+aidev test run --slot full --suite hfm_functional -- --rerun hfm-functional::hive_fork_manager/test_update_script
 ```
 
-| Slot | Steps |
+| Slot | Suites: steps |
 |---|---|
 | quick, coverage | hfm-smoke (+ cxx-scope on quick) |
-| full, canary | hfm-functional, cxx-scope |
+| full | `hfm_functional`: hfm-functional, cxx-scope; `haf_system`: the HAF system tests the change selects (*The haf-system suite*) |
+| canary | hfm-functional, cxx-scope |
 | baseline | hfm-functional |
 
 Not covered yet: hived's C++ build (only libhfm and libquery_supervisor are built), the C++ unit tests, `test.functional.update.*` (each functional
-test re-run on a database updated by the generator; CI runs them on develop and master only), replay, system, forking and application tests, and
-shellcheck (`scripts/` has 8 error-severity findings today). They stay in GitLab CI.
+test re-run on a database updated by the generator; CI runs them on develop and master only), replay, forking and application tests, the system
+tests no change selects (and all of them on `canary` and `baseline`), and shellcheck (`scripts/` has 8 error-severity findings today). They stay in
+GitLab CI.
 
 To run by hand:
 
@@ -82,6 +85,82 @@ To run by hand:
 docker run --rm --network none --user 1000:1000 -v "$PWD:/work" -w /work \
     "$(grep -o 'registry[^"]*aidev-tests@sha256:[0-9a-f]*' .aidev/project.yaml)" \
     .aidev/run-checks.sh full hfm-functional
+```
+
+## The haf-system suite (`verification.full`, `haf_system`)
+
+The HAF system tests (`tests/integration/system/haf/`) drive a testnet hived
+(`BUILD_HIVE_TESTNET`) that feeds a HAF database; CI runs them as `haf_system_tests`
+in the `haf_image_build_testnet` image. The `full` slot's `haf_system` suite runs
+the ones the candidate's change selects, in an image of its own (the suite's
+`image:`; aidev `docs/architecture/verification-slots.md`, *A suite may run in its
+own image*), which AIDEV pulls through the region cache before the slot is timed:
+an image it cannot obtain refuses the slot as a retriable infrastructure failure,
+not a red.
+
+**Change-scoped.** `.aidev/haf-system-select.sh` is the suite's `select`, and
+`.aidev/run-haf-system.sh` runs it again for the list. It reads the change from
+`AIDEV_CHANGED_FILES_FILE` (else `git diff` from `AIDEV_BASE_REF`):
+
+| The change touches | Tests run |
+|---|---|
+| `tests/integration/system/haf/test_<x>.py` (still present) | that module |
+| any other path under `tests/integration/system/haf/` or `tests/integration/haf-local-tools/`, `src/hive_fork_manager/hived_api.sql`, `src/sql_serializer/` | the core modules in `.aidev/haf-system-tests.txt` (about 5 minutes, 4 at a time; `HAF_SYSTEM_JOBS`) |
+| none of these | none: the select exits 77 and the suite is reported skipped, its reason `the change touches none of …` |
+| unknown (no changed-files list or base ref, e.g. a by-hand run) | the core modules |
+
+A changed module is run whole, under the image's testnet hived, as CI's job runs it
+(`-m "not mirrornet"`, its binaries and `HELPY_*` settings, `PG_ACCESS` trusting
+127.0.0.1).
+
+**The candidate's SQL.** `.aidev/haf-system.sh`, the entrypoint's maintenance script,
+installs the candidate's hive_fork_manager SQL with `.aidev/install-candidate-hfm.sh`
+(the same install `hfm-functional` does) and then recreates `haf_block_log` with
+the candidate's `scripts/setup_db.sh`. Every `HafNode` database is a copy of
+`haf_block_log` (`create_database(…, template="haf_block_log")`), so the hived of
+every test connects to the candidate's `hive.connect()` and the rest of its SQL.
+
+**Reports.** `test-results/haf-system/junit.xml`: one case per test, its id
+`haf-system::<module>.py::<test>[<param>]` (pytest's node id under the suite's name),
+so `known_failures.txt` can pardon one (`honor_quarantine`) and the flake layers
+re-run one by node id (`rerun:`, `run-haf-system.sh --rerun <id>...`, reporting to
+`test-results/haf-system/rerun/<n>/`). A failed setup is one failing case of its own:
+`haf-system/environment` (the image's venv was built from another `poetry.lock`),
+`haf-system/libhfm-symbols` (the candidate's SQL declares a C function the image's
+libhfm lacks), `haf-system/install` or `haf-system/setup_db`; a run that failed with no
+failing test recorded is `haf-system/run`. test_tools' node directories
+(`generated_during_<module>/`) are moved into `test-results/haf-system/generated/`,
+kept with a failing run's artifacts. To run one test:
+
+```bash
+aidev test run --slot full --suite haf_system -- --rerun haf-system::test_replay_restart_over_populated_db.py::test_force_replay_over_populated_database_is_refused
+```
+
+**The image** (`runtime/Dockerfile.system`, `registry.gitlab.syncad.com/hive/haf/aidev-system-tests`):
+`hive/haf/testnet:v-l2-6f476cfd`, the testnet image of develop 46558ea2e — the same
+commit as the mainnet base — pinned by digest, plus a venv holding
+`tests/integration/haf-local-tools`' locked dependencies (`poetry install --no-root`).
+AIDEV runs a suite container with no network, so nothing is installed at run time,
+unlike CI's `run_haf_system_tests.sh`; `haf_local_tools` itself is imported from the
+candidate's tree. hived and libhfm are the image's: a candidate's C++ change to
+`src/sql_serializer/` selects the core tests but runs them under the pinned hived
+(`cxx-scope` names it), and a C function its SQL newly needs is
+`haf-system/libhfm-symbols`. Re-pin the image with the mainnet base, and rebuild it
+**in the same commit** as any change to haf-local-tools' `pyproject.toml` or
+`poetry.lock` (until then the suite fails as `haf-system/environment`):
+
+```bash
+.aidev/runtime/build.sh --system --push   # registry digest if aidev-<input hash> exists, else build + push
+# put the printed repo@sha256:<digest> into project.yaml's haf_system `image:`
+```
+
+To run it by hand (all the core tests; mount a changed-files list at
+`/aidev-artifacts/changed-files.txt` and set `AIDEV_CHANGED_FILES_FILE` to scope it):
+
+```bash
+docker run --rm --network none --user 1000:1000 -v "$PWD:/work" -w /work \
+    "$(grep -o 'registry[^"]*aidev-system-tests@sha256:[0-9a-f]*' .aidev/project.yaml)" \
+    .aidev/run-haf-system.sh
 ```
 
 ## The test runtime image (`runtime/`)
@@ -146,7 +225,9 @@ run above uses. Its hived, PostgreSQL and extension layout reach every slot, so
 re-pin it when those should follow `develop` (and when the base's Ubuntu or
 PostgreSQL changes, re-pin the builder `FROM` in `Dockerfile.source` with it, so the
 libraries are built against the same system): re-pin the `FROM` to that commit's
-`hive/haf:<commit>` image, rebuild and re-pin **in the same commit**:
+`hive/haf:<commit>` image, rebuild and re-pin **in the same commit** (and the
+`haf_system` image's `FROM` to the same commit's `hive/haf/testnet` image, *The
+haf-system suite*):
 
 ```bash
 .aidev/runtime/build.sh --push   # registry digest if aidev-<input hash> exists, else build + push
