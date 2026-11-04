@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import re
+import signal
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
@@ -34,6 +36,11 @@ FROM hafd.{table};
 
 LIVE_SYNC_START_BLOCK: Final[int] = 110
 REVERSIBLE_BLOCKS_BEFORE_STOP: Final[int] = 5
+IRREVERSIBLE_BLOCKS_AHEAD_OF_HAF: Final[int] = 3
+
+DUMP_REFUSAL: Final[re.Pattern[str]] = re.compile(
+    r"hived's state is at its last irreversible block (\d+), but HAF's irreversible head block is (\d+)"
+)
 
 class Test:
     @pytest.mark.parametrize(
@@ -124,6 +131,57 @@ class Test:
         # THEN
         self.assert_loaded(haf_head_block)
 
+    def test_dump_instance_refuses_after_hived_killed(self, prepared_networks_and_database_12_8: tuple[ttcn.NetworksBuilder, Session]) -> None:
+        # GIVEN
+        networks_builder, session = prepared_networks_and_database_12_8
+        self.db_url = session.get_bind().url
+        node_under_test = networks_builder.networks[1].node('ApiNode0')
+        node_under_test.wait_for_block_with_number(LIVE_SYNC_START_BLOCK)
+
+        # The lock stalls sql_serializer's hive.set_irreversible while hived keeps applying blocks and
+        # queues them in its write-ahead log, so the kill leaves hived's LIB above HAF's irreversible head.
+        blocker = create_session(self.db_url)
+        blocker.execute(sqlalchemy.text("LOCK TABLE hafd.blocks IN SHARE MODE"))
+        haf_head_block = query_max_block_num(blocker, 'blocks')
+        tt.Time.wait_for(
+            lambda: get_irreversible_block(node_under_test) >= haf_head_block + IRREVERSIBLE_BLOCKS_AHEAD_OF_HAF,
+            timeout=120,
+        )
+        hived_irreversible_block = get_irreversible_block(node_under_test)
+
+        os.kill(hived_pid(node_under_test.directory), signal.SIGKILL)
+        tt.Time.wait_for(lambda: not node_under_test.is_running(), timeout=30)
+        # The killed hived's backend still waits for the lock; once granted it would move blocks to hafd.blocks.
+        blocker.execute(sqlalchemy.text(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+            "WHERE datname = current_database() AND wait_event_type = 'Lock'"
+        ))
+        blocker.rollback()
+        blocker.close()
+        for node in networks_builder.nodes:
+            node.close()
+        session.close()
+
+        session = create_session(self.db_url)
+        assert query_max_block_num(session, 'blocks') == haf_head_block
+        session.close()
+        tt.logger.info(f"Killed hived at irreversible block {hived_irreversible_block} or later, HAF head block {haf_head_block}")
+
+        self.use_node_data_dir(node_under_test.directory)
+        os.chdir(tt.context.get_current_directory())
+
+        # WHEN
+        with pytest.raises(subprocess.CalledProcessError):
+            self.dump_instance('')
+
+        # THEN
+        refusal = DUMP_REFUSAL.search(Path('dump_instance.log').read_text(errors='replace'))
+        assert refusal is not None, "dump_instance.sh did not report the mismatch of hived's LIB and HAF's head"
+        assert int(refusal.group(1)) >= hived_irreversible_block
+        assert int(refusal.group(2)) == haf_head_block
+        assert not (self.backup_dir / 'hived').exists()
+        assert not (self.backup_dir / 'db').exists()
+
     def run_node_with_db(self, prepared_networks_and_database_1, database, stop_at_block : int) -> None:
         node, session, self.db_url = prepared_networks_and_database_1(database)
         self.use_node_data_dir(node.directory)
@@ -193,6 +251,21 @@ class Test:
         if dump_stop_replay_at_block:
             additional_command_line+=f' --stop-at-block={dump_stop_replay_at_block}'
         return additional_command_line
+
+def hived_pid(data_dir: Path) -> int:
+    """The pid of the hived process running on data_dir (test_tools keeps its process private)."""
+    pids = []
+    for proc in Path("/proc").iterdir():
+        if not proc.name.isdigit():
+            continue
+        try:
+            cmdline = (proc / "cmdline").read_bytes().split(b"\0")
+        except (FileNotFoundError, ProcessLookupError, PermissionError):
+            continue
+        if Path(cmdline[0].decode()).name == "hived" and str(data_dir).encode() in cmdline:
+            pids.append(int(proc.name))
+    assert len(pids) == 1, f"expected one hived on {data_dir}, found pids {pids}"
+    return pids[0]
 
 def shell(command: str) -> None:
     subprocess.check_call(command, shell=True)

@@ -5,17 +5,21 @@ SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 LOG_FILE=dump_instance.log
 source ${SCRIPTPATH}/dump_load_common.sh true "Dump hived and haf states." "  --override-existing-backup-dir   Erases backup directory and its contents." "$@"
 
+remove_snapshot(){
+  if [ "${HIVED_DB_ROLE}" != "${POSTGRES_USER}" ];
+  then
+    echo "Switching to a separate hived role to erase the snapshot..."
+    run_as_user "${HIVED_DB_ROLE}" rm -rf "${HIVED_SNAPSHOT_DIR}"
+  else
+    rm -rf ${HIVED_SNAPSHOT_DIR}
+  fi
+}
+
 validate_environment(){
 
   if [ ${ERASE_CURRENT} = true ];
   then
-    if [ "${HIVED_DB_ROLE}" != "${POSTGRES_USER}" ];
-    then
-      echo "Switching to a separate hived role to erase previously generated snapshot..."
-      run_as_user "${HIVED_DB_ROLE}" rm -rf "${HIVED_SNAPSHOT_DIR}"
-    else
-      rm -rf ${HIVED_SNAPSHOT_DIR}
-    fi
+    remove_snapshot
 
     rm -rf ${POSTGRES_BACKUP_DIR}
 
@@ -82,14 +86,36 @@ dump_snapshot(){
 
   echo "Using HIVED_DB_ROLE: ${HIVED_DB_ROLE}, POSTGRES_USER: ${POSTGRES_USER}."
 
+  local hived_log
+  hived_log=$(mktemp)
+  trap "rm -f -- $(printf '%q' "${hived_log}")" EXIT
+
   if [ "${HIVED_DB_ROLE}" != "${POSTGRES_USER}" ];
   then
     echo "Switching to a separate hived role..."
-    run_as_user "${HIVED_DB_ROLE}" "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}"
+    run_as_user "${HIVED_DB_ROLE}" "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}" 2>&1 | tee "${hived_log}"
   else
-    "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}"
+    "${HIVED_EXECUTABLE_PATH}" "${hived_args[@]}" 2>&1 | tee "${hived_log}"
   fi
 
+  # On open hived rewinds its state to its last irreversible block. A replay that stops at or below that
+  # block applies nothing, so the snapshot holds this state. After an unclean stop HAF's irreversible head
+  # can lag it: blocks hived made irreversible may still wait in sql_serializer's write-ahead log, which
+  # hived replays only once it applies a block, and the dump never does.
+  local state_head
+  state_head=$(sed -nE 's/.*Blockchain state database is AT IRREVERSIBLE state specific to head block: ([0-9]+).*/\1/p' "${hived_log}" | tail -n 1)
+  if [ -z "${state_head}" ];
+  then
+    remove_snapshot
+    echo "Cannot find the block of the dumped hived state in hived's output, so it cannot be checked against HAF's irreversible head block ${head_block}. Let hived log to stderr and dump again."
+    exit 1
+  fi
+  if [ "${state_head}" -ne "${head_block}" ];
+  then
+    remove_snapshot
+    echo "hived's state is at its last irreversible block ${state_head}, but HAF's irreversible head block is ${head_block}: the dump would pair them. This happens when hived was not stopped cleanly. Run the HAF instance until HAF catches up with hived, stop hived cleanly and dump again."
+    exit 1
+  fi
 }
 
 dump_database(){
