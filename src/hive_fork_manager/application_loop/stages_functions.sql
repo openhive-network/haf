@@ -140,3 +140,58 @@ BEGIN
     )::hafd.application_stage;
 END;
 $BODY$;
+CREATE OR REPLACE FUNCTION hive.default_stages()
+    RETURNS hafd.application_stages
+    LANGUAGE plpgsql
+    IMMUTABLE
+AS
+$BODY$
+BEGIN
+    RETURN ARRAY[ hive.stage( 'MASSIVE_PROCESSING', 100, 1000 ), hafd.live_stage() ];
+END;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION hive.app_context_set_stages( _contexts hive.contexts_group, _stages hafd.application_stages )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __updated INTEGER;
+BEGIN
+    IF _stages IS NULL THEN
+        RAISE EXCEPTION 'Stages for contexts % cannot be NULL', _contexts;
+    END IF;
+    PERFORM hive.validate_stages( _stages );
+
+    UPDATE hafd.contexts
+    SET stages = _stages
+    WHERE name = ANY( _contexts );
+    GET DIAGNOSTICS __updated = ROW_COUNT;
+
+    IF __updated != ( SELECT COUNT( DISTINCT c ) FROM unnest( _contexts ) AS c ) THEN
+        RAISE EXCEPTION 'Some contexts from group % do not exist', _contexts;
+    END IF;
+END;
+$BODY$;
+
+-- Sets hive.default_stages() on the contexts of the group that have no stages; other contexts are left unchanged.
+CREATE OR REPLACE FUNCTION hive.app_context_set_default_stages( _contexts hive.contexts_group )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __context TEXT;
+BEGIN
+    FOR __context IN
+        SELECT hc.name FROM hafd.contexts hc WHERE hc.name = ANY( _contexts ) AND hc.stages IS NULL ORDER BY hc.name
+    LOOP
+        RAISE NOTICE 'Context % has no stages defined, hive.app_next_iteration sets the default stages %. Declare stages with hive.app_create_context( _stages => ... ) or hive.app_context_set_stages',
+            __context, hive.default_stages();
+        PERFORM hive.app_context_set_stages( ARRAY[ __context ], hive.default_stages() );
+    END LOOP;
+END;
+$BODY$;

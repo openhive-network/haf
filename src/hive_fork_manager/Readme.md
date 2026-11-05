@@ -787,7 +787,12 @@ Creates a new context. Context name can contain only characters from the set: `a
 - '_schema' name of postgreSQL schema used by context to hold there its views
 - '_is_forking' sets contexts as forking or non-forking.
 - '_is_attached' if create attached or not attched context
-- '_stages' optional array of stages, required for `hive.app_next_iteration`
+- '_stages' optional array of stages used by `hive.app_next_iteration`. A context without stages gets `hive.default_stages()`
+  (MASSIVE_PROCESSING from 100 blocks to the head in batches of 1000 blocks, then live) at its first `hive.app_next_iteration`, with a NOTICE.
+
+##### hive.app_context_set_stages( _contexts, _stages )
+Replaces the stages of existing contexts. The stages are validated like those passed to `hive.app_create_context`:
+names and distances to the head block must be unique, and the live stage must be present.
 
 ##### hive.app_remove_context( _name hafd.context_name )
 Remove the context and unregister all its tables.
@@ -887,8 +892,8 @@ Function. Returns name  of a current context stage computed by `hive.app_next_it
 
 #### hive.app_next_iteration( _array_of_contexts, [OUT] _blocks_range, _override_max_batch INTEGER = NULL )
 The procedure finds a possible range of blocks to process, decides in which stage the application will work,
-and attaches or detaches the context. It issues the pending transaction commit. It requires contexts 
-to have defined stages. When the returned _blocks_range is NULL, it means that there were 
+and attaches or detaches the context. It issues the pending transaction commit. Contexts without
+stages get `hive.default_stages()`. When the returned _blocks_range is NULL, it means that there were 
 no blocks to process during the last call.
 
 It is possible to override the batch size of blocks to process by using the parameter '_override_max_batch'.
