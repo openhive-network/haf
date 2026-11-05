@@ -15,7 +15,6 @@ BEGIN
     PERFORM hive.app_create_context( 'attached_context_not_insync', _schema => 'a', _is_forking => FALSE, _stages => __context_stages );
     PERFORM hive.app_create_context( 'detached_context', _schema => 'a', _is_forking => FALSE, _stages => __context_stages );
     PERFORM hive.app_create_context( 'forking_context', 'a', _stages => __context_stages );
-    PERFORM hive.app_create_context( 'nostaged_context', 'a' );
     PERFORM hive.app_context_detach( 'detached_context' );
 
 
@@ -62,12 +61,6 @@ BEGIN
     BEGIN
         PERFORM hive.app_next_iteration( ARRAY[ 'attached_context', 'attached_context_not_insync' ], __blocks );
         ASSERT FALSE, 'No expected exception for non in sync cntexts';
-    EXCEPTION WHEN OTHERS THEN
-    END;
-
-    BEGIN
-        PERFORM hive.app_next_iteration( ARRAY[ 'nostaged_context' ], __blocks );
-        ASSERT FALSE, 'No expected exception for using context without stages';
     EXCEPTION WHEN OTHERS THEN
     END;
 END;

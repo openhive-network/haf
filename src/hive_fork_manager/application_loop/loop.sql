@@ -332,9 +332,11 @@ BEGIN
     -- dependency gating: never deliver a block a dependency has not committed
     __block_limit := hive.app_dependencies_block_limit( _contexts );
 
-    IF EXISTS( SELECT 1 FROM hafd.contexts hc WHERE hc.name = ANY(_contexts) AND hc.stages = NULL )
+    -- A context without stages would never leave wait_for_haf: every iteration would attach it,
+    -- process one block and detach it again. Give it the default stages once, persistently.
+    IF EXISTS( SELECT 1 FROM hafd.contexts hc WHERE hc.name = ANY(_contexts) AND hc.stages IS NULL )
     THEN
-        RAISE EXCEPTION 'Some contexts from group % have no stages defined and cannot be used with hive.app_next_iteration', _contexts;
+        PERFORM hive.app_context_set_default_stages( _contexts );
     END IF;
 
     SELECT (hc.loop).* INTO __lead_context_state
