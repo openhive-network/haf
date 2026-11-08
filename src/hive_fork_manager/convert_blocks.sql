@@ -21,7 +21,7 @@ BEGIN
 
   -- if successfully converted _from to integer, check if the number is less than 0
   IF __from_block IS NOT NULL AND __from_block <= 0 THEN
-    RAISE EXCEPTION 'the starting Block-num must be a positive integer or a valid timestamp, found: %d', __from_block;
+    RAISE EXCEPTION 'the starting Block-num must be a positive integer or a valid timestamp, found: %', __from_block;
   END IF;
 
   -- Try to convert _from to timestamp if it's not an integer
@@ -51,7 +51,7 @@ BEGIN
 
   -- if successfully converted _to to integer, check if the number is less than 0
   IF __to_block IS NOT NULL AND __to_block <= 0 THEN
-    RAISE EXCEPTION 'the ending Block-num must be a positive integer or a valid timestamp, found: %d', __to_block;
+    RAISE EXCEPTION 'the ending Block-num must be a positive integer or a valid timestamp, found: %', __to_block;
   END IF;
 
   -- Try to convert _to to timestamp if it's not an integer
