@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS hafd.applications(
                                        -- the position together with the block's work)
     paused BOOL NOT NULL DEFAULT FALSE,
     owner NAME NOT NULL,
+    health_function TEXT,              -- '<schema>.<function>' returning TEXT: NULL when the installation is
+                                       -- healthy, otherwise why it is broken; see hive._app_broken_reason
     CONSTRAINT pk_hive_applications PRIMARY KEY( name ),
     CONSTRAINT chk_hive_applications_name CHECK( LENGTH( name ) != 0 ),
     CONSTRAINT chk_hive_applications_contexts CHECK( CARDINALITY( contexts ) > 0 )

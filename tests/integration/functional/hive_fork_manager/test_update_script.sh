@@ -145,6 +145,7 @@ make_hafd_schema_of_last_release() {
     exec_sql "ALTER EXTENSION hive_fork_manager DROP TABLE hafd.custom_json_type_index_requests;
               DROP TABLE hafd.custom_json_type_index_requests;
               ALTER TABLE hafd.contexts DROP COLUMN early_block_processing;
+              ALTER TABLE hafd.applications DROP COLUMN health_function;
               ALTER TABLE hafd.indexes_constraints DROP COLUMN massive_sync_class;
               ALTER TABLE hafd.vacuum_requests DROP CONSTRAINT pk_hive_vacuum_requests;
               ALTER TABLE hafd.vacuum_requests DROP COLUMN kind, DROP COLUMN skip_count, DROP COLUMN first_skip_time;
@@ -568,6 +569,30 @@ exec_sql "CREATE SCHEMA cj_update_app;
           SELECT hive.register_custom_json_type_index('cj_update_app', ARRAY['follow']);"
 [ "$(exec_sql "SELECT custom_json_ids::text FROM hafd.custom_json_type_index_requests")" = "{follow}" ] \
     || { echo "TEST FAILED: hive.register_custom_json_type_index did not record its request on the updated database"; exit 34; }
+
+printf "\nTEST: Upgrade a database with registered applications whose hafd.applications lacks health_function. The column should be added and the registrations kept.\n"
+prepare_database
+exec_sql "CREATE SCHEMA registry_update_app;
+          CREATE PROCEDURE registry_update_app.process_blocks(_blocks hive.blocks_range) LANGUAGE plpgsql AS \$\$ BEGIN END \$\$;
+          CREATE FUNCTION registry_update_app.health() RETURNS TEXT LANGUAGE sql AS \$\$ SELECT NULL::TEXT \$\$;
+          SELECT hive.app_create_context('registry_update_ctx', 'registry_update_app');
+          SELECT hive.app_create_context('registry_update_dep_ctx', 'registry_update_app');
+          SELECT hive.app_register('registry_update_app', ARRAY['registry_update_ctx'], 'registry_update_app.process_blocks');
+          SELECT hive.app_register('registry_update_dep', ARRAY['registry_update_dep_ctx']);
+          SELECT hive.app_add_dependency('registry_update_dep', 'registry_update_app');
+          SELECT hive.app_pause('registry_update_dep');
+          ALTER TABLE hafd.applications DROP COLUMN health_function;"
+registrations_before=$(exec_sql "SELECT name, contexts, process_procedure, completed_block_function, paused, owner FROM hafd.applications ORDER BY name")
+update_database
+[ "$(exec_sql "SELECT name, contexts, process_procedure, completed_block_function, paused, owner FROM hafd.applications ORDER BY name")" = "$registrations_before" ] \
+    || { echo "TEST FAILED: the update changed the registrations in hafd.applications"; exit 45; }
+[ "$(exec_sql "SELECT count(*) FROM hafd.applications WHERE health_function IS NULL")" = "2" ] \
+    || { echo "TEST FAILED: the update did not add hafd.applications.health_function as NULL"; exit 46; }
+[ "$(exec_sql "SELECT application || '>' || depends_on FROM hafd.application_dependencies")" = "registry_update_dep>registry_update_app" ] \
+    || { echo "TEST FAILED: the update lost the dependency between the registered applications"; exit 47; }
+exec_sql "SELECT hive.app_register('registry_update_app', ARRAY['registry_update_ctx'], 'registry_update_app.process_blocks', _health_function => 'registry_update_app.health')"
+[ "$(exec_sql "SELECT health_function FROM hafd.applications WHERE name = 'registry_update_app'")" = "registry_update_app.health" ] \
+    || { echo "TEST FAILED: hive.app_register did not record the health function on the updated database"; exit 48; }
 
 printf "\nTEST: Upgrade a database that already has hafd.custom_json_type_index_requests. The table and its requests should be left as they are.\n"
 prepare_database

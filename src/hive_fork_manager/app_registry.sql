@@ -7,7 +7,9 @@
 -- their contexts' current_block_num (e.g. a massive sync that commits the position
 -- before the batch's data), '<schema>.<function>' returning INT; see
 -- hive.app_dependencies_block_limit.
-CREATE OR REPLACE FUNCTION hive.app_register( _name TEXT, _contexts hive.contexts_group, _process_procedure TEXT = NULL, _completed_block_function TEXT = NULL )
+-- _health_function: '<schema>.<function>' returning TEXT, NULL when the installation
+-- is healthy, otherwise why it is broken; see hive._app_broken_reason.
+CREATE OR REPLACE FUNCTION hive.app_register( _name TEXT, _contexts hive.contexts_group, _process_procedure TEXT = NULL, _completed_block_function TEXT = NULL, _health_function TEXT = NULL )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -60,10 +62,15 @@ BEGIN
         RAISE EXCEPTION 'Cannot register application %: function %() does not exist', _name, _completed_block_function;
     END IF;
 
-    INSERT INTO hafd.applications( name, contexts, process_procedure, completed_block_function, owner )
-    VALUES ( _name, _contexts::TEXT[], _process_procedure, _completed_block_function, current_user )
+    IF _health_function IS NOT NULL AND to_regprocedure( _health_function || '()' ) IS NULL THEN
+        RAISE EXCEPTION 'Cannot register application %: function %() does not exist', _name, _health_function;
+    END IF;
+
+    INSERT INTO hafd.applications( name, contexts, process_procedure, completed_block_function, health_function, owner )
+    VALUES ( _name, _contexts::TEXT[], _process_procedure, _completed_block_function, _health_function, current_user )
     ON CONFLICT ( name ) DO UPDATE
-    SET contexts = EXCLUDED.contexts, process_procedure = EXCLUDED.process_procedure, completed_block_function = EXCLUDED.completed_block_function;
+    SET contexts = EXCLUDED.contexts, process_procedure = EXCLUDED.process_procedure, completed_block_function = EXCLUDED.completed_block_function,
+        health_function = EXCLUDED.health_function;
 END;
 $BODY$
 ;
