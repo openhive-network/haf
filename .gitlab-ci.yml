@@ -1236,17 +1236,11 @@ haf_system_tests_mirrornet:
   script:
     # check that postgres service is ready
     - psql "$DB_URL" -c "SELECT 1"
-    - mkdir $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
-    # This cp and call to compress_block_log is to keep backcompatibility with pipelines on master branch (where still 1.27.X line is present until next HF will apply),
-    # where nodes does not support new format of block_log.artifacts file;
-    # Issue: https://gitlab.syncad.com/hive/haf/-/issues/151
-    # copy block_log to tmp location (source is read-only, so fix permissions after copy)
-    - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
-    - chmod 644 $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log/block_log
-    # copy block_log and generate new artifacts with compress_block_log util
-    - time $COMPRESS_BLOCK_LOG_PATH --input-block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log/block_log --output-block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log --decompress
-    # drop tmp location
-    - rm -r $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/tmp_block_log
+    # copy block_log only (source is read-only, so fix permissions after copy): the runners'
+    # block_log.artifacts is in a 2022 format, so generate a current one once, before the parallel tests open it
+    - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/
+    - chmod 644 $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log
+    - time $BLOCK_LOG_UTIL_PATH --block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log --generate-artifacts
     # prepare environment and run tests
     - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests && ls -la
     - pytest -vvv --junitxml report.xml --timeout=1200 --block-log-dir-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests --snapshot-path="$SNAPSHOTS_PATH/5m_mirrornet/snapshot/snapshot" -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
