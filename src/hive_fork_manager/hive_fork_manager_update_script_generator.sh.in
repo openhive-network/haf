@@ -488,6 +488,14 @@ BEGIN
         ALTER TABLE hafd.contexts ADD COLUMN early_block_processing BOOL NOT NULL DEFAULT FALSE;
     END IF;
 
+    -- Registered applications keep their rows, without a health function.
+    IF to_regclass('hafd.applications') IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'hafd' AND table_name = 'applications' AND column_name = 'health_function'
+    ) THEN
+        ALTER TABLE hafd.applications ADD COLUMN health_function TEXT;
+    END IF;
+
     -- Created here, outside the extension script, so it is added to the extension explicitly; the update
     -- script (custom_json_type_schema_update.sql) then registers it with pg_extension_config_dump, which
     -- only an extension script may call.

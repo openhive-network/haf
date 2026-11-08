@@ -5,12 +5,14 @@
 -- Installers TRY an EXCLUSIVE advisory lock on the app they install; if any
 -- shared holder exists, the installer skips its work and exits cleanly.
 --
--- Both sides first check that the app's registered process procedure
--- (hafd.applications, keyed by the same name as the lock) still resolves. A
--- holder of a broken app's lock cannot be doing useful processing, so the
--- installer does not skip: it waits briefly for the holders to go, then fails
--- naming them. A block-processor refuses to keep the lock of a broken app, so a
--- crash-looping loop never blocks its own repair.
+-- Both sides first check that the app's installation is not broken
+-- (hive._app_broken_reason on its hafd.applications row, which an app registers
+-- under the name of its lock). A holder of a broken app's lock cannot be doing
+-- useful processing, so the installer does not skip: it waits briefly for the
+-- holders to go, then fails naming them. A block-processor refuses to keep the
+-- lock of a broken app, so a crash-looping loop never blocks its own repair.
+-- An installer whose app has no row at all waits the same, then proceeds without
+-- the lock; block-processors do take the lock of an app not registered yet.
 --
 -- Callers must `SET application_name` before invoking these so the holder
 -- descriptions returned on contention are human-readable.
@@ -53,28 +55,55 @@ $BODY$
 ;
 
 
--- The app's registered process procedure when it no longer resolves; NULL for a
--- healthy, self-driven or unregistered app.
-CREATE OR REPLACE FUNCTION hive._missing_app_process_procedure( _app_name TEXT )
+-- Why the app registered under _app_name is broken: its process procedure or
+-- completed block function no longer resolves, or its health function reports a
+-- reason or fails. NULL for a healthy or unregistered app.
+CREATE OR REPLACE FUNCTION hive._app_broken_reason( _app_name TEXT )
     RETURNS TEXT
     LANGUAGE plpgsql
     STABLE
 AS
 $BODY$
 DECLARE
-    __procedure TEXT;
+    __app RECORD;
+    __health REGPROCEDURE;
+    __reason TEXT;
 BEGIN
-    SELECT a.process_procedure INTO __procedure
+    SELECT a.process_procedure, a.completed_block_function, a.health_function INTO __app
     FROM hafd.applications a
     WHERE a.name = _app_name;
 
-    IF __procedure IS NULL OR to_regprocedure( __procedure || '( hive.blocks_range )' ) IS NOT NULL THEN
+    IF __app.process_procedure IS NOT NULL AND to_regprocedure( __app.process_procedure || '( hive.blocks_range )' ) IS NULL THEN
+        RETURN format( 'its process procedure %s( hive.blocks_range ) does not exist', __app.process_procedure );
+    END IF;
+
+    IF __app.completed_block_function IS NOT NULL AND to_regprocedure( __app.completed_block_function || '()' ) IS NULL THEN
+        RETURN format( 'its completed block function %s() does not exist', __app.completed_block_function );
+    END IF;
+
+    IF __app.health_function IS NULL THEN
         RETURN NULL;
     END IF;
-    RETURN __procedure;
+    __health := to_regprocedure( __app.health_function || '()' );
+    IF __health IS NULL THEN
+        RETURN format( 'its health function %s() does not exist', __app.health_function );
+    END IF;
+    IF NOT has_function_privilege( __health, 'EXECUTE' ) THEN
+        RETURN NULL;
+    END IF;
+
+    BEGIN
+        EXECUTE format( 'SELECT %s()', __health::OID::REGPROC ) INTO __reason;
+    EXCEPTION WHEN OTHERS THEN
+        RETURN format( 'its health function %s() failed: %s', __app.health_function, SQLERRM );
+    END;
+    IF __reason IS NOT NULL THEN
+        RETURN format( 'its health function %s() reports: %s', __app.health_function, __reason );
+    END IF;
+    RETURN NULL;
 EXCEPTION WHEN insufficient_privilege THEN
-    -- A dependent's role need not have USAGE on the schema of the app it depends on;
-    -- unable to tell, it is treated as healthy, as before this check existed.
+    -- A dependent's role need not have USAGE on the schema of the app it depends on, nor
+    -- EXECUTE on its health function; unable to tell, it is treated as healthy.
     RETURN NULL;
 END;
 $BODY$
@@ -89,7 +118,8 @@ AS
 $BODY$
 DECLARE
     __holders TEXT;
-    __missing TEXT;
+    __reason TEXT;
+    __unregistered BOOLEAN;
     __deadline TIMESTAMPTZ;
 BEGIN
     __holders := hive._try_app_lock( _app_name, TRUE );
@@ -97,16 +127,20 @@ BEGIN
         RETURN TRUE;
     END IF;
 
-    __missing := hive._missing_app_process_procedure( _app_name );
-    IF __missing IS NULL THEN
-        RAISE NOTICE 'Skipping install: lock on % held by %', _app_name, __holders;
-        RETURN FALSE;
+    __unregistered := NOT EXISTS ( SELECT 1 FROM hafd.applications a WHERE a.name = _app_name );
+    IF __unregistered THEN
+        __reason := 'no application is registered under that name';
+    ELSE
+        __reason := hive._app_broken_reason( _app_name );
+        IF __reason IS NULL THEN
+            RAISE NOTICE 'Skipping install: lock on % held by %', _app_name, __holders;
+            RETURN FALSE;
+        END IF;
     END IF;
 
     -- A block-processor starting up holds a broken app's lock only until it notices
-    -- the missing procedure, so give such holders a moment to let go.
-    RAISE NOTICE 'Waiting for lock on %: held by % while its process procedure %( hive.blocks_range ) does not exist',
-                 _app_name, __holders, __missing;
+    -- the breakage, so give such holders a moment to let go.
+    RAISE NOTICE 'Waiting for lock on %: held by % while %', _app_name, __holders, __reason;
     __deadline := clock_timestamp() + interval '10 seconds';
     WHILE clock_timestamp() < __deadline LOOP
         PERFORM pg_sleep( 0.5 );
@@ -116,8 +150,15 @@ BEGIN
         END IF;
     END LOOP;
 
-    RAISE EXCEPTION 'Cannot install %: its process procedure %( hive.blocks_range ) does not exist and its lock is held by %; stop those sessions and rerun the install',
-                    _app_name, __missing, __holders;
+    -- Holders of an app that is not installed (dependents' block-processors, which keep
+    -- their locks across the dependency's absence) cannot be doing useful work on it.
+    IF __unregistered THEN
+        RAISE NOTICE 'Installing % without its lock: % and it is still held by %', _app_name, __reason, __holders;
+        RETURN TRUE;
+    END IF;
+
+    RAISE EXCEPTION 'Cannot install %: % and its lock is held by %; stop those sessions and rerun the install',
+                    _app_name, __reason, __holders;
 END;
 $BODY$
 ;
@@ -134,7 +175,7 @@ DECLARE
     __holders TEXT;
     __wait_start TIMESTAMPTZ;
     __last_log   TIMESTAMPTZ;
-    __missing    TEXT;
+    __reason     TEXT;
     __locked     TEXT;
 BEGIN
     FOREACH __app IN ARRAY _app_names LOOP
@@ -160,13 +201,12 @@ BEGIN
     -- Checked under the locks, so an install in progress is waited for, not failed on.
     -- Advisory locks survive the error, hence the explicit release.
     FOREACH __app IN ARRAY _app_names LOOP
-        __missing := hive._missing_app_process_procedure( __app );
-        IF __missing IS NOT NULL THEN
+        __reason := hive._app_broken_reason( __app );
+        IF __reason IS NOT NULL THEN
             FOREACH __locked IN ARRAY _app_names LOOP
                 PERFORM pg_advisory_unlock_shared( hashtext( 'hive_fork_manager_app_lock' ), hashtext( __locked ) );
             END LOOP;
-            RAISE EXCEPTION 'Cannot take block-processor lock on %: its process procedure %( hive.blocks_range ) does not exist; reinstall the application',
-                            __app, __missing;
+            RAISE EXCEPTION 'Cannot take block-processor lock on %: %; reinstall the application', __app, __reason;
         END IF;
     END LOOP;
 END;
