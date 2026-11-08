@@ -36,15 +36,16 @@ class SQLNodesPreparer(ttcn.NodesPreparer):
             node.config.psql_first_block = self.start_block
             apply_block_log_type_to_monolithic_workaround(node)
 
-            # Increase initialization timeout for nodes with sql_serializer.
+        for node in builder.nodes:
+            apply_block_log_type_to_monolithic_workaround(node)
+
             # Under CI load with parallel tests, the default 5-second beekeepy timeout
-            # is insufficient for port detection.
+            # is insufficient for port detection: the network's nodes start together and
+            # each takes up to ~10 s to open its ports. Node.run's live-mode deadline
+            # still bounds the whole start.
             node_impl = get_implementation(node, Node)
             with node_impl.update_settings() as settings:
                 settings.initialization_timeout = timedelta(seconds=60)
-
-        for node in builder.nodes:
-            apply_block_log_type_to_monolithic_workaround(node)
             node.config.log_logger = '{"name":"default","level":"debug","appender":"stderr,p2p"} '\
                                     '{"name":"user","level":"debug","appender":"stderr,p2p"} '\
                                     '{"name":"chainlock","level":"debug","appender":"p2p"} '\
