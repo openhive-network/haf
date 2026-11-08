@@ -138,15 +138,15 @@ aidev test run --slot full --suite haf_system -- --rerun haf-system::test_replay
 ```
 
 **The image** (`runtime/Dockerfile.system`, `registry.gitlab.syncad.com/hive/haf/aidev-system-tests`):
-`hive/haf/testnet:v-l2-6f476cfd`, the testnet image of develop 46558ea2e — the same
-commit as the mainnet base — pinned by digest, plus a venv holding
+`hive/haf/testnet:ee3bc298`, the testnet image of develop a5f9302d7 — newer than the
+mainnet base, so its hived has #433's clean-exit fix — pinned by digest, plus a venv holding
 `tests/integration/haf-local-tools`' locked dependencies (`poetry install --no-root`).
 AIDEV runs a suite container with no network, so nothing is installed at run time,
 unlike CI's `run_haf_system_tests.sh`; `haf_local_tools` itself is imported from the
 candidate's tree. hived and libhfm are the image's: a candidate's C++ change to
 `src/sql_serializer/` selects the core tests but runs them under the pinned hived
 (`cxx-scope` names it), and a C function its SQL newly needs is
-`haf-system/libhfm-symbols`. Re-pin the image with the mainnet base, and rebuild it
+`haf-system/libhfm-symbols`. Re-pin the image when its hived should follow develop, and rebuild it
 **in the same commit** as any change to haf-local-tools' `pyproject.toml` or
 `poetry.lock` (until then the suite fails as `haf-system/environment`):
 
