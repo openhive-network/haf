@@ -239,8 +239,26 @@ END;
 $BODY$
 ;
 
+-- Name of the registered application _context belongs to, NULL when it belongs to
+-- none. hive.app_remove_context takes the context out of that application (and
+-- unregisters it when it was its last context), so an uninstall script removing a
+-- context it may share with an embedding application can ask first.
+CREATE OR REPLACE FUNCTION hive.app_context_owner( _context TEXT )
+    RETURNS TEXT
+    LANGUAGE sql
+    STABLE
+AS
+$BODY$
+    SELECT a.name FROM hafd.applications a WHERE a.contexts @> ARRAY[ _context ];
+$BODY$
+;
+
 -- Removes _context from the application it belongs to (if any); the application
 -- is unregistered when it loses its last context. Called by hive.context_remove.
+-- Changing a registration requires the same authority as hive.app_register: a role
+-- that can impersonate the application's owner. Roles that bypass row level
+-- security (haf_admin, which the applications' uninstall scripts connect as) are
+-- let through, as the registry's own policies let them through.
 CREATE OR REPLACE FUNCTION hive.app_registry_context_removed( _context hafd.context_name )
     RETURNS void
     LANGUAGE plpgsql
@@ -249,18 +267,27 @@ AS
 $BODY$
 DECLARE
     __app TEXT;
+    __owner TEXT;
     __contexts TEXT[];
 BEGIN
-    SELECT a.name, array_remove( a.contexts, _context::TEXT ) INTO __app, __contexts
+    SELECT a.name, a.owner, array_remove( a.contexts, _context::TEXT ) INTO __app, __owner, __contexts
     FROM hafd.applications a WHERE a.contexts @> ARRAY[ _context::TEXT ];
 
     IF __app IS NULL THEN
         RETURN;
     END IF;
 
+    IF NOT hive.can_impersonate( current_user, __owner )
+       AND NOT EXISTS ( SELECT 1 FROM pg_roles r WHERE r.rolname = current_user AND ( r.rolsuper OR r.rolbypassrls ) ) THEN
+        RAISE EXCEPTION 'Cannot remove context %: it belongs to application % owned by %, which role % cannot impersonate', _context, __app, __owner, current_user
+            USING HINT = 'Remove it as a role that can impersonate the application owner; hive.app_context_owner( context ) names the application a context belongs to.';
+    END IF;
+
     IF CARDINALITY( __contexts ) = 0 THEN
+        RAISE WARNING 'Removing context % unregisters application %: it was its last context', _context, __app;
         PERFORM hive.app_unregister( __app );
     ELSE
+        RAISE WARNING 'Removing context % from application %, which keeps contexts %', _context, __app, __contexts;
         UPDATE hafd.applications SET contexts = __contexts WHERE name = __app;
     END IF;
 END;
