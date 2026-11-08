@@ -4,5 +4,3 @@
 # add one with `aidev test quarantine <id> --reason "see #N"` so its tracking
 # issue is recorded. Remove entries when the tests are fixed.
 # Empty file = all failures block.
-# see #433: passes only under a hived built with #433's sql_serializer fix (exit 255, not SIGABRT); the haf_system image pins develop 46558ea2e's hived. Remove when that image is re-pinned past #433.
-haf-system::test_replay_restart_over_populated_db.py::test_force_replay_over_populated_database_is_refused

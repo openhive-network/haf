@@ -107,9 +107,9 @@ verification:
       - name: haf_system
         adapter: command
         args: [".aidev/run-haf-system.sh"]
-        # The testnet HAF image of develop 46558ea2e (the mainnet base's source) with
+        # The testnet HAF image of develop a5f9302d7 (its hived has #433's fix) with
         # the haf-local-tools venv: .aidev/runtime/build.sh --system --push.
-        image: "registry.gitlab.syncad.com/hive/haf/aidev-system-tests@sha256:4e7697731bb2d46e5cf591549f0b54bdc4ec58b076293f29f1296d91a702469b"
+        image: "registry.gitlab.syncad.com/hive/haf/aidev-system-tests@sha256:a7594b26090434b25a15f49afb15179e308de4f51ee8720e57b653abb3c69278"
         select: [".aidev/haf-system-select.sh"]
         artifacts: ["test-results/haf-system/"]
         timeout: 1800

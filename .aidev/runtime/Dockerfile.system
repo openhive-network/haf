@@ -4,9 +4,11 @@
 # beforehand. AIDEV runs a suite container with no network, so nothing can be
 # installed when the suite runs, as CI's run_haf_system_tests.sh does.
 #
-# Base: hive/haf/testnet:v-l2-6f476cfd — built from develop 46558ea2e, the
-# source of the mainnet base in Dockerfile (BUILD_HIVE_TESTNET=ON). Re-pin it with
-# that one.
+# Base: hive/haf/testnet:ee3bc298 — the CI testnet image (BUILD_HIVE_TESTNET=ON)
+# of develop a5f9302d7 (pipeline 185780, tagged by its last source commit
+# ee3bc298d), whose hived includes #433's sql_serializer fix (ef751b46d). It is
+# newer than the mainnet base in Dockerfile (develop 46558ea2e); re-pin both
+# together when the mainnet base next follows develop.
 #
 # The venv holds haf-local-tools' locked dependencies, not haf_local_tools
 # itself: the suite imports that from the candidate's tree (PYTHONPATH). The lock
@@ -16,7 +18,7 @@
 # import, which the suite's uid could not write. Build with
 # `.aidev/runtime/build.sh --system`; the context is haf-local-tools'
 # pyproject.toml and poetry.lock.
-FROM registry.gitlab.syncad.com/hive/haf/testnet@sha256:841961babefe6a255515b706d165fa6d6d60cff13c32c57c78aa759c5e6afceb
+FROM registry.gitlab.syncad.com/hive/haf/testnet@sha256:b0532af2f90d3e7c8c4c344389f36403a482d1da4adc09bb43017683a45aec01
 
 USER root
 COPY pyproject.toml poetry.lock /tmp/haf-local-tools/
