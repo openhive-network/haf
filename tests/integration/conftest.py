@@ -26,7 +26,7 @@ class SQLNodesPreparer(ttcn.NodesPreparer):
         self.database = database
         self.start_block = start_block
 
-    def prepare(self, builder: ttcn.NetworksBuilder):
+    def prepare(self, builder: ttcn.NetworksBuilder) -> None:
         for cnt, node in enumerate(builder.prepare_nodes):
             DB_URL = os.getenv("DB_URL")
             self.sessions.append( self.database(f"{DB_URL}-{cnt}") )
@@ -72,7 +72,7 @@ from test_tools.__private.process.node_config import NodeConfig
 _lite_mode_config_ids: set = set()
 _original_node_config_save = NodeConfig.save
 
-def _save_with_lite_mode(self, directory):
+def _save_with_lite_mode(self, directory) -> None:
     _original_node_config_save(self, directory)
     if id(self) in _lite_mode_config_ids:
         config_path = Path(directory) / "config.ini"
@@ -85,7 +85,7 @@ NodeConfig.save = _save_with_lite_mode
 
 class LiteModeSQLNodesPreparer(SQLNodesPreparer):
     """SQLNodesPreparer that enables --psql-lite-mode on the hived node."""
-    def prepare(self, builder: ttcn.NetworksBuilder):
+    def prepare(self, builder: ttcn.NetworksBuilder) -> None:
         super().prepare(builder)
         for node in builder.prepare_nodes:
             _lite_mode_config_ids.add(id(node.config))
