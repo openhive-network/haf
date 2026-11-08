@@ -8,7 +8,7 @@
 # The suite is change-scoped: it runs only for a change under
 #
 #   tests/integration/system/haf/   tests/integration/haf-local-tools/
-#   tests/integration/conftest.py
+#   tests/integration/conftest.py   tests/integration/pytest.ini
 #   src/hive_fork_manager/hived_api.sql   src/sql_serializer/
 #   scripts/dump_instance.sh   scripts/load_instance.sh   scripts/dump_load_common.sh
 #
@@ -31,7 +31,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 tests_dir=tests/integration/system/haf
-trigger='^(tests/integration/system/haf/|tests/integration/haf-local-tools/|tests/integration/conftest\.py$|src/hive_fork_manager/hived_api\.sql$|src/sql_serializer/|\.aidev/(haf-system-select\.sh|haf-system\.sh|run-haf-system\.sh|haf-system-tests\.txt|system_test_cases\.py|install-candidate-hfm\.sh|runtime/Dockerfile\.system)$)'
+trigger='^(tests/integration/system/haf/|tests/integration/haf-local-tools/|tests/integration/conftest\.py$|tests/integration/pytest\.ini$|src/hive_fork_manager/hived_api\.sql$|src/sql_serializer/|\.aidev/(haf-system-select\.sh|haf-system\.sh|run-haf-system\.sh|haf-system-tests\.txt|system_test_cases\.py|install-candidate-hfm\.sh|runtime/Dockerfile\.system)$)'
 module="^$tests_dir/(test_[^/]*\\.py)\$"
 dump_load_scripts='^scripts/(dump_instance|load_instance|dump_load_common)\.sh$'
 
@@ -73,7 +73,7 @@ while IFS= read -r line; do
 done <<< "$changes"
 
 if [ ${#selected[@]} -eq 0 ] && [ "$wants_core" -eq 0 ]; then
-    echo "skipped: the change touches none of tests/integration/system/haf/, tests/integration/haf-local-tools/, tests/integration/conftest.py, src/hive_fork_manager/hived_api.sql, src/sql_serializer/, scripts/{dump_instance,load_instance,dump_load_common}.sh, the suite's own .aidev/ files"
+    echo "skipped: the change touches none of tests/integration/system/haf/, tests/integration/haf-local-tools/, tests/integration/conftest.py, tests/integration/pytest.ini, src/hive_fork_manager/hived_api.sql, src/sql_serializer/, scripts/{dump_instance,load_instance,dump_load_common}.sh, the suite's own .aidev/ files"
     exit 77
 fi
 {

@@ -106,7 +106,7 @@ not a red.
 |---|---|
 | `tests/integration/system/haf/test_<x>.py` (still present) | that module |
 | `scripts/dump_instance.sh`, `scripts/load_instance.sh`, `scripts/dump_load_common.sh` | `test_dump_load_instance_scripts.py` |
-| any other path under `tests/integration/system/haf/` or `tests/integration/haf-local-tools/`, `tests/integration/conftest.py` (the fixtures every system test uses), `src/hive_fork_manager/hived_api.sql`, `src/sql_serializer/`, or the suite's own files (`.aidev/haf-system-select.sh`, `haf-system.sh`, `run-haf-system.sh`, `haf-system-tests.txt`, `system_test_cases.py`, `install-candidate-hfm.sh`, `runtime/Dockerfile.system`) | the core modules in `.aidev/haf-system-tests.txt` (about 5 minutes, 4 at a time; `HAF_SYSTEM_JOBS`) |
+| any other path under `tests/integration/system/haf/` or `tests/integration/haf-local-tools/`, `tests/integration/conftest.py` (the fixtures every system test uses), `tests/integration/pytest.ini` (the suite's per-test timeout and `mirrornet` marker), `src/hive_fork_manager/hived_api.sql`, `src/sql_serializer/`, or the suite's own files (`.aidev/haf-system-select.sh`, `haf-system.sh`, `run-haf-system.sh`, `haf-system-tests.txt`, `system_test_cases.py`, `install-candidate-hfm.sh`, `runtime/Dockerfile.system`) | the core modules in `.aidev/haf-system-tests.txt` (about 5 minutes, 4 at a time; `HAF_SYSTEM_JOBS`) |
 | none of these | none: the select exits 77 and the suite is reported skipped, its reason `the change touches none of …` |
 | unknown (no changed-files list or base ref, e.g. a by-hand run) | the core modules |
 
