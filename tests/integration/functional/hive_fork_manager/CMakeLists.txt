@@ -339,6 +339,7 @@ ADD_SQL_FUNCTIONAL_TEST( application_loop/context_without_stages.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/pause_resume.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/dependency_completed_block_function.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/register_embedded_application.sql )
+ ADD_SQL_FUNCTIONAL_TEST( application_loop/remove_embedded_context.sql )
 SET_TESTS_PROPERTIES(
   test.functional.hive_fork_manager.application_loop.vacuum_shadow_tables
   test.functional.update.hive_fork_manager.application_loop.vacuum_shadow_tables
