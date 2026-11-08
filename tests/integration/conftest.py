@@ -26,7 +26,7 @@ class SQLNodesPreparer(ttcn.NodesPreparer):
         self.database = database
         self.start_block = start_block
 
-    def prepare(self, builder: ttcn.NetworksBuilder):
+    def prepare(self, builder: ttcn.NetworksBuilder) -> None:
         for cnt, node in enumerate(builder.prepare_nodes):
             DB_URL = os.getenv("DB_URL")
             self.sessions.append( self.database(f"{DB_URL}-{cnt}") )
@@ -36,15 +36,16 @@ class SQLNodesPreparer(ttcn.NodesPreparer):
             node.config.psql_first_block = self.start_block
             apply_block_log_type_to_monolithic_workaround(node)
 
-            # Increase initialization timeout for nodes with sql_serializer.
+        for node in builder.nodes:
+            apply_block_log_type_to_monolithic_workaround(node)
+
             # Under CI load with parallel tests, the default 5-second beekeepy timeout
-            # is insufficient for port detection.
+            # is insufficient for port detection: the network's nodes start together and
+            # each takes up to ~10 s to open its ports. Node.run's live-mode deadline
+            # still bounds the whole start.
             node_impl = get_implementation(node, Node)
             with node_impl.update_settings() as settings:
                 settings.initialization_timeout = timedelta(seconds=60)
-
-        for node in builder.nodes:
-            apply_block_log_type_to_monolithic_workaround(node)
             node.config.log_logger = '{"name":"default","level":"debug","appender":"stderr,p2p"} '\
                                     '{"name":"user","level":"debug","appender":"stderr,p2p"} '\
                                     '{"name":"chainlock","level":"debug","appender":"p2p"} '\
@@ -71,7 +72,7 @@ from test_tools.__private.process.node_config import NodeConfig
 _lite_mode_config_ids: set = set()
 _original_node_config_save = NodeConfig.save
 
-def _save_with_lite_mode(self, directory):
+def _save_with_lite_mode(self, directory) -> None:
     _original_node_config_save(self, directory)
     if id(self) in _lite_mode_config_ids:
         config_path = Path(directory) / "config.ini"
@@ -84,7 +85,7 @@ NodeConfig.save = _save_with_lite_mode
 
 class LiteModeSQLNodesPreparer(SQLNodesPreparer):
     """SQLNodesPreparer that enables --psql-lite-mode on the hived node."""
-    def prepare(self, builder: ttcn.NetworksBuilder):
+    def prepare(self, builder: ttcn.NetworksBuilder) -> None:
         super().prepare(builder)
         for node in builder.prepare_nodes:
             _lite_mode_config_ids.add(id(node.config))
