@@ -1,3 +1,5 @@
+from typing import Any
+
 from haf_utilities import helper, timer
 
 from adapter import Db
@@ -17,7 +19,7 @@ class haf_query:
     self.context_detached_save_block_num  = "SELECT hive.app_context_detached_save_block_num('{}', {})"
     self.context_detached_get_block_num   = "SELECT * FROM hive.app_context_detached_get_block_num('{}')".format( self.application_context )
     
-    self.context_current_block_num        = "SELECT current_block_num FROM hafd.contexts WHERE NAME = '{}'".format( self.application_context )
+    self.context_current_block_num        = "SELECT hive.app_get_current_block_num( CAST( :context_name AS hafd.context_name ) )"
     
     self.next_block                       = "SELECT * FROM hive.app_next_block('{}');".format( self.application_context )
 
@@ -43,7 +45,7 @@ class haf_sql:
       assert self.db is not None, "self.db is not None"
       return self.db.query_all(query, **kwargs)
 
-  def exec_query_one(self, query, **kwargs):
+  def exec_query_one(self, query: str, **kwargs: Any) -> Any:
     with timer("query time[ms]: {}") as tm:
       helper.display_query(query)
 
@@ -76,7 +78,7 @@ class haf_sql:
     return self.exec_query_one(self.text_query.context_detached_get_block_num)
 
   def exec_context_current_block_num(self):
-    return self.exec_query_one(self.text_query.context_current_block_num)
+    return self.exec_query_one(self.text_query.context_current_block_num, context_name = self.text_query.application_context)
 
   def exec_next_block(self):
     return self.exec_query_all(self.text_query.next_block)
