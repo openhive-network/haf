@@ -266,7 +266,7 @@ update_extension() {
   db_sql "SELECT hive_update.restore_hive_dependents()"
 
   echo
-  echo "Recreating context views that read their horizon from context_data_view..."
+  echo "Recreating context views of an outdated shape..."
   db_sql "SELECT hive_update.recreate_outdated_context_views()"
 
   check_functions_were_updated

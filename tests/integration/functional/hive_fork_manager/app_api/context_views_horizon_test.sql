@@ -128,6 +128,34 @@ END;
 $BODY$
 ;
 
+-- Asserts that a forking context's operations_view_extended joins the blocks of its operations, instead of reading the
+-- timestamp in a subquery run for every operation, and that it reads no reversible operation when _reversible is false.
+CREATE OR REPLACE FUNCTION assert_operations_view_extended_plan( _schema TEXT, _reversible BOOLEAN, _state TEXT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __plan JSONB;
+BEGIN
+    EXECUTE format( 'EXPLAIN ( ANALYZE, FORMAT JSON ) SELECT count( t.timestamp ) FROM %I.operations_view_extended t', _schema ) INTO __plan;
+    ASSERT NOT jsonb_path_exists( __plan, 'strict $.** ? ( @."Parent Relationship" == "SubPlan" ).** ? ( @."Relation Name" == "blocks" )' )
+        , format( '%s.operations_view_extended reads hafd.blocks in a subplan when %s: %s', _schema, _state, __plan );
+    ASSERT jsonb_path_exists( __plan, 'strict $.** ? ( @."Relation Name" == "operations_reversible" )' )
+        , format( '%s.operations_view_extended has no reversible leg when %s: %s', _schema, _state, __plan );
+    IF _reversible THEN
+        ASSERT jsonb_array_length( jsonb_path_query_array( __plan, 'strict $.** ? ( @."Relation Name" == "blocks_reversible" )' ) )
+            > jsonb_array_length( jsonb_path_query_array( __plan, 'strict $.** ? ( @."Parent Relationship" == "SubPlan" ).** ? ( @."Relation Name" == "blocks_reversible" )' ) )
+            , format( '%s.operations_view_extended does not join hafd.blocks_reversible when %s: %s', _schema, _state, __plan );
+    ELSE
+        ASSERT NOT jsonb_path_exists( __plan, 'strict $.** ? ( @."Relation Name" == "operations_reversible" && @."Actual Loops" > 0 )' )
+            , format( '%s.operations_view_extended reads reversible operations when %s: %s', _schema, _state, __plan );
+    END IF;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
 AS
@@ -345,6 +373,7 @@ DECLARE
 BEGIN
     UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8 WHERE name = 'context';
     __rows := assert_context_views( 'context', 'fork 2 is visible up to block 8' );
+    PERFORM assert_operations_view_extended_plan( 'a', TRUE, 'fork 2 is visible up to block 8' );
     -- blocks 1-4 irreversible, 5-8 reversible; block 7 of fork 2, block 8 of fork 2 (fork 3 is not seen yet)
     ASSERT ( SELECT array_agg( encode( hash, 'hex' ) ORDER BY num ) FROM a.blocks_view )
         = ARRAY[ 'badd10', 'badd20', 'badd30', 'badd40', 'badd50', 'badd60', 'badd72', 'badd82' ], 'blocks_view does not show fork 2 up to block 8';
@@ -353,18 +382,22 @@ BEGIN
 
     UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 4, current_block_num = 10 WHERE name = 'context';
     ASSERT assert_context_views( 'context', 'the context switched to fork 3' ) > __rows, 'the switch to fork 3 shows no new rows';
+    PERFORM assert_operations_view_extended_plan( 'a', TRUE, 'the context switched to fork 3' );
     ASSERT ( SELECT array_agg( encode( hash, 'hex' ) ORDER BY num ) FROM a.blocks_view WHERE num > 6 )
         = ARRAY[ 'badd72', 'badd83', 'badd93', 'badd13' ], 'blocks_view does not show fork 3 after the switch';
 
     UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 6, current_block_num = 10 WHERE name = 'context';
     PERFORM assert_context_views( 'context', 'blocks 5 and 6 are irreversible, but not in hafd.blocks' );
+    PERFORM assert_operations_view_extended_plan( 'a', TRUE, 'blocks 5 and 6 are irreversible, but not in hafd.blocks' );
 
     UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 5, current_block_num = 5 WHERE name = 'context';
     PERFORM assert_context_views( 'context', 'the context has no reversible range' );
+    PERFORM assert_operations_view_extended_plan( 'a', FALSE, 'the context has no reversible range' );
     ASSERT ( SELECT max( num ) FROM a.blocks_view ) = 5, 'blocks_view shows reversible blocks without a reversible range';
 
     UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 5, current_block_num = 3 WHERE name = 'context';
     PERFORM assert_context_views( 'context', 'the context is behind its irreversible block' );
+    PERFORM assert_operations_view_extended_plan( 'a', FALSE, 'the context is behind its irreversible block' );
     ASSERT ( SELECT max( num ) FROM a.blocks_view ) = 3, 'blocks_view shows blocks after the current block of the context';
 
     UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8 WHERE name = 'context_nf';

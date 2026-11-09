@@ -417,10 +417,14 @@ END;
 $BODY$;
 
 /**
-Recreates, with the updated extension's generators, every view of a context that still reads the context's horizon
-by joining `<schema>.context_data_view`, the shape of the views before they read it through hive.context_view_horizon.
-Such views do not depend on the hive schema, so the update neither saves nor drops them. Views showing all irreversible
-data (those of a detached context) read no horizon and are left as they are. Returns a line for each recreated view.
+Recreates, with the updated extension's generators, every view of a context that has an outdated shape:
+- it still reads the context's horizon by joining `<schema>.context_data_view`, the shape of the views before they
+  read it through hive.context_view_horizon. Such views do not depend on the hive schema, so the update neither saves
+  nor drops them.
+- it reads the horizon through hive.context_view_horizon, hive.context_view_shape names a shape for it, and its
+  comment is not that shape. The update restores such views as they were, with their comment.
+Views showing all irreversible data (those of a detached context) read no horizon and are left as they are.
+Returns a line for each recreated view.
 */
 CREATE OR REPLACE FUNCTION hive_update.recreate_outdated_context_views()
     RETURNS SETOF TEXT
@@ -443,13 +447,20 @@ BEGIN
             , ( 'account_operations_view', 'hive.create_account_operations_view' )
             , ( 'applied_hardforks_view', 'hive.create_applied_hardforks_view' )
         ) AS v( view_name, create_function )
+        CROSS JOIN LATERAL ( SELECT to_regclass( format( '%I.%I', hc.schema, v.view_name ) ) AS oid ) cv
         WHERE EXISTS (
             SELECT 1
             FROM pg_rewrite r
             JOIN pg_depend d ON d.classid = 'pg_rewrite'::regclass AND d.objid = r.oid
-            WHERE r.ev_class = to_regclass( format( '%I.%I', hc.schema, v.view_name ) )
-              AND d.refclassid = 'pg_class'::regclass
-              AND d.refobjid = to_regclass( format( '%I.context_data_view', hc.schema ) )
+            WHERE r.ev_class = cv.oid
+              AND (
+                  ( d.refclassid = 'pg_class'::regclass AND d.refobjid = to_regclass( format( '%I.context_data_view', hc.schema ) ) )
+                  OR (
+                      d.refclassid = 'pg_proc'::regclass AND d.refobjid = 'hive.context_view_horizon(text)'::regprocedure
+                      AND hive.context_view_shape( v.view_name ) IS NOT NULL
+                      AND hive.context_view_shape( v.view_name ) IS DISTINCT FROM obj_description( cv.oid, 'pg_class' )
+                  )
+              )
         )
         ORDER BY hc.name, v.view_name
     LOOP
