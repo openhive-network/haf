@@ -266,6 +266,35 @@ check_app_objects_unchanged() {
     fi
 }
 
+# Two contexts, as lite_account and lite_posts are, and app views spanning both contexts' views.
+create_views_spanning_two_contexts() {
+    exec_sql "DO \$\$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'span_test_owner') THEN CREATE ROLE span_test_owner IN ROLE hive_applications_owner_group; END IF;
+                IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'span_test_reader') THEN CREATE ROLE span_test_reader; END IF;
+              END \$\$;
+              CREATE SCHEMA span_account AUTHORIZATION span_test_owner;
+              CREATE SCHEMA span_posts AUTHORIZATION span_test_owner;
+              SET ROLE span_test_owner;
+              SELECT hive.app_create_context('span_account_ctx', 'span_account');
+              SELECT hive.app_create_context('span_posts_ctx', 'span_posts');
+              CREATE VIEW span_posts.profiles AS
+                  SELECT a.num, a.hash AS account_hash, p.hash AS posts_hash
+                  FROM span_account.blocks_view a JOIN span_posts.blocks_view p ON p.num = a.num;
+              GRANT SELECT ON span_posts.profiles TO span_test_reader;
+              COMMENT ON VIEW span_posts.profiles IS 'profiles of both contexts';
+              CREATE VIEW span_account.profile_count AS SELECT count(*) AS profiles FROM span_posts.profiles;
+              GRANT USAGE ON SCHEMA span_account TO span_test_reader;
+              GRANT SELECT ON span_account.profile_count TO span_test_reader;
+              RESET ROLE;" > /dev/null
+}
+
+# Definition, owner, privileges and comment of every view of the span_account and span_posts schemas.
+span_views_snapshot() {
+    exec_sql "SELECT c.oid::regclass::text, pg_get_viewdef(c.oid), pg_get_userbyid(c.relowner), c.relacl::text, obj_description(c.oid, 'pg_class')
+              FROM pg_class c WHERE c.relnamespace IN ('span_account'::regnamespace, 'span_posts'::regnamespace) AND c.relkind = 'v'
+              ORDER BY 1"
+}
+
 deployed_version() {
     exec_sql "SELECT extversion FROM pg_extension WHERE extname = 'hive_fork_manager'"
 }
@@ -771,5 +800,40 @@ current_definition=$(exec_sql "SELECT pg_get_viewdef('shape_app.operations_view_
 exec_sql "SELECT hive.create_operations_view_extended('shape_ctx')" > /dev/null
 [ "$(exec_sql "SELECT pg_get_viewdef('shape_app.operations_view_extended'::regclass)")" = "$current_definition" ] \
     || { echo "TEST FAILED: shape_app.operations_view_extended does not have the definition hive.create_operations_view_extended generates"; exit 63; }
+
+printf "\nTEST: Upgrade a database with an app view built on the blocks_view of two contexts, and an app view built on it. The update should restore every view once, with its definition, owner, privileges and comment.\n"
+prepare_database
+create_views_spanning_two_contexts
+span_before=$(span_views_snapshot)
+update_output=$(update_database 2>&1) || { echo "$update_output"; exit 64; }
+echo "$update_output"
+check_table_is_empty hafd.deps_saved_ddl
+[ "$(grep -c "Restoring span_posts.profiles" <<< "$update_output")" = "1" ] \
+    || { echo "TEST FAILED: span_posts.profiles was not restored exactly once"; exit 65; }
+span_after=$(span_views_snapshot)
+[ "$span_after" = "$span_before" ] \
+    || { printf "TEST FAILED: views of span_account and span_posts changed in the update:\nBefore:\n%s\nAfter:\n%s\n" "$span_before" "$span_after"; exit 66; }
+[ "$(exec_sql "SET ROLE span_test_reader; SELECT profiles FROM span_account.profile_count")" = "0" ] \
+    || { echo "TEST FAILED: the app views spanning two contexts do not work after the update"; exit 67; }
+
+printf "\nTEST: Upgrade a database whose app view, built on an app view spanning two contexts, uses a hive function the new version lacks. The update should fail naming it, and leave the database unchanged.\n"
+prepare_database
+create_views_spanning_two_contexts
+exec_sql "CREATE FUNCTION hive.removed_in_new_version() RETURNS INT LANGUAGE sql AS 'SELECT 1';
+          CREATE VIEW span_posts.removed_function_view AS SELECT num, hive.removed_in_new_version() AS one FROM span_posts.profiles;"
+span_before=$(span_views_snapshot)
+update_output=$(failswith 1 update_database 2>&1) || { echo "$update_output"; exit 68; }
+echo "$update_output"
+grep -q "span_posts.removed_function_view: function hive.removed_in_new_version() does not exist" <<< "$update_output" \
+    || { echo "TEST FAILED: the failed restore of span_posts.removed_function_view was not reported"; exit 69; }
+if grep -q "^span_posts.profiles:" <<< "$update_output"; then
+    echo "TEST FAILED: span_posts.profiles was reported as unrestorable"
+    exit 70
+fi
+[ "$(deployed_version)" = "1.0" ] || { echo "TEST FAILED: a failed update left version $(deployed_version) deployed"; exit 71; }
+check_accepts_connections
+check_table_is_empty hafd.deps_saved_ddl
+[ "$(span_views_snapshot)" = "$span_before" ] || { echo "TEST FAILED: a failed update changed the views of span_account and span_posts"; exit 72; }
+check_hive_update_helpers_present
 
 echo "Succeeded"

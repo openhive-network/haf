@@ -699,7 +699,8 @@ To use this script you have to rebuild the project and then run `hive_fork_manag
         - The update script performs the following steps:
             - The `hive` schema is dropped along with all its content. The `hafd` schema remains unmodified.
             - A new version of the `hive` schema is created, containing only runtime code and excluding tables.
-    - Saved objects are restored. An object that cannot be restored (for example a view calling a `hive` function the new version
+    - Saved objects are restored, each one once, after the objects it is built on (a view built on views of several
+      contexts is restored after all of them). An object that cannot be restored (for example a view calling a `hive` function the new version
       no longer has) fails the update, and the error names it.
     - Functions connected to the 'shared lib' are verified to ensure they use the correct version of the shared library.
 
