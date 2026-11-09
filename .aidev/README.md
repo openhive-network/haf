@@ -123,16 +123,32 @@ every test connects to the candidate's `hive.connect()` and the rest of its SQL.
 
 **The candidate's libhfm.** The suite's image is pinned, so its libhfm is not built
 from the candidate, and a candidate cannot re-pin it in its own gate (aidev holds a
-re-pin of a suite declaring no `image_inputs`). The `full` slot's `hfm_functional`
-suite runs before it, in the image AIDEV builds from the candidate's tree
-(*The test runtime image*), which `Dockerfile.source` also gives a libhfm built for
-the testnet (`/home/hived/aidev/testnet-libhfm/`). `run-checks.sh` copies it into
-the workspace, `test-results/testnet-libhfm/`, and `haf-system.sh` installs the
-candidate's SQL with it (`HFM_CANDIDATE_LIBHFM_DIR`) when the hash of
-`src/hive_fork_manager/shared_lib` it was built from is the tree's. Otherwise (no
-such copy: a slot image CI built or the pinned one, or a re-run of the suite alone
-after the sources changed) the image's own libhfm is used, and a C function the
-candidate's SQL needs that it lacks is `haf-system/libhfm-symbols`.
+re-pin of a suite declaring no `image_inputs`, and a re-pin per new C symbol would
+need a person each time). Instead the image AIDEV builds from the candidate's tree
+(*The test runtime image*) carries a libhfm built for the testnet
+(`/home/hived/aidev/testnet-libhfm/`, with the hash of the
+`src/hive_fork_manager/shared_lib` sources it was built from), and it reaches the
+suite through the workspace, `test-results/testnet-libhfm/`. The suite's own
+container has no network and no docker, and its image no compiler, so it cannot
+fetch or build the library itself. Two things put it there:
+
+- `run-checks.sh` copies it whenever it runs in that image, so in the `full` slot
+  the `hfm_functional` suite, which runs first, hands it over;
+- `.aidev/fetch-candidate-libhfm.sh`, run on the host, copies it out of a local
+  `aidev-runtime/haf-source:<commit>-<recipe>` image of HEAD's closest ancestor
+  whose hash is the tree's (without pulling; `aidev test run --slot full …`
+  resolves the tree's own before it runs anything). A run of the suite on its own
+  (`--suite haf_system`, which consults no `select` and runs nothing host-side)
+  needs it first, as below.
+
+`haf-system.sh` installs the candidate's SQL with it (`HFM_CANDIDATE_LIBHFM_DIR`)
+only when its source hash is the tree's. Otherwise (no copy: a slot image CI built,
+which carries no testnet libhfm, or a run of the suite alone that nothing prepared;
+or a copy left from other sources) the image's own libhfm is used, and a C function
+the candidate's SQL needs that it lacks is `haf-system/libhfm-symbols`, whose
+message says why the candidate's library was not used and how to get it.
+`libhfm-symbols` is never quarantined. The decision is
+`docs/decisions/0000-hand-the-candidate-s-testnet-libhfm-to-the-haf-system-suite.md`.
 
 **Reports.** `test-results/haf-system/junit.xml`: one case per test, its id
 `haf-system::<module>.py::<test>[<param>]` (pytest's node id under the suite's name),
@@ -144,9 +160,11 @@ re-run one by node id (`rerun:`, `run-haf-system.sh --rerun <id>...`, reporting 
 libhfm lacks), `haf-system/install` or `haf-system/setup_db`; a run that failed with no
 failing test recorded is `haf-system/run`. test_tools' node directories
 (`generated_during_<module>/`) are moved into `test-results/haf-system/generated/`,
-kept with a failing run's artifacts. To run one test:
+kept with a failing run's artifacts. To run one test (the first command hands the
+suite the candidate's libhfm when `hfm_functional` has not run in the workspace):
 
 ```bash
+.aidev/fetch-candidate-libhfm.sh
 aidev test run --slot full --suite haf_system -- --rerun haf-system::test_replay_restart_over_populated_db.py::test_force_replay_over_populated_database_is_refused
 ```
 
@@ -158,7 +176,7 @@ AIDEV runs a suite container with no network, so nothing is installed at run tim
 unlike CI's `run_haf_system_tests.sh`; `haf_local_tools` itself is imported from the
 candidate's tree. hived is the image's: a candidate's C++ change to
 `src/sql_serializer/` selects the core tests but runs them under the pinned hived
-(`cxx-scope` names it); libhfm is the candidate's when the slot hands it over (*The
+(`cxx-scope` names it); libhfm is the candidate's when it reaches the suite (*The
 candidate's libhfm*). Re-pin the image when its hived should follow develop, and rebuild it
 **in the same commit** as any change to haf-local-tools' `pyproject.toml` or
 `poetry.lock` (until then the suite fails as `haf-system/environment`):

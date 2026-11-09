@@ -16,9 +16,10 @@
 #
 # Exit 0: installed, as the extension's default version. Exit 3: the candidate
 # SQL declares C symbols the libhfm it is installed with lacks, so CREATE EXTENSION
-# would fail in every test; the message naming them is printed and written to
-# LOG_DIR/libhfm-symbols.log, and nothing is installed. Any other status: the
-# install failed (generate_extension_sql.sh's output is in LOG_DIR/generate.log).
+# would fail in every test; the message naming them, and why the candidate's
+# library was not used, is printed and written to LOG_DIR/libhfm-symbols.log, and
+# nothing is installed. Any other status: the install failed
+# (generate_extension_sql.sh's output is in LOG_DIR/generate.log).
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 log_dir="${1:?usage: $0 LOG_DIR}"
@@ -38,6 +39,7 @@ done
 [ -n "$base_so" ] || { echo "no libhfm-*.so in $libdir"; exit 1; }
 
 candidate_so=""
+fallback=""
 candidate_dir="${HFM_CANDIDATE_LIBHFM_DIR:-}"
 if [ -n "$candidate_dir" ] && [ -f "$candidate_dir/libhfm.so" ]; then
     # the same hash .aidev/runtime/Dockerfile.source takes of the sources it builds
@@ -46,16 +48,17 @@ if [ -n "$candidate_dir" ] && [ -f "$candidate_dir/libhfm.so" ]; then
         candidate_so="$candidate_dir/libhfm.so"
         echo "== installing with the candidate's libhfm from $candidate_dir"
     else
-        echo "== $candidate_dir/libhfm.so was built from other shared_lib sources than this tree's: installing with the image's $base_so"
+        fallback="$candidate_dir/libhfm.so was built from other shared_lib sources than this tree's"
     fi
 elif [ -n "$candidate_dir" ]; then
-    echo "== no candidate libhfm in $candidate_dir: installing with the image's $base_so"
+    fallback="no candidate libhfm in $candidate_dir"
 fi
+[ -z "$fallback" ] || echo "== $fallback: installing with the image's $base_so"
 
 checked_so="${candidate_so:-$libdir/$base_so}"
 missing="$(python3 .aidev/missing_c_symbols.py "$checked_so" "$ext"/hive_fork_manager*.sql)" || exit 1
 if [ -n "$missing" ]; then
-    echo "$checked_so lacks C symbols the candidate SQL declares: $(echo "$missing" | tr '\n' ' ')- it was not built from these sources (.aidev/README.md)" \
+    echo "$checked_so lacks C symbols the candidate SQL declares: $(echo "$missing" | tr '\n' ' ')- it was not built from these sources${fallback:+ ($fallback)} (.aidev/README.md)" \
         | tee "$log_dir/libhfm-symbols.log"
     exit 3
 fi
