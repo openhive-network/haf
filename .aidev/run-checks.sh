@@ -153,6 +153,7 @@ rerun_unmatched() {
 # An image built by .aidev/runtime/Dockerfile.source also carries libhfm built for the testnet from these
 # sources. The haf_system suite runs in its own testnet image, whose libhfm was not built from them, so it is
 # handed over through the workspace (.aidev/haf-system.sh); the `full` slot runs hfm_functional before haf_system.
+# Before a haf_system run on its own, .aidev/fetch-candidate-libhfm.sh copies it out of the image on the host.
 testnet_libhfm=/home/hived/aidev/testnet-libhfm
 if [ -f "$testnet_libhfm/libhfm.so" ]; then
     rm -rf test-results/testnet-libhfm
