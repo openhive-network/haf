@@ -675,4 +675,48 @@ check_accepts_connections
 [ -n "$(exec_sql "SELECT pg_get_expr(adbin, adrelid) FROM pg_attrdef WHERE adrelid = 'public.default_from_hive'::regclass")" ] \
     || { echo "TEST FAILED: a failed update dropped the column default"; exit 26; }
 
+printf "\nTEST: Upgrade a database whose context views read their horizon from context_data_view. The update should recreate them in the current shape, keeping their owner and the app views built on them, and leave a detached context's views as they are.\n"
+prepare_database
+exec_sql "DO \$\$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'horizon_test_owner') THEN CREATE ROLE horizon_test_owner IN ROLE hive_applications_owner_group; END IF;
+          END \$\$;
+          CREATE SCHEMA horizon_app AUTHORIZATION horizon_test_owner;
+          CREATE SCHEMA horizon_detached AUTHORIZATION horizon_test_owner;
+          SET ROLE horizon_test_owner;
+          SELECT hive.app_create_context('horizon_ctx', 'horizon_app');
+          SELECT hive.app_create_context('horizon_detached_ctx', 'horizon_detached');
+          SELECT hive.app_context_detach('horizon_detached_ctx');
+          CREATE OR REPLACE VIEW horizon_app.blocks_view AS
+              SELECT t.* FROM horizon_app.context_data_view c, LATERAL ( SELECT hb.* FROM hafd.blocks hb WHERE hb.num <= c.min_block ) t;
+          CREATE OR REPLACE VIEW horizon_app.operations_view AS
+              SELECT t.id, hafd.operation_id_to_block_num(t.id) AS block_num, t.trx_in_block, t.op_pos, t.op_type_id, t.body_value,
+                     jsonb_build_object('type', ot.name, 'value', t.body_value) AS body, t.custom_json_type_id
+              FROM horizon_app.context_data_view c,
+              LATERAL ( SELECT ho.* FROM hafd.operations ho WHERE hafd.operation_id_to_block_num(ho.id) <= c.min_block ) t
+              JOIN hafd.operation_types ot ON ot.id = t.op_type_id;
+          CREATE VIEW horizon_app.last_block AS SELECT max(num) AS num FROM horizon_app.blocks_view;
+          CREATE VIEW horizon_app.transaction_count AS SELECT count(*) AS transactions FROM horizon_app.transactions_view;
+          RESET ROLE;"
+reading_context_data_view="SELECT string_agg(c.relname, ',' ORDER BY c.relname) FROM pg_class c
+    WHERE c.relnamespace = 'horizon_app'::regnamespace AND c.relkind = 'v' AND EXISTS (
+        SELECT 1 FROM pg_rewrite r JOIN pg_depend d ON d.classid = 'pg_rewrite'::regclass AND d.objid = r.oid
+        WHERE r.ev_class = c.oid AND d.deptype = 'n' AND d.refobjid = 'horizon_app.context_data_view'::regclass)"
+[ "$(exec_sql "$reading_context_data_view")" = "blocks_view,operations_view" ] \
+    || { echo "TEST FAILED: could not give horizon_app the views of the previous shape"; exit 49; }
+detached_views="SELECT string_agg(c.relname || ':' || pg_get_viewdef(c.oid), E'\n' ORDER BY c.relname) FROM pg_class c
+    WHERE c.relnamespace = 'horizon_detached'::regnamespace AND c.relkind = 'v'"
+detached_before=$(exec_sql "$detached_views")
+update_database
+[ -z "$(exec_sql "$reading_context_data_view")" ] \
+    || { echo "TEST FAILED: views still reading context_data_view after the update: $(exec_sql "$reading_context_data_view")"; exit 50; }
+[ "$(exec_sql "SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'horizon_app'::regnamespace AND c.relkind = 'v'
+               AND pg_get_viewdef(c.oid) LIKE '%hive.context_view_horizon(%'")" = "8" ] \
+    || { echo "TEST FAILED: the 8 views of horizon_ctx do not read hive.context_view_horizon after the update"; exit 51; }
+[ "$(exec_sql "SELECT string_agg(DISTINCT pg_get_userbyid(c.relowner), ',') FROM pg_class c WHERE c.relnamespace = 'horizon_app'::regnamespace AND c.relkind = 'v'")" = "horizon_test_owner" ] \
+    || { echo "TEST FAILED: the update changed the owner of a view of horizon_ctx"; exit 52; }
+[ "$(exec_sql "SELECT (SELECT num FROM horizon_app.last_block) IS NULL AND (SELECT transactions FROM horizon_app.transaction_count) = 0")" = "t" ] \
+    || { echo "TEST FAILED: the app views built on the views of horizon_ctx do not work after the update"; exit 53; }
+[ "$(exec_sql "$detached_views")" = "$detached_before" ] \
+    || { echo "TEST FAILED: the update changed the views of the detached context"; exit 54; }
+
 echo "Succeeded"

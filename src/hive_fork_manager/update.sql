@@ -416,6 +416,49 @@ BEGIN
 END;
 $BODY$;
 
+/**
+Recreates, with the updated extension's generators, every view of a context that still reads the context's horizon
+by joining `<schema>.context_data_view`, the shape of the views before they read it through hive.context_view_horizon.
+Such views do not depend on the hive schema, so the update neither saves nor drops them. Views showing all irreversible
+data (those of a detached context) read no horizon and are left as they are. Returns a line for each recreated view.
+*/
+CREATE OR REPLACE FUNCTION hive_update.recreate_outdated_context_views()
+    RETURNS SETOF TEXT
+    LANGUAGE plpgsql
+    VOLATILE
+AS $BODY$
+DECLARE
+    __view RECORD;
+BEGIN
+    FOR __view IN
+        SELECT hc.name AS context_name, hc.schema, v.view_name, v.create_function
+        FROM hafd.contexts hc
+        CROSS JOIN ( VALUES
+              ( 'blocks_view', 'hive.create_blocks_view' )
+            , ( 'transactions_view', 'hive.create_transactions_view' )
+            , ( 'operations_view', 'hive.create_operations_view' )
+            , ( 'operations_view_extended', 'hive.create_operations_view_extended' )
+            , ( 'transactions_multisig_view', 'hive.create_signatures_view' )
+            , ( 'accounts_view', 'hive.create_accounts_view' )
+            , ( 'account_operations_view', 'hive.create_account_operations_view' )
+            , ( 'applied_hardforks_view', 'hive.create_applied_hardforks_view' )
+        ) AS v( view_name, create_function )
+        WHERE EXISTS (
+            SELECT 1
+            FROM pg_rewrite r
+            JOIN pg_depend d ON d.classid = 'pg_rewrite'::regclass AND d.objid = r.oid
+            WHERE r.ev_class = to_regclass( format( '%I.%I', hc.schema, v.view_name ) )
+              AND d.refclassid = 'pg_class'::regclass
+              AND d.refobjid = to_regclass( format( '%I.context_data_view', hc.schema ) )
+        )
+        ORDER BY hc.name, v.view_name
+    LOOP
+        EXECUTE format( 'SELECT %s( %L )', __view.create_function, __view.context_name );
+        RETURN NEXT format( 'Recreating %I.%I', __view.schema, __view.view_name );
+    END LOOP;
+END;
+$BODY$;
+
 CREATE TYPE hive_update.verify_table_schema AS(
    table_name TEXT,
    table_schema TEXT,
