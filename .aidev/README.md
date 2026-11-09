@@ -134,17 +134,19 @@ fetch or build the library itself. Two things put it there:
 
 - `run-checks.sh` copies it whenever it runs in that image, so in the `full` slot
   the `hfm_functional` suite, which runs first, hands it over;
-- `.aidev/fetch-candidate-libhfm.sh`, run on the host, copies it out of a local
+- `.aidev/fetch-candidate-libhfm.sh`, the suite's `prepare` step, which aidev runs
+  on the host before the suite both in the `full` slot and in a run of the suite on
+  its own (`--suite haf_system`), copies it out of a local
   `aidev-runtime/haf-source:<commit>-<recipe>` image of HEAD's closest ancestor
   whose hash is the tree's (without pulling; `aidev test run --slot full …`
-  resolves the tree's own before it runs anything). A run of the suite on its own
-  (`--suite haf_system`, which consults no `select` and runs nothing host-side)
-  needs it first, as below.
+  resolves the tree's own before it runs anything). When `hfm_functional` already
+  left it, the step does nothing. When no such image is on the host, the step fails
+  naming the missing source image, and the suite does not run: a `prepare_failure`
+  no-verdict, not a red `libhfm-symbols`.
 
 `haf-system.sh` installs the candidate's SQL with it (`HFM_CANDIDATE_LIBHFM_DIR`)
-only when its source hash is the tree's. Otherwise (no copy: a slot image CI built,
-which carries no testnet libhfm, or a run of the suite alone that nothing prepared;
-or a copy left from other sources) the image's own libhfm is used, and a C function
+only when its source hash is the tree's. Otherwise (no copy, as when the step was not
+run; or a copy left from other sources) the image's own libhfm is used, and a C function
 the candidate's SQL needs that it lacks is `haf-system/libhfm-symbols`, whose
 message says why the candidate's library was not used and how to get it.
 `libhfm-symbols` is never quarantined.
@@ -154,9 +156,10 @@ Why it is done this way: the suite's image is a protected pin that declares no
 candidate adds would otherwise fail the suite until a person re-pinned it. The
 candidate's testnet libhfm is therefore built by `.aidev/runtime/Dockerfile.source`
 and handed over through `test-results/testnet-libhfm/`, guarded by the hash of the
-`shared_lib` sources so a library from other sources is never installed. A run of
-`haf_system` on its own needs `.aidev/fetch-candidate-libhfm.sh` first, until
-aidev#18303 gives a suite a host-side prepare step of its own. `libhfm-symbols` is
+`shared_lib` sources so a library from other sources is never installed. The suite
+declares the copy as its host-side `prepare` step, so a run of `haf_system` on its
+own gets the library with no manual step, and a host without the source image says
+so before the suite starts instead of failing it on symbols. `libhfm-symbols` is
 never quarantined: pardoning it would hide that the candidate's SQL was tested
 against a library that lacks its functions.
 
@@ -170,11 +173,10 @@ re-run one by node id (`rerun:`, `run-haf-system.sh --rerun <id>...`, reporting 
 libhfm lacks), `haf-system/install` or `haf-system/setup_db`; a run that failed with no
 failing test recorded is `haf-system/run`. test_tools' node directories
 (`generated_during_<module>/`) are moved into `test-results/haf-system/generated/`,
-kept with a failing run's artifacts. To run one test (the first command hands the
-suite the candidate's libhfm when `hfm_functional` has not run in the workspace):
+kept with a failing run's artifacts. To run one test (the suite's `prepare` step
+hands it the candidate's libhfm when `hfm_functional` has not run in the workspace):
 
 ```bash
-.aidev/fetch-candidate-libhfm.sh
 aidev test run --slot full --suite haf_system -- --rerun haf-system::test_replay_restart_over_populated_db.py::test_force_replay_over_populated_database_is_refused
 ```
 

@@ -42,7 +42,7 @@ fi
 
 rc=0
 HFM_CANDIDATE_LIBHFM_DIR="$src/test-results/testnet-libhfm" bash .aidev/install-candidate-hfm.sh "$out/setup" || rc=$?
-[ "$rc" -ne 3 ] || fail_case libhfm-symbols "$(< "$out/setup/libhfm-symbols.log"). The candidate's testnet libhfm is built into the source image of this tree (.aidev/runtime/Dockerfile.source) and handed over in test-results/testnet-libhfm/ by the full slot's hfm_functional suite: to run this suite on its own, run .aidev/fetch-candidate-libhfm.sh on the host first (it copies the library out of that image when the host's docker holds it), or \`aidev test run --slot full --suite hfm_functional\`, then re-run this suite"
+[ "$rc" -ne 3 ] || fail_case libhfm-symbols "$(< "$out/setup/libhfm-symbols.log"). The candidate's testnet libhfm is built into the source image of this tree (.aidev/runtime/Dockerfile.source) and handed over in test-results/testnet-libhfm/ by the full slot's hfm_functional suite or by this suite's prepare step, .aidev/fetch-candidate-libhfm.sh: if that step did not run (aidev predating suite prepare steps, or the binding declaring it not yet approved), run it on the host first (it copies the library out of that image when the host's docker holds it), or \`aidev test run --slot full --suite hfm_functional\`, then re-run this suite"
 [ "$rc" -eq 0 ] || fail_case install "installing the candidate's hive_fork_manager SQL failed (exit $rc)"
 bash scripts/setup_db.sh --haf-db-admin=haf_admin --haf-db-name=haf_block_log > "$out/setup/setup_db.log" 2>&1 \
     || fail_case setup_db "recreating haf_block_log with the candidate's extension failed; see $out/setup/setup_db.log"
