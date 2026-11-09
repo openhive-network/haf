@@ -116,6 +116,11 @@ SELECT hive.app_add_dependency( 'hivesense', 'hivemind' );
   holders to go, then fails naming them. An installer whose lock is held while no application is
   registered under its name (the application is not installed, e.g. after a partial uninstall)
   waits the same and then proceeds, since the holders cannot be doing useful work on it.
+  Installers of the same application are serialized by a separate per-app installer lock that
+  block-processors never take: `hive.try_acquire_app_install_lock` takes it first and keeps it for
+  the session, like the application's lock, so an installer proceeding without the application's
+  lock still keeps others out. A second installer finding it held returns FALSE at once, with a
+  NOTICE naming the installer that holds it.
 * `_health_function => '<schema>.<function>'` names a function taking no arguments and returning
   TEXT: NULL while the installation is healthy, otherwise the reason it is broken, which the lock
   helpers' errors quote. Use it when the procedures above do not tell, e.g. for an application

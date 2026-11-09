@@ -300,6 +300,7 @@ ADD_SQL_FUNCTIONAL_TEST( app_api/install_lock_broken_app.sql )
 ADD_SQL_FUNCTIONAL_TEST( app_api/install_lock_broken_completed_block_function.sql )
 ADD_SQL_FUNCTIONAL_TEST( app_api/install_lock_health_function.sql )
 ADD_SQL_FUNCTIONAL_TEST( app_api/install_lock_unregistered_app.sql )
+ADD_SQL_FUNCTIONAL_TEST( app_api/install_lock_concurrent_unregistered_installers.sql )
 ADD_SQL_FUNCTIONAL_TEST( app_api/app_register_health_function.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( application_loop/validate_stages.sql )

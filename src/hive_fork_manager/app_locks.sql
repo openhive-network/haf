@@ -14,26 +14,29 @@
 -- An installer whose app has no row at all waits the same, then proceeds without
 -- the lock; block-processors do take the lock of an app not registered yet.
 --
+-- Installers of an app are serialized by a separate per-app installer lock, which
+-- block-processors never take: an installer takes it first and keeps it for as
+-- long as the app lock, so that one proceeding without the app lock still keeps a
+-- second installer out. An installer that finds it held skips its work.
+--
 -- Callers must `SET application_name` before invoking these so the holder
 -- descriptions returned on contention are human-readable.
 
 
-CREATE OR REPLACE FUNCTION hive._try_app_lock( _app_name TEXT, _exclusive BOOLEAN )
+CREATE OR REPLACE FUNCTION hive._try_advisory_lock( _classid INTEGER, _objid INTEGER, _exclusive BOOLEAN )
     RETURNS TEXT
     LANGUAGE plpgsql
     VOLATILE
 AS
 $BODY$
 DECLARE
-    __classid INTEGER := hashtext( 'hive_fork_manager_app_lock' );
-    __objid   INTEGER := hashtext( _app_name );
     __acquired BOOLEAN;
     __holders TEXT;
 BEGIN
     IF _exclusive THEN
-        __acquired := pg_try_advisory_lock( __classid, __objid );
+        __acquired := pg_try_advisory_lock( _classid, _objid );
     ELSE
-        __acquired := pg_try_advisory_lock_shared( __classid, __objid );
+        __acquired := pg_try_advisory_lock_shared( _classid, _objid );
     END IF;
 
     IF __acquired THEN
@@ -45,11 +48,24 @@ BEGIN
       FROM pg_locks l
       JOIN pg_stat_activity a ON a.pid = l.pid
      WHERE l.locktype = 'advisory'
-       AND l.classid  = __classid
-       AND l.objid    = __objid
+       AND l.classid  = _classid
+       AND l.objid    = _objid
        AND l.granted;
 
     RETURN COALESCE( __holders, '(unknown)' );
+END;
+$BODY$
+;
+
+
+CREATE OR REPLACE FUNCTION hive._try_app_lock( _app_name TEXT, _exclusive BOOLEAN )
+    RETURNS TEXT
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    RETURN hive._try_advisory_lock( hashtext( 'hive_fork_manager_app_lock' ), hashtext( _app_name ), _exclusive );
 END;
 $BODY$
 ;
@@ -117,11 +133,19 @@ CREATE OR REPLACE FUNCTION hive.try_acquire_app_install_lock( _app_name TEXT )
 AS
 $BODY$
 DECLARE
+    __installer_classid INTEGER := hashtext( 'hive_fork_manager_app_installer_lock' );
+    __objid INTEGER := hashtext( _app_name );
     __holders TEXT;
     __reason TEXT;
     __unregistered BOOLEAN;
     __deadline TIMESTAMPTZ;
 BEGIN
+    __holders := hive._try_advisory_lock( __installer_classid, __objid, TRUE );
+    IF __holders IS NOT NULL THEN
+        RAISE NOTICE 'Skipping install: another installer of % is running: %', _app_name, __holders;
+        RETURN FALSE;
+    END IF;
+
     __holders := hive._try_app_lock( _app_name, TRUE );
     IF __holders IS NULL THEN
         RETURN TRUE;
@@ -133,6 +157,7 @@ BEGIN
     ELSE
         __reason := hive._app_broken_reason( _app_name );
         IF __reason IS NULL THEN
+            PERFORM pg_advisory_unlock( __installer_classid, __objid );
             RAISE NOTICE 'Skipping install: lock on % held by %', _app_name, __holders;
             RETURN FALSE;
         END IF;
@@ -157,6 +182,8 @@ BEGIN
         RETURN TRUE;
     END IF;
 
+    -- Advisory locks survive the error, hence the explicit release.
+    PERFORM pg_advisory_unlock( __installer_classid, __objid );
     RAISE EXCEPTION 'Cannot install %: % and its lock is held by %; stop those sessions and rerun the install',
                     _app_name, __reason, __holders;
 END;
