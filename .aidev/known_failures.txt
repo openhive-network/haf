@@ -4,3 +4,5 @@
 # add one with `aidev test quarantine <id> --reason "see #N"` so its tracking
 # issue is recorded. Remove entries when the tests are fixed.
 # Empty file = all failures block.
+# see #468: passes only under a hived built with #468's sql_serializer fix (lite mode keeps the reversible P2P-sync tail at LIVE entry); the haf_system image pins develop a5f9302d7's hived. Remove when that image is re-pinned past #468.
+haf-system::test_replay_and_p2p_sync_lite_mode.py::test_replay_and_p2p_sync_in_lite_mode

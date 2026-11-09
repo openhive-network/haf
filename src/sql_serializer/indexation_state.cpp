@@ -535,14 +535,8 @@ indexation_state::update_state(
             force_trigger_flush_with_all_data( cached_data, last_block_num );
           }
           );
-        // In lite mode, discard non-irreversible cached blocks instead of flushing to reversible
-        cached_data.blocks.clear();
-        cached_data.transactions.clear();
-        cached_data.transactions_multisig.clear();
-        cached_data.operations.clear();
-        cached_data.accounts.clear();
-        cached_data.account_operations.clear();
-        cached_data.applied_hardforks.clear();
+        // In lite mode the reversible tail of the sync stays cached: hived never re-delivers it,
+        // so the trigger writes it block by block once it becomes irreversible (a fork drops it in on_switch_fork)
       } else {
         _trigger = std::make_unique< live_flush_trigger >(
           [this]( cached_data_t& cached_data, int last_block_num ) {
@@ -633,7 +627,7 @@ void indexation_state::flush_all_cached_data( cached_data_t& cached_data, int la
   if ( get_state() == INDEXATION::LIVE ) {
     // In LIVE mode, only flush irreversible blocks. Reversible blocks left in cache
     // will be re-fetched from P2P on restart.
-    // Safety: move_irreversible_blocks() is safe here because in LIVE mode, blocks are
+    // Safety: outside lite mode move_irreversible_blocks() is safe here because blocks are
     // processed and flushed one at a time via livesync_data_dumper (which asserts
     // blocks.size() == 1). The cache therefore never accumulates more than one
     // irreversible block, satisfying that assertion.
@@ -641,7 +635,13 @@ void indexation_state::flush_all_cached_data( cached_data_t& cached_data, int la
       ilog( "LIVE shutdown: flushing irreversible blocks up to ${b}, discarding reversible blocks beyond that",
             ("b", _irreversible_block_num) );
     }
-    move_irreversible_blocks( cached_data );
+    if ( _lite_mode ) {
+      // The lite cache can hold several irreversible blocks (LIB may advance by more than one block
+      // between flushes), and livesync_data_dumper accepts one block per flush, so let the trigger split them.
+      trigger_data_flush( cached_data, last_block_num );
+    } else {
+      move_irreversible_blocks( cached_data );
+    }
   } else {
     force_trigger_flush_with_all_data( cached_data, last_block_num );
   }
