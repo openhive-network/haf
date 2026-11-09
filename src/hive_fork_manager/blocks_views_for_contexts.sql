@@ -193,6 +193,24 @@ $BODY$
 $BODY$
 ;
 
+/*
+The comment the generator of a context view reading its horizon through hive.context_view_horizon puts on the view,
+naming the shape it generates now; NULL for a view whose generator puts none. hive_update.recreate_outdated_context_views
+recreates such a view when its comment differs, so a change to the shape of a view bumps its shape here, and a view
+getting its first shape also has its generator put the comment.
+*/
+CREATE OR REPLACE FUNCTION hive.context_view_shape( _view_name TEXT )
+    RETURNS TEXT
+    LANGUAGE sql
+    IMMUTABLE
+AS
+$BODY$
+    SELECT CASE _view_name
+        WHEN 'operations_view_extended' THEN 'HAF context view operations_view_extended, shape 2'
+    END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.create_blocks_view( _context_name TEXT )
     RETURNS void
     LANGUAGE plpgsql
@@ -504,8 +522,10 @@ BEGIN
         WHERE hc.name = _context_name;
 
     IF __is_forking THEN
-        -- A leg joined with its blocks would not be a single table, which the planner cannot pull up into an append
-        -- relation, so each leg reads the timestamp of an operation's block in a subquery.
+        -- Each leg joins the blocks of its operations: a join may probe a block once for all its operations (Memoize)
+        -- or run in parallel workers, where a subquery reading the timestamp runs once per operation. A leg that is
+        -- a join is not pulled up into an append relation, and the planner does not push into it a filter holding
+        -- subqueries, so each leg applies its own instead of hive.context_view_legs_filter.
         EXECUTE format(
                 'CREATE OR REPLACE VIEW %s.operations_view_extended
                  AS
@@ -519,31 +539,36 @@ BEGIN
                     jsonb_build_object(''type'', replace(ot.name, ''hive::protocol::'', ''''), ''value'', t.body_value) AS body,
                     t.custom_json_type_id
                   FROM (
-                    SELECT 0 AS leg,
+                    SELECT
                       ho.id,
                       ho.trx_in_block,
                       ho.op_pos,
                       ho.op_type_id,
-                      ( SELECT b.created_at FROM hafd.blocks b WHERE b.num = hafd.operation_id_to_block_num( ho.id ) ) AS timestamp,
+                      b.created_at AS timestamp,
                       ho.body_value,
-                      ho.custom_json_type_id,
-                      NULL::BIGINT AS fork_id
+                      ho.custom_json_type_id
                     FROM hafd.operations ho
+                    JOIN hafd.blocks b ON b.num = hafd.operation_id_to_block_num( ho.id )
+                    WHERE %s
                     UNION ALL
-                    SELECT 1 AS leg,
+                    SELECT
                       o.id,
                       o.trx_in_block,
                       o.op_pos,
                       o.op_type_id,
-                      ( SELECT b.created_at FROM hafd.blocks_reversible b WHERE b.num = hafd.operation_id_to_block_num( o.id ) AND b.fork_id = o.fork_id ) AS timestamp,
+                      b.created_at AS timestamp,
                       o.body_value,
-                      o.custom_json_type_id,
-                      o.fork_id
+                      o.custom_json_type_id
                     FROM hafd.operations_reversible o
+                    JOIN hafd.blocks_reversible b ON b.num = hafd.operation_id_to_block_num( o.id ) AND b.fork_id = o.fork_id
+                    WHERE %s AND %s
                 ) t
                 JOIN hafd.operation_types ot ON ot.id = t.op_type_id
-                WHERE %s
-                ;', __schema, hive.context_view_legs_filter( _context_name, 'hafd.operation_id_to_block_num( t.id )' )
+                ;'
+                , __schema
+                , hive.context_view_irreversible_filter( _context_name, 'hafd.operation_id_to_block_num( ho.id )' )
+                , hive.context_view_reversible_guard( _context_name )
+                , hive.context_view_reversible_filter( _context_name, 'hafd.operation_id_to_block_num( o.id )', 'o.fork_id' )
             );
         ELSE
             EXECUTE format(
@@ -565,6 +590,7 @@ BEGIN
                     ;', __schema, hive.context_view_irreversible_filter( _context_name, 'hafd.operation_id_to_block_num( ho.id )' )
                     );
         END IF;
+    EXECUTE format( 'COMMENT ON VIEW %s.operations_view_extended IS %L', __schema, hive.context_view_shape( 'operations_view_extended' ) );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
 END;
 $BODY$
@@ -674,6 +700,8 @@ EXECUTE format(
         JOIN hafd.operation_types ot ON ot.id = ho.op_type_id
         ;', __schema
     );
+    -- the view reads no horizon, so it has none of the shapes of hive.context_view_shape
+    EXECUTE format( 'COMMENT ON VIEW %s.operations_view_extended IS NULL', __schema );
     PERFORM hive.adjust_view_ownership(_context_name, 'operations_view_extended');
 END;
 $BODY$

@@ -719,4 +719,57 @@ update_database
 [ "$(exec_sql "$detached_views")" = "$detached_before" ] \
     || { echo "TEST FAILED: the update changed the views of the detached context"; exit 54; }
 
+printf "\nTEST: Upgrade a database whose operations_view_extended reads the timestamp of an operation in a subquery, the shape it had when it began to read its horizon through hive.context_view_horizon. The update should recreate it in the current shape, keeping the app views built on it, and leave the other views as they are.\n"
+prepare_database
+exec_sql "DO \$\$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'shape_test_owner') THEN CREATE ROLE shape_test_owner IN ROLE hive_applications_owner_group; END IF;
+          END \$\$;
+          CREATE SCHEMA shape_app AUTHORIZATION shape_test_owner;
+          SET ROLE shape_test_owner;
+          SELECT hive.app_create_context('shape_ctx', 'shape_app');
+          DO \$\$ BEGIN
+            EXECUTE format(\$v\$CREATE OR REPLACE VIEW shape_app.operations_view_extended AS
+              SELECT t.id, hafd.operation_id_to_block_num(t.id) AS block_num, t.trx_in_block, t.op_pos, t.op_type_id, t.timestamp, t.body_value,
+                     jsonb_build_object('type', replace(ot.name, 'hive::protocol::', ''), 'value', t.body_value) AS body, t.custom_json_type_id
+              FROM (
+                SELECT 0 AS leg, ho.id, ho.trx_in_block, ho.op_pos, ho.op_type_id,
+                       (SELECT b.created_at FROM hafd.blocks b WHERE b.num = hafd.operation_id_to_block_num(ho.id)) AS timestamp,
+                       ho.body_value, ho.custom_json_type_id, NULL::BIGINT AS fork_id
+                FROM hafd.operations ho
+                UNION ALL
+                SELECT 1 AS leg, o.id, o.trx_in_block, o.op_pos, o.op_type_id,
+                       (SELECT b.created_at FROM hafd.blocks_reversible b WHERE b.num = hafd.operation_id_to_block_num(o.id) AND b.fork_id = o.fork_id) AS timestamp,
+                       o.body_value, o.custom_json_type_id, o.fork_id
+                FROM hafd.operations_reversible o
+              ) t
+              JOIN hafd.operation_types ot ON ot.id = t.op_type_id
+              WHERE %s\$v\$, hive.context_view_legs_filter('shape_ctx', 'hafd.operation_id_to_block_num( t.id )'));
+          END \$\$;
+          COMMENT ON VIEW shape_app.operations_view_extended IS NULL;
+          CREATE VIEW shape_app.operation_count AS SELECT count(*) AS operations FROM shape_app.operations_view_extended;
+          RESET ROLE;"
+reads_timestamp_in_subquery="SELECT pg_get_viewdef('shape_app.operations_view_extended'::regclass) LIKE '%SELECT b.created_at%'"
+[ "$(exec_sql "$reads_timestamp_in_subquery")" = "t" ] \
+    || { echo "TEST FAILED: could not give shape_app the operations_view_extended of the previous shape"; exit 55; }
+other_shape_views="SELECT string_agg(c.relname || ':' || pg_get_viewdef(c.oid), E'\n' ORDER BY c.relname) FROM pg_class c
+    WHERE c.relnamespace = 'shape_app'::regnamespace AND c.relkind = 'v' AND c.relname NOT IN ('operations_view_extended', 'operation_count')"
+other_shape_views_before=$(exec_sql "$other_shape_views")
+update_output=$(update_database 2>&1) || { echo "$update_output"; exit 56; }
+echo "$update_output"
+grep -q "Recreating shape_app.operations_view_extended" <<< "$update_output" \
+    || { echo "TEST FAILED: the update did not recreate shape_app.operations_view_extended"; exit 57; }
+[ "$(exec_sql "$reads_timestamp_in_subquery")" = "f" ] \
+    || { echo "TEST FAILED: shape_app.operations_view_extended reads the timestamp in a subquery after the update"; exit 58; }
+[ "$(exec_sql "SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid = 'shape_app.operations_view_extended'::regclass")" = "shape_test_owner" ] \
+    || { echo "TEST FAILED: the update changed the owner of shape_app.operations_view_extended"; exit 59; }
+check_relation_comment shape_app.operations_view_extended "$(exec_sql "SELECT hive.context_view_shape('operations_view_extended')")" || exit 60
+[ "$(exec_sql "SELECT operations FROM shape_app.operation_count")" = "0" ] \
+    || { echo "TEST FAILED: the app view built on shape_app.operations_view_extended does not work after the update"; exit 61; }
+[ "$(exec_sql "$other_shape_views")" = "$other_shape_views_before" ] \
+    || { echo "TEST FAILED: the update changed the other views of shape_ctx"; exit 62; }
+current_definition=$(exec_sql "SELECT pg_get_viewdef('shape_app.operations_view_extended'::regclass)")
+exec_sql "SELECT hive.create_operations_view_extended('shape_ctx')" > /dev/null
+[ "$(exec_sql "SELECT pg_get_viewdef('shape_app.operations_view_extended'::regclass)")" = "$current_definition" ] \
+    || { echo "TEST FAILED: shape_app.operations_view_extended does not have the definition hive.create_operations_view_extended generates"; exit 63; }
+
 echo "Succeeded"
