@@ -1,23 +1,25 @@
 #!/usr/bin/env bash
 # Puts the candidate's testnet libhfm into test-results/testnet-libhfm/, where
 # .aidev/haf-system.sh installs it from, when hfm_functional has not run in this
-# workspace (.aidev/README.md, The candidate's libhfm). Run it on the host, where
-# docker is, before a run of the `haf_system` suite on its own, whose container
-# has no network and no docker:
-#
-#   .aidev/fetch-candidate-libhfm.sh
-#   aidev test run --slot full --suite haf_system -- --rerun haf-system::<module>.py::<test>
+# workspace (.aidev/README.md, The candidate's libhfm). It is the `haf_system`
+# suite's `prepare` step (.aidev/project.yaml): aidev runs it on the host, where
+# docker is, before the suite, whose container has no network and no docker, both
+# in the `full` slot and in a run of the suite on its own. It can also be run by
+# hand the same way.
 #
 # Does nothing when test-results/testnet-libhfm/ already holds a libhfm built from
 # this tree's src/hive_fork_manager/shared_lib. Otherwise it looks in this host's
 # docker daemon, without pulling, for the per-commit source images AIDEV builds
 # from .aidev/runtime/Dockerfile.source (`<registry>/aidev-runtime/haf-source:
 # <source commit>-<recipe>`; `aidev test run --slot full` resolves the tree's own
-# before it runs a suite). Those tagged with an ancestor of HEAD are tried closest
-# first, at most HFM_FETCH_MAX_IMAGES (default 5) distinct images; the first whose
+# before it runs a suite). AIDEV_SUITE_RUNTIME_IMAGE, which aidev sets for a
+# prepare step, is the suite's own pinned image, not that source image, so it is
+# not used. Those tagged with an ancestor of HEAD are tried closest first, at most
+# HFM_FETCH_MAX_IMAGES (default 5) distinct images; the first whose
 # /home/hived/aidev/testnet-libhfm/shared_lib.sha256 is this tree's hash is
 # copied. Exit 0: the library is there. Exit 1: none was found (or it could not
-# be written), with the reason on stderr.
+# be written), with what is missing on stderr, so the suite does not run (a
+# prepare failure) rather than fail later as haf-system/libhfm-symbols.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
@@ -68,5 +70,10 @@ while read -r _ id ref; do
     say "copied the candidate's testnet libhfm from $ref into $dest"
     exit 0
 done < <(candidates)
-say "no local aidev-runtime/haf-source image of an ancestor of HEAD holds a testnet libhfm built from this tree's shared_lib ($tried tried); \`aidev test run --slot full --suite hfm_functional\` builds or reuses that image and leaves the library in $dest"
+hint="\`aidev test run --slot full --suite hfm_functional\` builds or reuses that image and leaves the library in $dest"
+if [ "$tried" -eq 0 ]; then
+    say "missing source image: this host's docker has no aidev-runtime/haf-source:<commit>-<recipe> image of HEAD ($(git rev-parse --short HEAD)) or an ancestor, so there is no testnet libhfm built from this tree's shared_lib ($sources) to hand to haf_system; $hint"
+else
+    say "missing testnet libhfm: none of the $tried closest local aidev-runtime/haf-source images of an ancestor of HEAD ($(git rev-parse --short HEAD)) holds one built from this tree's shared_lib ($sources); $hint"
+fi
 exit 1

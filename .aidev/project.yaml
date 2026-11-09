@@ -111,6 +111,10 @@ verification:
         # the haf-local-tools venv: .aidev/runtime/build.sh --system --push.
         image: "registry.gitlab.syncad.com/hive/haf/aidev-system-tests@sha256:a7594b26090434b25a15f49afb15179e308de4f51ee8720e57b653abb3c69278"
         select: [".aidev/haf-system-select.sh"]
+        # Its container has no network and no docker, so the host copies the
+        # candidate's testnet libhfm out of the tree's source image into
+        # test-results/testnet-libhfm/ first; a no-op once hfm_functional left it.
+        prepare: [".aidev/fetch-candidate-libhfm.sh"]
         artifacts: ["test-results/haf-system/"]
         timeout: 1800
         honor_quarantine: true
