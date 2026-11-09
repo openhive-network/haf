@@ -14,7 +14,9 @@
 #
 # or to the suite's own files (.aidev/haf-system-select.sh, haf-system.sh,
 # run-haf-system.sh, haf-system-tests.txt, system_test_cases.py,
-# install-candidate-hfm.sh, runtime/Dockerfile.system),
+# install-candidate-hfm.sh, runtime/Dockerfile.system) and the files that decide
+# how it gets its libhfm (fetch-candidate-libhfm.sh, run-checks.sh,
+# runtime/Dockerfile.source),
 #
 # and then only the tests that change matches: each changed test module
 # (test_*.py directly in tests/integration/system/haf/) that still exists,
@@ -31,7 +33,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 tests_dir=tests/integration/system/haf
-trigger='^(tests/integration/system/haf/|tests/integration/haf-local-tools/|tests/integration/conftest\.py$|tests/integration/pytest\.ini$|src/hive_fork_manager/hived_api\.sql$|src/sql_serializer/|\.aidev/(haf-system-select\.sh|haf-system\.sh|run-haf-system\.sh|haf-system-tests\.txt|system_test_cases\.py|install-candidate-hfm\.sh|runtime/Dockerfile\.system)$)'
+trigger='^(tests/integration/system/haf/|tests/integration/haf-local-tools/|tests/integration/conftest\.py$|tests/integration/pytest\.ini$|src/hive_fork_manager/hived_api\.sql$|src/sql_serializer/|\.aidev/(haf-system-select\.sh|haf-system\.sh|run-haf-system\.sh|haf-system-tests\.txt|system_test_cases\.py|install-candidate-hfm\.sh|fetch-candidate-libhfm\.sh|run-checks\.sh|runtime/Dockerfile\.(system|source))$)'
 module="^$tests_dir/(test_[^/]*\\.py)\$"
 dump_load_scripts='^scripts/(dump_instance|load_instance|dump_load_common)\.sh$'
 
@@ -73,7 +75,7 @@ while IFS= read -r line; do
 done <<< "$changes"
 
 if [ ${#selected[@]} -eq 0 ] && [ "$wants_core" -eq 0 ]; then
-    echo "skipped: the change touches none of tests/integration/system/haf/, tests/integration/haf-local-tools/, tests/integration/conftest.py, tests/integration/pytest.ini, src/hive_fork_manager/hived_api.sql, src/sql_serializer/, scripts/{dump_instance,load_instance,dump_load_common}.sh, the suite's own .aidev/ files"
+    echo "skipped: the change touches none of tests/integration/system/haf/, tests/integration/haf-local-tools/, tests/integration/conftest.py, tests/integration/pytest.ini, src/hive_fork_manager/hived_api.sql, src/sql_serializer/, scripts/{dump_instance,load_instance,dump_load_common}.sh, the suite's own .aidev/ files ({haf-system-select,haf-system,run-haf-system,install-candidate-hfm,fetch-candidate-libhfm,run-checks}.sh, haf-system-tests.txt, system_test_cases.py, runtime/Dockerfile.{system,source})"
     exit 77
 fi
 {
