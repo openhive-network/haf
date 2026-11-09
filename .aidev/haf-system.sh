@@ -9,7 +9,10 @@
 # 2. Installs the candidate's hive_fork_manager SQL (.aidev/install-candidate-hfm.sh)
 #    and recreates haf_block_log with it (the candidate's scripts/setup_db.sh, as
 #    the entrypoint created it): every HafNode database is a copy of
-#    haf_block_log, so this is the SQL the tests' hived connects to.
+#    haf_block_log, so this is the SQL the tests' hived connects to. It is
+#    installed with the candidate's testnet libhfm that .aidev/run-checks.sh left
+#    in test-results/testnet-libhfm/ when the slot's image was built from this
+#    tree (.aidev/runtime/Dockerfile.source), else with the image's own libhfm.
 # 3. Runs the selected tests with pytest under the testnet hived, HAF_SYSTEM_JOBS
 #    at a time, and records one case per test (.aidev/system_test_cases.py).
 #
@@ -37,7 +40,7 @@ if ! cmp -s "$venv/haf-local-tools.poetry.lock" tests/integration/haf-local-tool
 fi
 
 rc=0
-bash .aidev/install-candidate-hfm.sh "$out/setup" || rc=$?
+HFM_CANDIDATE_LIBHFM_DIR="$src/test-results/testnet-libhfm" bash .aidev/install-candidate-hfm.sh "$out/setup" || rc=$?
 [ "$rc" -ne 3 ] || fail_case libhfm-symbols "$(< "$out/setup/libhfm-symbols.log")"
 [ "$rc" -eq 0 ] || fail_case install "installing the candidate's hive_fork_manager SQL failed (exit $rc)"
 bash scripts/setup_db.sh --haf-db-admin=haf_admin --haf-db-name=haf_block_log > "$out/setup/setup_db.log" 2>&1 \

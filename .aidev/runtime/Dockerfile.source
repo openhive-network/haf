@@ -15,6 +15,13 @@
 # built, with CI's flags (scripts/build.sh: Release, Ninja, mainnet), against the
 # same Ubuntu, PostgreSQL and boost as the base. The context is the checkout,
 # whose `hive` submodule AIDEV checks out with the worktree.
+#
+# libhfm is also built for the testnet (BUILD_HIVE_TESTNET=ON) and kept in
+# /home/hived/aidev/testnet-libhfm/, with the hash of the shared_lib sources it
+# was built from: the haf_system suite runs in its own testnet image, whose libhfm
+# is not built from the candidate, so .aidev/run-checks.sh hands this one to it
+# through the workspace (.aidev/README.md, The haf-system suite). The testnet
+# image has the same Ubuntu, PostgreSQL and boost as the base.
 ARG BASE_IMAGE
 
 FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-ubuntu@sha256:febc0ed876e69369891a8d567494d78f292c7cc2ba88ae733e2e9c30b14deb79 AS builder
@@ -63,6 +70,17 @@ RUN cmake -S . -B /home/hived/build -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_H
     && cp /home/hived/build/lib/libhfm-*.so /home/hived/out/libhfm.so \
     && cp /home/hived/build/lib/libquery_supervisor.so /home/hived/out/
 
+# The same hash .aidev/install-candidate-hfm.sh takes of the checkout's shared_lib.
+RUN cmake -S . -B /home/hived/build-testnet -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_HIVE_TESTNET=ON \
+        -DENABLE_SMT_SUPPORT=OFF -DHIVE_CONVERTER_BUILD=OFF -DHIVE_LINT=OFF \
+    && hfm_target="$(ninja -C /home/hived/build-testnet -t targets all | grep -oE '^hfm-[^:]+' | sort -u)" \
+    && [ "$(wc -w <<< "$hfm_target")" -eq 1 ] \
+    && ninja -C /home/hived/build-testnet -j "$(nproc)" "$hfm_target" \
+    && mkdir -p /home/hived/out/testnet \
+    && cp /home/hived/build-testnet/lib/libhfm-*.so /home/hived/out/testnet/libhfm.so \
+    && find src/hive_fork_manager/shared_lib -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1 \
+        > /home/hived/out/testnet/shared_lib.sha256
+
 FROM ${BASE_IMAGE}
 
 RUN --mount=from=builder,source=/home/hived/out,target=/tmp/candidate-libs \
@@ -70,7 +88,9 @@ RUN --mount=from=builder,source=/home/hived/out,target=/tmp/candidate-libs \
     base_so=("$libdir"/libhfm-*.so); \
     [ "${#base_so[@]}" -eq 1 ] && [ -e "${base_so[0]}" ] || { echo "expected one libhfm-*.so in $libdir, found: ${base_so[*]}"; exit 1; }; \
     sudo -n install -m 755 -o hived -g users /tmp/candidate-libs/libhfm.so "${base_so[0]}"; \
-    sudo -n install -m 755 -o hived -g users /tmp/candidate-libs/libquery_supervisor.so "$libdir/libquery_supervisor.so"
+    sudo -n install -m 755 -o hived -g users /tmp/candidate-libs/libquery_supervisor.so "$libdir/libquery_supervisor.so"; \
+    install -d /home/hived/aidev/testnet-libhfm; \
+    install -m 644 /tmp/candidate-libs/testnet/libhfm.so /tmp/candidate-libs/testnet/shared_lib.sha256 /home/hived/aidev/testnet-libhfm/
 
 ENTRYPOINT []
 CMD ["bash"]

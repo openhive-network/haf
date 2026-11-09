@@ -164,8 +164,17 @@ CREATE POLICY dp_state_providers_registered ON hafd.state_providers_registered F
 -- 3. hive_applications_group can use every functions from hive schema except hived_api
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA hive FROM PUBLIC;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hive TO hive_applications_group;
--- the context views call it, and anyone the context's owner lets read them (an API role) needs to
-GRANT EXECUTE ON FUNCTION hive.context_view_horizon( TEXT ) TO PUBLIC;
+-- the context views call them, and anyone the context's owner lets read them (an API role) needs to
+GRANT EXECUTE ON FUNCTION
+      hive.context_view_horizon( TEXT )
+    , hive.context_view_horizon_min_block( TEXT )
+    , hive.context_view_horizon_irreversible_block( TEXT )
+    , hive.context_view_horizon_current_block_num( TEXT )
+    , hive.context_view_horizon_fork_id( TEXT )
+    , hive.context_view_horizon_reversible_range( TEXT )
+TO PUBLIC;
+-- an operator's switch, regenerating the views of every application
+REVOKE EXECUTE ON FUNCTION hive.set_context_view_horizon_mode( TEXT ) FROM hive_applications_group;
 
 GRANT EXECUTE ON FUNCTION
       hive.back_from_fork( INT )

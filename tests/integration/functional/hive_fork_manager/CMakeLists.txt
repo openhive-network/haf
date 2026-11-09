@@ -185,6 +185,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( app_api/context_views_horizon_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/context_views_join_plan_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/context_views_join_range_readme_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( app_api/context_views_horizon_freshness_test.sql )
 #ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_detached_save_block_num.sql )
 #ADD_SQL_FUNCTIONAL_TEST( app_api/app_contexts_group_detached_save_block_num.sql )
  ADD_SQL_FUNCTIONAL_TEST( app_api/app_context_is_attached.sql )

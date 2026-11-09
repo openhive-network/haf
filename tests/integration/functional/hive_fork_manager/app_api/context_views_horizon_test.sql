@@ -1,7 +1,9 @@
 -- Every view of a forking and of a non-forking context returns the rows the definitions the views had when they read
 -- their horizon from `<schema>.context_data_view` return, in every state of the horizon: a reversible range, a fork
 -- switch, no reversible range, a context behind its irreversible block. The rows are also read as a role which may
--- only read the views, and through a cached generic plan while the horizon moves.
+-- only read the views, and through a cached generic plan while the horizon moves. All of it in both modes of
+-- hive.set_context_view_horizon_mode: 'initplan', which generates the views as they were before the mode existed,
+-- and 'c'.
 
 -- The rows `_view` of `_context` must show: the definitions of the views from before they read hive.context_view_horizon.
 CREATE OR REPLACE FUNCTION expected_view_rows( _context TEXT, _view TEXT )
@@ -358,6 +360,111 @@ BEGIN
     END IF;
     GRANT USAGE ON SCHEMA a TO context_views_reader;
     GRANT SELECT ON ALL TABLES IN SCHEMA a TO context_views_reader;
+
+    CREATE TABLE default_view_definitions AS SELECT * FROM context_view_definitions();
+END;
+$BODY$
+;
+
+-- The definitions of the views of both contexts.
+CREATE OR REPLACE FUNCTION context_view_definitions()
+    RETURNS TABLE( view_name TEXT, definition TEXT )
+    LANGUAGE sql
+    STABLE
+AS
+$BODY$
+    SELECT format( '%I.%I', n.nspname, c.relname ), pg_get_viewdef( c.oid )
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname IN ( 'a', 'b' ) AND c.relname IN ( SELECT * FROM context_view_names() )
+    ORDER BY 1;
+$BODY$
+;
+
+-- Asserts that the views of both contexts are defined as when the contexts were created, in the default mode.
+CREATE OR REPLACE FUNCTION assert_default_view_definitions( _state TEXT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __differing TEXT;
+BEGIN
+    SELECT string_agg( COALESCE( d.view_name, c.view_name ), ', ' ) INTO __differing
+    FROM default_view_definitions d
+    FULL JOIN context_view_definitions() c ON c.view_name = d.view_name
+    WHERE c.definition IS DISTINCT FROM d.definition;
+    ASSERT __differing IS NULL, format( 'views defined otherwise than by default %s: %s', _state, __differing );
+END;
+$BODY$
+;
+
+-- Asserts the rows of the views of both contexts in every state of the horizon, the views generated in mode _mode.
+CREATE OR REPLACE FUNCTION assert_views_in_every_horizon_state( _mode TEXT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __in TEXT := format( ' (%s mode)', _mode );
+    __rows BIGINT;
+    __generic_before BIGINT;
+    __generic_after BIGINT;
+BEGIN
+    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8 WHERE name = 'context';
+    __rows := assert_context_views( 'context', 'fork 2 is visible up to block 8' || __in );
+    PERFORM assert_operations_view_extended_plan( 'a', TRUE, 'fork 2 is visible up to block 8' || __in );
+    -- blocks 1-4 irreversible, 5-8 reversible; block 7 of fork 2, block 8 of fork 2 (fork 3 is not seen yet)
+    ASSERT ( SELECT array_agg( encode( hash, 'hex' ) ORDER BY num ) FROM a.blocks_view )
+        = ARRAY[ 'badd10', 'badd20', 'badd30', 'badd40', 'badd50', 'badd60', 'badd72', 'badd82' ], 'blocks_view does not show fork 2 up to block 8' || __in;
+    ASSERT ( SELECT array_agg( t.timestamp ORDER BY t.id ) FROM a.operations_view_extended t WHERE t.block_num = 7 )
+        = ARRAY[ '2016-06-22 19:10:27-07'::timestamp, '2016-06-22 19:10:27-07'::timestamp ], 'operations of block 7 do not carry the timestamp of fork 2' || __in;
+
+    UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 4, current_block_num = 10 WHERE name = 'context';
+    ASSERT assert_context_views( 'context', 'the context switched to fork 3' || __in ) > __rows, 'the switch to fork 3 shows no new rows' || __in;
+    PERFORM assert_operations_view_extended_plan( 'a', TRUE, 'the context switched to fork 3' || __in );
+    ASSERT ( SELECT array_agg( encode( hash, 'hex' ) ORDER BY num ) FROM a.blocks_view WHERE num > 6 )
+        = ARRAY[ 'badd72', 'badd83', 'badd93', 'badd13' ], 'blocks_view does not show fork 3 after the switch' || __in;
+
+    UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 6, current_block_num = 10 WHERE name = 'context';
+    PERFORM assert_context_views( 'context', 'blocks 5 and 6 are irreversible, but not in hafd.blocks' || __in );
+    PERFORM assert_operations_view_extended_plan( 'a', TRUE, 'blocks 5 and 6 are irreversible, but not in hafd.blocks' || __in );
+
+    UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 5, current_block_num = 5 WHERE name = 'context';
+    PERFORM assert_context_views( 'context', 'the context has no reversible range' || __in );
+    PERFORM assert_operations_view_extended_plan( 'a', FALSE, 'the context has no reversible range' || __in );
+    ASSERT ( SELECT max( num ) FROM a.blocks_view ) = 5, 'blocks_view shows reversible blocks without a reversible range' || __in;
+
+    UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 5, current_block_num = 3 WHERE name = 'context';
+    PERFORM assert_context_views( 'context', 'the context is behind its irreversible block' || __in );
+    PERFORM assert_operations_view_extended_plan( 'a', FALSE, 'the context is behind its irreversible block' || __in );
+    ASSERT ( SELECT max( num ) FROM a.blocks_view ) = 3, 'blocks_view shows blocks after the current block of the context' || __in;
+
+    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8 WHERE name = 'context_nf';
+    PERFORM assert_context_views( 'context_nf', 'a non-forking context has blocks after its irreversible block' || __in );
+    ASSERT ( SELECT max( num ) FROM b.blocks_view ) = 4, 'a non-forking blocks_view shows reversible blocks' || __in;
+
+    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 5, current_block_num = 3 WHERE name = 'context_nf';
+    PERFORM assert_context_views( 'context_nf', 'a non-forking context is behind its irreversible block' || __in );
+
+    -- a role which may only read the views, as an API's
+    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8 WHERE name = 'context';
+    SET ROLE context_views_reader;
+    SELECT count(*) INTO __rows FROM a.blocks_view;
+    RESET ROLE;
+    ASSERT __rows = 8, format( 'a role reading only the views sees %s blocks, not 8%s', __rows, __in );
+
+    -- a cached generic plan reads the horizon when it runs, not when it was planned
+    SET LOCAL plan_cache_mode = force_generic_plan;
+    EXECUTE 'PREPARE context_blocks AS SELECT count(*) FROM a.blocks_view';
+    EXECUTE 'EXECUTE context_blocks' INTO __generic_before;
+    UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 4, current_block_num = 10 WHERE name = 'context';
+    EXECUTE 'EXECUTE context_blocks' INTO __generic_after;
+    EXECUTE 'DEALLOCATE context_blocks';
+    RESET plan_cache_mode;
+    ASSERT ( __generic_before, __generic_after ) = ( 8::BIGINT, 10::BIGINT ), format( 'a generic plan saw %s and %s blocks, not 8 and 10%s', __generic_before, __generic_after, __in );
 END;
 $BODY$
 ;
@@ -367,61 +474,26 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 DECLARE
-    __rows BIGINT;
-    __generic_before BIGINT;
-    __generic_after BIGINT;
+    __c_definition RECORD;
 BEGIN
-    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8 WHERE name = 'context';
-    __rows := assert_context_views( 'context', 'fork 2 is visible up to block 8' );
-    PERFORM assert_operations_view_extended_plan( 'a', TRUE, 'fork 2 is visible up to block 8' );
-    -- blocks 1-4 irreversible, 5-8 reversible; block 7 of fork 2, block 8 of fork 2 (fork 3 is not seen yet)
-    ASSERT ( SELECT array_agg( encode( hash, 'hex' ) ORDER BY num ) FROM a.blocks_view )
-        = ARRAY[ 'badd10', 'badd20', 'badd30', 'badd40', 'badd50', 'badd60', 'badd72', 'badd82' ], 'blocks_view does not show fork 2 up to block 8';
-    ASSERT ( SELECT array_agg( t.timestamp ORDER BY t.id ) FROM a.operations_view_extended t WHERE t.block_num = 7 )
-        = ARRAY[ '2016-06-22 19:10:27-07'::timestamp, '2016-06-22 19:10:27-07'::timestamp ], 'operations of block 7 do not carry the timestamp of fork 2';
+    ASSERT hive.context_view_horizon_mode() = 'initplan', format( 'the default mode is %s, not initplan', hive.context_view_horizon_mode() );
+    PERFORM hive.set_context_view_horizon_mode( 'initplan' );
+    PERFORM assert_default_view_definitions( 'after switching to initplan mode' );
+    PERFORM assert_views_in_every_horizon_state( 'initplan' );
 
-    UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 4, current_block_num = 10 WHERE name = 'context';
-    ASSERT assert_context_views( 'context', 'the context switched to fork 3' ) > __rows, 'the switch to fork 3 shows no new rows';
-    PERFORM assert_operations_view_extended_plan( 'a', TRUE, 'the context switched to fork 3' );
-    ASSERT ( SELECT array_agg( encode( hash, 'hex' ) ORDER BY num ) FROM a.blocks_view WHERE num > 6 )
-        = ARRAY[ 'badd72', 'badd83', 'badd93', 'badd13' ], 'blocks_view does not show fork 3 after the switch';
+    PERFORM hive.set_context_view_horizon_mode( 'c' );
+    ASSERT hive.context_view_horizon_mode() = 'c', 'the mode is not c after switching to it';
+    -- the views call the functions of libhfm themselves: no InitPlan, no ANY( ARRAY[ ... ] )
+    FOR __c_definition IN SELECT * FROM context_view_definitions() LOOP
+        ASSERT __c_definition.definition LIKE '%hive.context_view_horizon_min_block(%'
+            AND __c_definition.definition NOT LIKE '%hive.context_view_horizon(%'
+            AND __c_definition.definition NOT LIKE '%ANY (ARRAY[%'
+            , format( '%s does not read the horizon through the functions of libhfm in c mode: %s', __c_definition.view_name, __c_definition.definition );
+    END LOOP;
+    PERFORM assert_views_in_every_horizon_state( 'c' );
 
-    UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 6, current_block_num = 10 WHERE name = 'context';
-    PERFORM assert_context_views( 'context', 'blocks 5 and 6 are irreversible, but not in hafd.blocks' );
-    PERFORM assert_operations_view_extended_plan( 'a', TRUE, 'blocks 5 and 6 are irreversible, but not in hafd.blocks' );
-
-    UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 5, current_block_num = 5 WHERE name = 'context';
-    PERFORM assert_context_views( 'context', 'the context has no reversible range' );
-    PERFORM assert_operations_view_extended_plan( 'a', FALSE, 'the context has no reversible range' );
-    ASSERT ( SELECT max( num ) FROM a.blocks_view ) = 5, 'blocks_view shows reversible blocks without a reversible range';
-
-    UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 5, current_block_num = 3 WHERE name = 'context';
-    PERFORM assert_context_views( 'context', 'the context is behind its irreversible block' );
-    PERFORM assert_operations_view_extended_plan( 'a', FALSE, 'the context is behind its irreversible block' );
-    ASSERT ( SELECT max( num ) FROM a.blocks_view ) = 3, 'blocks_view shows blocks after the current block of the context';
-
-    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8 WHERE name = 'context_nf';
-    PERFORM assert_context_views( 'context_nf', 'a non-forking context has blocks after its irreversible block' );
-    ASSERT ( SELECT max( num ) FROM b.blocks_view ) = 4, 'a non-forking blocks_view shows reversible blocks';
-
-    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 5, current_block_num = 3 WHERE name = 'context_nf';
-    PERFORM assert_context_views( 'context_nf', 'a non-forking context is behind its irreversible block' );
-
-    -- a role which may only read the views, as an API's
-    UPDATE hafd.contexts SET fork_id = 2, irreversible_block = 4, current_block_num = 8 WHERE name = 'context';
-    SET ROLE context_views_reader;
-    SELECT count(*) INTO __rows FROM a.blocks_view;
-    RESET ROLE;
-    ASSERT __rows = 8, format( 'a role reading only the views sees %s blocks, not 8', __rows );
-
-    -- a cached generic plan reads the horizon when it runs, not when it was planned
-    SET LOCAL plan_cache_mode = force_generic_plan;
-    EXECUTE 'PREPARE context_blocks AS SELECT count(*) FROM a.blocks_view';
-    EXECUTE 'EXECUTE context_blocks' INTO __generic_before;
-    UPDATE hafd.contexts SET fork_id = 3, irreversible_block = 4, current_block_num = 10 WHERE name = 'context';
-    EXECUTE 'EXECUTE context_blocks' INTO __generic_after;
-    EXECUTE 'DEALLOCATE context_blocks';
-    ASSERT ( __generic_before, __generic_after ) = ( 8::BIGINT, 10::BIGINT ), format( 'a generic plan saw %s and %s blocks, not 8 and 10', __generic_before, __generic_after );
+    PERFORM hive.set_context_view_horizon_mode( 'initplan' );
+    PERFORM assert_default_view_definitions( 'after switching back from c mode' );
 END;
 $BODY$
 ;

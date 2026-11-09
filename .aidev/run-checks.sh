@@ -150,6 +150,17 @@ rerun_unmatched() {
     printf 'case\trerun-ids\tfail\t0\tre-run ids that name no functional test: %s\n' "${missing[*]}" >> "$cases"
 }
 
+# An image built by .aidev/runtime/Dockerfile.source also carries libhfm built for the testnet from these
+# sources. The haf_system suite runs in its own testnet image, whose libhfm was not built from them, so it is
+# handed over through the workspace (.aidev/haf-system.sh); the `full` slot runs hfm_functional before haf_system.
+testnet_libhfm=/home/hived/aidev/testnet-libhfm
+if [ -f "$testnet_libhfm/libhfm.so" ]; then
+    rm -rf test-results/testnet-libhfm
+    mkdir -p test-results/testnet-libhfm \
+        && cp "$testnet_libhfm/libhfm.so" "$testnet_libhfm/shared_lib.sha256" test-results/testnet-libhfm/ \
+        || echo "could not hand the candidate's testnet libhfm to the haf_system suite: it will run the image's own" >&2
+fi
+
 declare -A step_filter=(
     [hfm-smoke]='^hive_fork_manager/(context_rewind|app_api)/'
     [hfm-functional]='.'
