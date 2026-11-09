@@ -136,13 +136,28 @@ fetch or build the library itself. Two things put it there:
   the `hfm_functional` suite, which runs first, hands it over;
 - `.aidev/fetch-candidate-libhfm.sh`, the suite's `prepare` step, which aidev runs
   on the host before the suite both in the `full` slot and in a run of the suite on
-  its own (`--suite haf_system`), copies it out of a local
-  `aidev-runtime/haf-source:<commit>-<recipe>` image of HEAD's closest ancestor
-  whose hash is the tree's (without pulling; `aidev test run --slot full …`
-  resolves the tree's own before it runs anything). When `hfm_functional` already
-  left it, the step does nothing. When no such image is on the host, the step fails
-  naming the missing source image, and the suite does not run: a `prepare_failure`
-  no-verdict, not a red `libhfm-symbols`.
+  its own (`--suite haf_system`). When `hfm_functional` already left the library,
+  it does nothing. Otherwise it covers both runtime-image cases:
+  - **aidev built the image**: it copies the library out of a local
+    `aidev-runtime/haf-source:<commit>-<recipe>` image of HEAD's closest ancestor
+    whose hash is the tree's, without pulling.
+  - **CI built it** (aidev runs `hive/haf:<commit[:8]>` and builds no source image,
+    so no host need hold one): it takes the `libhfm-*.so` of the testnet image CI
+    builds alongside it, `hive/haf/testnet:<commit[:8]>`, pulling it when the host
+    lacks it. CI's image carries no source hash, so the commits tried are
+    HEAD's commits that changed CI's source paths and whose
+    `src/hive_fork_manager/shared_lib` git tree is HEAD's, newest first; the image's
+    `org.opencontainers.image.revision` commit, when the checkout has it, must have
+    that tree too; and the working tree's `shared_lib` must be HEAD's. The pull is
+    bounded (`HFM_FETCH_PULL_TIMEOUT`, 600 s). It is small in practice, since the
+    testnet image shares most layers with the `hive/haf` image aidev already
+    pulled to run the slot: for `testnet:94b77653` (482 MB compressed), 1 s on
+    steem-18 and 71 s on steem-11, which held an older testnet image's layers.
+
+  `test-results/testnet-libhfm/origin` names the image the library came from. When
+  neither gives a library from the tree's `shared_lib`, the step fails naming what
+  it tried and why each was refused, and the suite does not run: a
+  `prepare_failure` no-verdict, not a red `libhfm-symbols`.
 
 `haf-system.sh` installs the candidate's SQL with it (`HFM_CANDIDATE_LIBHFM_DIR`)
 only when its source hash is the tree's. Otherwise (no copy, as when the step was not
@@ -158,8 +173,11 @@ candidate's testnet libhfm is therefore built by `.aidev/runtime/Dockerfile.sour
 and handed over through `test-results/testnet-libhfm/`, guarded by the hash of the
 `shared_lib` sources so a library from other sources is never installed. The suite
 declares the copy as its host-side `prepare` step, so a run of `haf_system` on its
-own gets the library with no manual step, and a host without the source image says
-so before the suite starts instead of failing it on symbols. `libhfm-symbols` is
+own gets the library with no manual step. When CI built the runtime image, no host
+holds an aidev source image of the commit, so the step takes CI's testnet build of
+the same `shared_lib` tree instead (compared as git trees, since CI's image has no
+source hash), and the gate does not depend on which host it lands on. A tree with no
+such library says so before the suite starts instead of failing it on symbols. `libhfm-symbols` is
 never quarantined: pardoning it would hide that the candidate's SQL was tested
 against a library that lacks its functions.
 
