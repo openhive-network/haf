@@ -590,9 +590,9 @@ update_database
     || { echo "TEST FAILED: the update did not add hafd.applications.health_function as NULL"; exit 46; }
 [ "$(exec_sql "SELECT application || '>' || depends_on FROM hafd.application_dependencies")" = "registry_update_dep>registry_update_app" ] \
     || { echo "TEST FAILED: the update lost the dependency between the registered applications"; exit 47; }
-exec_sql "SELECT hive.app_register('registry_update_app', ARRAY['registry_update_ctx'], 'registry_update_app.process_blocks', _health_function => 'registry_update_app.health')"
+exec_sql "SELECT hive.app_set_health_function('registry_update_app', 'registry_update_app.health')"
 [ "$(exec_sql "SELECT health_function FROM hafd.applications WHERE name = 'registry_update_app'")" = "registry_update_app.health" ] \
-    || { echo "TEST FAILED: hive.app_register did not record the health function on the updated database"; exit 48; }
+    || { echo "TEST FAILED: hive.app_set_health_function did not record the health function on the updated database"; exit 48; }
 
 printf "\nTEST: Upgrade a database that already has hafd.custom_json_type_index_requests. The table and its requests should be left as they are.\n"
 prepare_database

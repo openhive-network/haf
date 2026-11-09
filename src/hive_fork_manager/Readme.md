@@ -109,8 +109,10 @@ SELECT hive.app_register( 'hivesense', ARRAY[ 'hivesense_app' ], _process_proced
 SELECT hive.app_add_dependency( 'hivesense', 'hivemind' );
 ```
 
-* `hive.app_register( _name, _contexts, _process_procedure, _completed_block_function, _health_function )` registers (or re-registers, which is
-  safe to run from install scripts) an application owned by the caller. Contexts may belong to a
+* `hive.app_register( _name, _contexts, _process_procedure, _completed_block_function )` registers (or re-registers, which is
+  safe to run from install scripts) an application owned by the caller. Applications may detect the
+  registry with `to_regprocedure( 'hive.app_register(text, hive.contexts_group, text, text)' )`: this
+  signature is kept as it is, and further properties are set by separate functions. Contexts may belong to a
   single application. An application whose contexts are all already part of another application
   (one embedded in it, like the balance tracker in haf_block_explorer, whose loop drives both) is
   not registered: the call is a no-op, so the embedded application's install script can be re-run
@@ -146,14 +148,17 @@ SELECT hive.app_add_dependency( 'hivesense', 'hivemind' );
   the session, like the application's lock, so an installer proceeding without the application's
   lock still keeps others out. A second installer finding it held returns FALSE at once, with a
   NOTICE naming the installer that holds it.
-* `_health_function => '<schema>.<function>'` names a function taking no arguments and returning
+* `hive.app_set_health_function( _name, _health_function )` sets (NULL clears) the application's
+  health function, after `hive.app_register`, which clears it on re-registration. It requires the
+  same authority as re-registering the application. `_health_function => '<schema>.<function>'`
+  names a function taking no arguments and returning
   TEXT: NULL while the installation is healthy, otherwise the reason it is broken, which the lock
   helpers' errors quote. Use it when the procedures above do not tell, e.g. for an application
   that registers neither. It runs on every lock acquisition, so keep it cheap and read-only, and
   make it `SECURITY DEFINER` so that a dependent's block-processor can run it without access to the
   application's tables (it still needs `USAGE` on its schema and `EXECUTE` on it; a caller lacking
-  either treats the application as healthy). `hive.app_register` refuses a function that does not
-  exist.
+  either treats the application as healthy). `hive.app_set_health_function` refuses a function that
+  does not exist.
 * `hive.app_pause( _name )` / `hive.app_resume( _name )` stop and restart block delivery for an
   application without stopping its process: while paused, `hive.app_next_iteration` returns NULL.
   `haf_maintainer` may pause or resume any application; owners may pause their own.

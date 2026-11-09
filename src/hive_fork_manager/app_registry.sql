@@ -7,9 +7,11 @@
 -- their contexts' current_block_num (e.g. a massive sync that commits the position
 -- before the batch's data), '<schema>.<function>' returning INT; see
 -- hive.app_dependencies_block_limit.
--- _health_function: '<schema>.<function>' returning TEXT, NULL when the installation
--- is healthy, otherwise why it is broken; see hive._app_broken_reason.
-CREATE OR REPLACE FUNCTION hive.app_register( _name TEXT, _contexts hive.contexts_group, _process_procedure TEXT = NULL, _completed_block_function TEXT = NULL, _health_function TEXT = NULL )
+-- Re-registering clears the health function; set it again with
+-- hive.app_set_health_function.
+-- Applications probe for this exact signature with to_regprocedure, so it must not
+-- gain parameters: set further properties through separate functions.
+CREATE OR REPLACE FUNCTION hive.app_register( _name TEXT, _contexts hive.contexts_group, _process_procedure TEXT = NULL, _completed_block_function TEXT = NULL )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -62,15 +64,46 @@ BEGIN
         RAISE EXCEPTION 'Cannot register application %: function %() does not exist', _name, _completed_block_function;
     END IF;
 
-    IF _health_function IS NOT NULL AND to_regprocedure( _health_function || '()' ) IS NULL THEN
-        RAISE EXCEPTION 'Cannot register application %: function %() does not exist', _name, _health_function;
-    END IF;
-
     INSERT INTO hafd.applications( name, contexts, process_procedure, completed_block_function, health_function, owner )
-    VALUES ( _name, _contexts::TEXT[], _process_procedure, _completed_block_function, _health_function, current_user )
+    VALUES ( _name, _contexts::TEXT[], _process_procedure, _completed_block_function, NULL, current_user )
     ON CONFLICT ( name ) DO UPDATE
     SET contexts = EXCLUDED.contexts, process_procedure = EXCLUDED.process_procedure, completed_block_function = EXCLUDED.completed_block_function,
-        health_function = EXCLUDED.health_function;
+        health_function = NULL;
+END;
+$BODY$
+;
+
+-- Sets (NULL clears) the health function of a registered application:
+-- '<schema>.<function>' returning TEXT, NULL when the installation is healthy,
+-- otherwise why it is broken; see hive._app_broken_reason. Requires the same
+-- authority as re-registering the application: a role that can impersonate its
+-- owner, or one that bypasses row level security.
+CREATE OR REPLACE FUNCTION hive.app_set_health_function( _name TEXT, _health_function TEXT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __owner TEXT;
+BEGIN
+    PERFORM pg_advisory_xact_lock( hashtext('hive_catalog_modification') );
+
+    SELECT a.owner INTO __owner FROM hafd.applications a WHERE a.name = _name;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Application % is not registered', _name;
+    END IF;
+
+    IF NOT hive.can_impersonate( current_user, __owner )
+       AND NOT EXISTS ( SELECT 1 FROM pg_roles r WHERE r.rolname = current_user AND ( r.rolsuper OR r.rolbypassrls ) ) THEN
+        RAISE EXCEPTION 'Cannot set the health function of application %: it is owned by %, which role % cannot impersonate', _name, __owner, current_user;
+    END IF;
+
+    IF _health_function IS NOT NULL AND to_regprocedure( _health_function || '()' ) IS NULL THEN
+        RAISE EXCEPTION 'Cannot set the health function of application %: function %() does not exist', _name, _health_function;
+    END IF;
+
+    UPDATE hafd.applications SET health_function = _health_function WHERE name = _name;
 END;
 $BODY$
 ;
