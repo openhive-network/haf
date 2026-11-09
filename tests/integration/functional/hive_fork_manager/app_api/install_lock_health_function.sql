@@ -27,7 +27,8 @@ BEGIN
     $$;
     GRANT USAGE ON SCHEMA A TO alice;
     PERFORM hive.app_create_context( _name => 'checked_ctx', _schema => 'a', _is_forking => FALSE );
-    PERFORM hive.app_register( 'checked_app', ARRAY[ 'checked_ctx' ], _health_function => 'a.health' );
+    PERFORM hive.app_register( 'checked_app', ARRAY[ 'checked_ctx' ] );
+    PERFORM hive.app_set_health_function( 'checked_app', 'a.health' );
 END;
 $BODY$
 ;
