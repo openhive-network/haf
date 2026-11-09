@@ -164,6 +164,8 @@ CREATE POLICY dp_state_providers_registered ON hafd.state_providers_registered F
 -- 3. hive_applications_group can use every functions from hive schema except hived_api
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA hive FROM PUBLIC;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA hive TO hive_applications_group;
+-- the context views call it, and anyone the context's owner lets read them (an API role) needs to
+GRANT EXECUTE ON FUNCTION hive.context_view_horizon( TEXT ) TO PUBLIC;
 
 GRANT EXECUTE ON FUNCTION
       hive.back_from_fork( INT )
