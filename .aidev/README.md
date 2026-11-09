@@ -147,8 +147,18 @@ which carries no testnet libhfm, or a run of the suite alone that nothing prepar
 or a copy left from other sources) the image's own libhfm is used, and a C function
 the candidate's SQL needs that it lacks is `haf-system/libhfm-symbols`, whose
 message says why the candidate's library was not used and how to get it.
-`libhfm-symbols` is never quarantined. The decision is
-`docs/decisions/0000-hand-the-candidate-s-testnet-libhfm-to-the-haf-system-suite.md`.
+`libhfm-symbols` is never quarantined.
+
+Why it is done this way: the suite's image is a protected pin that declares no
+`image_inputs`, so a change cannot re-pin it in its own gate, and a C function the
+candidate adds would otherwise fail the suite until a person re-pinned it. The
+candidate's testnet libhfm is therefore built by `.aidev/runtime/Dockerfile.source`
+and handed over through `test-results/testnet-libhfm/`, guarded by the hash of the
+`shared_lib` sources so a library from other sources is never installed. A run of
+`haf_system` on its own needs `.aidev/fetch-candidate-libhfm.sh` first, until
+aidev#18303 gives a suite a host-side prepare step of its own. `libhfm-symbols` is
+never quarantined: pardoning it would hide that the candidate's SQL was tested
+against a library that lacks its functions.
 
 **Reports.** `test-results/haf-system/junit.xml`: one case per test, its id
 `haf-system::<module>.py::<test>[<param>]` (pytest's node id under the suite's name),
