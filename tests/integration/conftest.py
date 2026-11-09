@@ -1,7 +1,7 @@
 import os
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Tuple, Iterable
+from typing import Any, Callable, Iterator, Tuple, Iterable
 from random import randbytes
 from functools import partial
 
@@ -19,6 +19,8 @@ import test_tools as tt
 
 from test_tools import complex_networks as ttcn
 from haf_local_tools.haf_node.monolithic_workaround import apply_block_log_type_to_monolithic_workaround
+
+pytest_plugins = ["pytester"]
 
 class SQLNodesPreparer(ttcn.NodesPreparer):
     def __init__(self, database, start_block=1) -> None:
@@ -65,16 +67,18 @@ class SQLNodesPreparer(ttcn.NodesPreparer):
 
 from test_tools.__private.process.node_config import NodeConfig
 
-# Track which NodeConfig instances need psql-lite-mode appended to config.ini.
+# The NodeConfig objects whose config.ini gets psql-lite-mode appended, registered by
+# LiteModeSQLNodesPreparer and cleared by the lite_mode_configs fixture's teardown.
 # msgspec.Struct blocks all non-field attribute assignment on instances (even via
-# object.__setattr__), so we patch NodeConfig.save at the CLASS level and use this
-# set of instance ids to selectively append the flag.
-_lite_mode_config_ids: set = set()
+# object.__setattr__), so we patch NodeConfig.save at the CLASS level and match the
+# registered objects by identity. The list holds them alive, so no other config can
+# take over a registered object's id() while it is registered.
+_lite_mode_configs: list[NodeConfig] = []
 _original_node_config_save = NodeConfig.save
 
 def _save_with_lite_mode(self, directory) -> None:
     _original_node_config_save(self, directory)
-    if id(self) in _lite_mode_config_ids:
+    if any(config is self for config in _lite_mode_configs):
         config_path = Path(directory) / "config.ini"
         if config_path.exists():
             with open(config_path, "a") as f:
@@ -83,12 +87,26 @@ def _save_with_lite_mode(self, directory) -> None:
 NodeConfig.save = _save_with_lite_mode
 
 
+@pytest.fixture()
+def lite_mode_configs() -> Iterator[list[NodeConfig]]:
+    """
+    Returns the list of NodeConfig objects whose saved config.ini enables psql-lite-mode; it is emptied when the test ends
+    """
+    try:
+        yield _lite_mode_configs
+    finally:
+        _lite_mode_configs.clear()
+
+
 class LiteModeSQLNodesPreparer(SQLNodesPreparer):
     """SQLNodesPreparer that enables --psql-lite-mode on the hived node."""
+    def __init__(self, database: Callable[[str], Any], lite_mode_configs: list[NodeConfig]) -> None:
+        super().__init__(database)
+        self.lite_mode_configs = lite_mode_configs
+
     def prepare(self, builder: ttcn.NetworksBuilder) -> None:
         super().prepare(builder)
-        for node in builder.prepare_nodes:
-            _lite_mode_config_ids.add(id(node.config))
+        self.lite_mode_configs.extend(node.config for node in builder.prepare_nodes)
 
 
 def prepare_network_with_1_session(database, architecture: ttcn.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[ttcn.NetworksBuilder, Any]:
@@ -96,8 +114,8 @@ def prepare_network_with_1_session(database, architecture: ttcn.NetworksArchitec
     return ttcn.run_whole_network(architecture, block_log_directory_name, time_offsets, preparer), preparer.sessions[0]
 
 
-def prepare_network_with_1_session_lite_mode(database, architecture: ttcn.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[ttcn.NetworksBuilder, Any]:
-    preparer = LiteModeSQLNodesPreparer(database)
+def prepare_network_with_1_session_lite_mode(database: Callable[[str], Any], lite_mode_configs: list[NodeConfig], architecture: ttcn.NetworksArchitecture, block_log_directory_name: Path | None = None, time_offsets: Iterable[int] | None = None) -> Tuple[ttcn.NetworksBuilder, Any]:
+    preparer = LiteModeSQLNodesPreparer(database, lite_mode_configs)
     return ttcn.run_whole_network(architecture, block_log_directory_name, time_offsets, preparer), preparer.sessions[0]
 
 def prepare_network_with_1_session_from_115(database, architecture: ttcn.NetworksArchitecture, block_log_directory_name: Path = None, time_offsets: Iterable[int] = None) -> Tuple[ttcn.NetworksBuilder, Any]:
@@ -154,7 +172,7 @@ def prepared_networks_and_database_12_8(database) -> Tuple[ttcn.NetworksBuilder,
     yield prepare_network_with_1_session(database, architecture, ttcn.create_block_log_directory_name('block_log_12_8'), None)
 
 @pytest.fixture()
-def prepared_networks_and_database_12_8_lite_mode(database) -> Tuple[ttcn.NetworksBuilder, Any]:
+def prepared_networks_and_database_12_8_lite_mode(database: Callable[[str], Any], lite_mode_configs: list[NodeConfig]) -> Iterator[Tuple[ttcn.NetworksBuilder, Any]]:
     config = {
         "networks": [
                         {
@@ -169,7 +187,7 @@ def prepared_networks_and_database_12_8_lite_mode(database) -> Tuple[ttcn.Networ
     }
     architecture = ttcn.NetworksArchitecture()
     architecture.load(config)
-    yield prepare_network_with_1_session_lite_mode(database, architecture, ttcn.create_block_log_directory_name('block_log_12_8'), None)
+    yield prepare_network_with_1_session_lite_mode(database, lite_mode_configs, architecture, ttcn.create_block_log_directory_name('block_log_12_8'), None)
 
 @pytest.fixture()
 def prepared_networks_and_database_12_8_from_115(database) -> Tuple[ttcn.NetworksBuilder, Any]:
