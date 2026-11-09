@@ -41,6 +41,31 @@ Hive block data is stored in two separated, but similar tables: irreversible and
 A HAF app groups its tables into a named "context". A context name can only be composed of alphanumerical characters and underscores. An app's context holds information about its processed events, blocks, and the fork which is now being processed by the app. These pieces of information
 are enough to automatically create views which combine irreversible and reversible block data seamlessly for queries by the app. The auto-constructed view names use the following template: '{context_schema}.{blocks|transactions|multi_signatures|operations}_view'.
 
+### Joining a context's views: where to put the block range
+PostgreSQL does not carry a predicate across a join's equality: with `JOIN app.blocks_view bv ON bv.num = ov.block_num`, a `WHERE bv.num BETWEEN ...` restricts only `blocks_view`, never the operations view. Which view carries the block range therefore decides the plan:
+- Always put the block-range predicate on the operations side of the join: `block_num` of `operations_view` or `operations_view_extended`. For a join over a range of blocks, put the range on each joined view.
+- :warning: `operations_view_extended` of a forking context joins the block of each operation inside the view, so a join cannot probe it by index from `blocks_view`. **A range on `blocks_view` alone scans every operation**: on a mainnet database such a join takes over 30 s for 11 blocks. With the range on the operations side, or on both views, it takes about 1 ms per block (~150 ms for 10k blocks).
+- `operations_view` joined to `blocks_view` over a range is fastest with the range on both views: 85 ms for 10k blocks, against 350 ms with the range on `operations_view` only.
+
+For a context with the schema `app`:
+```sql
+-- a single block
+SELECT ov.id, ov.op_type_id, ov.body, bv.created_at
+FROM app.operations_view_extended ov
+JOIN app.blocks_view bv ON bv.num = ov.block_num
+WHERE ov.block_num = 5000;
+
+-- a range of blocks: the range on each joined view
+SELECT ov.id, ov.op_type_id, ov.body, bv.created_at
+FROM app.operations_view_extended ov
+JOIN app.blocks_view bv ON bv.num = ov.block_num
+WHERE ov.block_num BETWEEN 4996 AND 5005
+  AND bv.num BETWEEN 4996 AND 5005;
+```
+The same applies to `operations_view` in place of `operations_view_extended`.
+
+This warning is not repeated in the `COMMENT ON VIEW` of `operations_view_extended`. That comment is the shape marker returned by `hive.context_view_shape`, which the extension update compares with each context view's comment to find views of an outdated shape and recreate them. Any change to the comment's text is therefore a change of the marker, and recreates the view in every existing context at the next update.
+
 ### Overview of the fork manager and its interactions with hived and HAF apps
 ![alt text](./doc/evq_c3.png )
 
