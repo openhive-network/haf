@@ -106,32 +106,82 @@ $BODY$
 ;
 
 /*
-A field of hive.context_view_horizon as an uncorrelated subquery, which the planner runs once per query as an InitPlan.
-Calling the function directly in a view would run it again on every rescan of a nested loop's inner index scan.
+The fields of hive.context_view_horizon, one function each, in libhfm: a field is read from a copy of the context's
+row cached per snapshot (same transaction, subtransaction and visible transactions), so a view may call it directly,
+even on every probe of a nested loop, and the planner evaluates it when estimating a view's rows. Not SECURITY
+DEFINER, which would switch the user on every call: only the read of a row not cached yet runs as the extension's
+owner, so a reader of the views needs no access to hafd.contexts.
+*/
+CREATE OR REPLACE FUNCTION hive.context_view_horizon_min_block( _context TEXT )
+    RETURNS INTEGER
+    AS 'MODULE_PATHNAME', 'context_view_horizon_min_block' LANGUAGE C STABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION hive.context_view_horizon_irreversible_block( _context TEXT )
+    RETURNS INTEGER
+    AS 'MODULE_PATHNAME', 'context_view_horizon_irreversible_block' LANGUAGE C STABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION hive.context_view_horizon_current_block_num( _context TEXT )
+    RETURNS INTEGER
+    AS 'MODULE_PATHNAME', 'context_view_horizon_current_block_num' LANGUAGE C STABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION hive.context_view_horizon_fork_id( _context TEXT )
+    RETURNS BIGINT
+    AS 'MODULE_PATHNAME', 'context_view_horizon_fork_id' LANGUAGE C STABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION hive.context_view_horizon_reversible_range( _context TEXT )
+    RETURNS BOOLEAN
+    AS 'MODULE_PATHNAME', 'context_view_horizon_reversible_range' LANGUAGE C STABLE STRICT PARALLEL SAFE;
+
+/*
+How the generated views of a context read its horizon, set by hive.set_context_view_horizon_mode:
+- 'initplan' (the default): through hive.context_view_horizon, as InitPlans run once per query;
+- 'c': through the functions of libhfm above, called directly.
+*/
+CREATE OR REPLACE FUNCTION hive.context_view_horizon_mode()
+    RETURNS TEXT
+    LANGUAGE sql
+    STABLE
+AS
+$BODY$
+    SELECT COALESCE( ( SELECT m.mode FROM hafd.context_view_horizon_mode m ), 'initplan' );
+$BODY$
+;
+
+/*
+The SQL of a field of a context's horizon in a view. In 'initplan' mode, a field of hive.context_view_horizon as an
+uncorrelated subquery, which the planner runs once per query as an InitPlan: calling that function directly in a view
+would run it again on every rescan of a nested loop's inner index scan. In 'c' mode, a call of the field's function.
 */
 CREATE OR REPLACE FUNCTION hive.context_view_horizon_value( _context_name TEXT, _field TEXT )
     RETURNS TEXT
     LANGUAGE sql
-    IMMUTABLE
+    STABLE
 AS
 $BODY$
-    SELECT format( '( SELECT h.%I FROM hive.context_view_horizon( %L ) h )', _field, _context_name );
+    SELECT CASE hive.context_view_horizon_mode()
+        WHEN 'c' THEN format( 'hive.%I( %L )', 'context_view_horizon_' || _field, _context_name )
+        ELSE format( '( SELECT h.%I FROM hive.context_view_horizon( %L ) h )', _field, _context_name )
+    END;
 $BODY$
 ;
 
 /*
 The filter of a context view's irreversible rows, _block_num being the SQL of a row's block number.
-`<= ANY( ARRAY[ x ] )` means `<= x` and is still an index condition, but the planner does not combine it with a
-query's own range on the same column: a range bound it cannot estimate (an InitPlan's value) would make it estimate
-the whole range at its 0.5% default.
+In 'initplan' mode `<= ANY( ARRAY[ x ] )`, which means `<= x` and is still an index condition, but the planner does
+not combine it with a query's own range on the same column: a range bound it cannot estimate (an InitPlan's value)
+would make it estimate the whole range at its 0.5% default. In 'c' mode the planner knows the bound's value.
 */
 CREATE OR REPLACE FUNCTION hive.context_view_irreversible_filter( _context_name TEXT, _block_num TEXT )
     RETURNS TEXT
     LANGUAGE sql
-    IMMUTABLE
+    STABLE
 AS
 $BODY$
-    SELECT format( '%s <= ANY( ARRAY[ %s ] )', _block_num, hive.context_view_horizon_value( _context_name, 'min_block' ) );
+    SELECT format(
+          CASE hive.context_view_horizon_mode() WHEN 'c' THEN '%s <= %s' ELSE '%s <= ANY( ARRAY[ %s ] )' END
+        , _block_num
+        , hive.context_view_horizon_value( _context_name, 'min_block' )
+    );
 $BODY$
 ;
 
@@ -143,7 +193,7 @@ one of the block the context has seen.
 CREATE OR REPLACE FUNCTION hive.context_view_reversible_filter( _context_name TEXT, _block_num TEXT, _fork_id TEXT )
     RETURNS TEXT
     LANGUAGE sql
-    IMMUTABLE
+    STABLE
 AS
 $BODY$
     SELECT format(
@@ -164,7 +214,7 @@ reversible branch, so a context without a reversible range never probes the reve
 CREATE OR REPLACE FUNCTION hive.context_view_reversible_guard( _context_name TEXT )
     RETURNS TEXT
     LANGUAGE sql
-    IMMUTABLE
+    STABLE
 AS
 $BODY$
     SELECT hive.context_view_horizon_value( _context_name, 'reversible_range' );
@@ -181,7 +231,7 @@ half of this clause that does not apply to it.
 CREATE OR REPLACE FUNCTION hive.context_view_legs_filter( _context_name TEXT, _block_num TEXT )
     RETURNS TEXT
     LANGUAGE sql
-    IMMUTABLE
+    STABLE
 AS
 $BODY$
     SELECT format(

@@ -18,6 +18,41 @@ END;
 $BODY$
 ;
 
+/*
+For operators: records how the generated context views read their horizon (see hive.context_view_horizon_mode),
+'initplan' or 'c', and regenerates with it the views of every context whose views read a horizon; views created
+later follow it too. The views of a detached context show all irreversible data and read no horizon, so they are
+left as they are.
+*/
+CREATE OR REPLACE FUNCTION hive.set_context_view_horizon_mode( _mode TEXT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    IF _mode IS NULL OR _mode NOT IN ( 'initplan', 'c' ) THEN
+        RAISE EXCEPTION 'Unknown context view horizon mode %, expected ''initplan'' or ''c''', COALESCE( quote_literal( _mode ), 'NULL' );
+    END IF;
+
+    INSERT INTO hafd.context_view_horizon_mode( id, mode ) VALUES ( 1, _mode )
+    ON CONFLICT ( id ) DO UPDATE SET mode = EXCLUDED.mode;
+
+    PERFORM hive.app_create_views_for_contexts( hc.name )
+    FROM hafd.contexts hc
+    WHERE EXISTS (
+        SELECT 1
+        FROM pg_rewrite r
+        JOIN pg_depend d ON d.classid = 'pg_rewrite'::regclass AND d.objid = r.oid
+        WHERE r.ev_class = to_regclass( format( '%I.blocks_view', hc.schema ) )
+          AND d.refclassid = 'pg_proc'::regclass
+          AND d.refobjid IN ( 'hive.context_view_horizon(text)'::regprocedure, 'hive.context_view_horizon_min_block(text)'::regprocedure )
+    )
+    ORDER BY hc.name;
+END;
+$BODY$
+;
+
 
 CREATE OR REPLACE FUNCTION hive.app_create_context(
       _name hafd.context_name

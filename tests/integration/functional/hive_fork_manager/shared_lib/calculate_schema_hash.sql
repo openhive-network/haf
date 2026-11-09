@@ -26,6 +26,7 @@ FOR _row in
     '(accounts_reversible,4bf88047-1295-43ae-59f6-86124fa7b53f,d092cacd-a1ca-369a-0307-82b31779bb5b,c80ea5a5-3499-c1de-8ae0-a0ba05c4f6e3,d5fdf00a-dcf2-2447-bf72-2fb090af3ed0)',
     '(account_operations_reversible,2ef45bd9-e4de-f9e5-7502-34ddb5d188e1,655e989d-547d-cefa-f463-62feb02bea9b,41c0c887-e689-bae9-c7f9-0b3b445708af,8a3746dd-fa5b-644f-399d-348b864df570)',
     '(applied_hardforks_reversible,f5129d5e-5b98-7f93-b786-d55899b5b8b5,d6cca068-2076-4e87-5c24-85618ff564ac,fee57151-3162-0c46-424a-da912e742160,3eeef00d-0e16-421e-659e-7ee2b12aa7eb)',
+    '(context_view_horizon_mode,798bf9f2-a1f3-ca21-14ca-16289e61b9dc,bcbd3b37-26dc-9207-0858-47ee49deb2bc,7dec1331-32c0-f198-a82f-d0b930978f9b,b9c73aad-0892-cf74-97cb-f3df0dc90ced)',
     '(contexts_attachment,c99e00c4-bc99-eb5d-1071-310575d2655a,0007a55e-0b74-b8b1-fb0d-a2e2b82a05bd,3e2b74cd-8a9a-2768-c01b-c8a307e8267d,90df8e77-2984-5c96-2a9f-908b8e7604dc)',
     '(contexts,b09322c7-7165-e2f8-a3dd-ff9fb2054d7c,25c14181-7714-5172-d5eb-f74c1b711e60,4a82cf7a-fd28-61ec-f852-e591c0690ad0,8672562f-b341-b429-c70d-0d9a00dd18d7)',
     '(contexts_log,80122d29-15e5-b9a7-30e2-1cf4987bd9c9,aa673368-dc31-cf26-d7ec-fa46acd87a32,10c38e8d-5c8f-f588-0f62-9dab0e663ba6,e3d046e4-144c-4cda-176c-0f7f1a690d08)',

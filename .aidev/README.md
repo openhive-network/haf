@@ -121,6 +121,19 @@ the candidate's `scripts/setup_db.sh`. Every `HafNode` database is a copy of
 `haf_block_log` (`create_database(…, template="haf_block_log")`), so the hived of
 every test connects to the candidate's `hive.connect()` and the rest of its SQL.
 
+**The candidate's libhfm.** The suite's image is pinned, so its libhfm is not built
+from the candidate, and a candidate cannot re-pin it in its own gate (aidev holds a
+re-pin of a suite declaring no `image_inputs`). The `full` slot's `hfm_functional`
+suite runs before it, in the image AIDEV builds from the candidate's tree
+(*The test runtime image*), which `Dockerfile.source` also gives a libhfm built for
+the testnet (`/home/hived/aidev/testnet-libhfm/`). `run-checks.sh` copies it into
+the workspace, `test-results/testnet-libhfm/`, and `haf-system.sh` installs the
+candidate's SQL with it (`HFM_CANDIDATE_LIBHFM_DIR`) when the hash of
+`src/hive_fork_manager/shared_lib` it was built from is the tree's. Otherwise (no
+such copy: a slot image CI built or the pinned one, or a re-run of the suite alone
+after the sources changed) the image's own libhfm is used, and a C function the
+candidate's SQL needs that it lacks is `haf-system/libhfm-symbols`.
+
 **Reports.** `test-results/haf-system/junit.xml`: one case per test, its id
 `haf-system::<module>.py::<test>[<param>]` (pytest's node id under the suite's name),
 so `known_failures.txt` can pardon one (`honor_quarantine`) and the flake layers
@@ -143,10 +156,10 @@ mainnet base, so its hived has #433's clean-exit fix — pinned by digest, plus 
 `tests/integration/haf-local-tools`' locked dependencies (`poetry install --no-root`).
 AIDEV runs a suite container with no network, so nothing is installed at run time,
 unlike CI's `run_haf_system_tests.sh`; `haf_local_tools` itself is imported from the
-candidate's tree. hived and libhfm are the image's: a candidate's C++ change to
+candidate's tree. hived is the image's: a candidate's C++ change to
 `src/sql_serializer/` selects the core tests but runs them under the pinned hived
-(`cxx-scope` names it), and a C function its SQL newly needs is
-`haf-system/libhfm-symbols`. Re-pin the image when its hived should follow develop, and rebuild it
+(`cxx-scope` names it); libhfm is the candidate's when the slot hands it over (*The
+candidate's libhfm*). Re-pin the image when its hived should follow develop, and rebuild it
 **in the same commit** as any change to haf-local-tools' `pyproject.toml` or
 `poetry.lock` (until then the suite fails as `haf-system/environment`):
 
@@ -190,7 +203,10 @@ by digest, plus `scripts/setup_ubuntu.sh --dev`), configured as CI's
 `scripts/build.sh` does (Release, Ninja, mainnet). The final stage is the pinned
 image with both libraries overwritten in place, keeping the base's file names so
 the base's extension files still load them, and its entrypoint cleared. hived and
-the rest of the image stay the pinned base's.
+the rest of the image stay the pinned base's. libhfm is also built for the testnet
+(`BUILD_HIVE_TESTNET=ON`) and kept in `/home/hived/aidev/testnet-libhfm/` with the
+hash of its `shared_lib` sources, for the haf-system suite (*The candidate's libhfm*);
+the testnet image has the same Ubuntu, PostgreSQL and boost as the base.
 
 Because the image is reused by source commit, the recipe reads only source paths:
 `CMakeLists.txt`, `cmake/`, `common_includes/`, `src/`, `hive/` and the two
@@ -209,7 +225,9 @@ with both `FROM` images already pulled, 177 s with no layer cache (84 s for
 `setup_ubuntu.sh --dev`, 90 s to configure and compile the two libraries); about
 90 s once the toolchain layer is cached, since any source change reruns the
 compile; 1 s when nothing changed. A host that has neither image first pulls the
-3.6 GB toolchain image and the pinned base.
+3.6 GB toolchain image and the pinned base. Those times predate the testnet libhfm,
+whose configure and compile (libhfm with hive_protocol and fc) come on top and were
+not timed separately.
 
 To build it by hand:
 
