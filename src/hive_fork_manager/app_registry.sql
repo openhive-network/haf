@@ -9,7 +9,10 @@
 -- hive.app_dependencies_block_limit.
 -- _health_function: '<schema>.<function>' returning TEXT, NULL when the installation
 -- is healthy, otherwise why it is broken; see hive._app_broken_reason.
-CREATE OR REPLACE FUNCTION hive.app_register( _name TEXT, _contexts hive.contexts_group, _process_procedure TEXT = NULL, _completed_block_function TEXT = NULL, _health_function TEXT = NULL )
+-- This 5-argument form has no defaults: applications probe for the registry with
+-- to_regprocedure on the 4-argument signature below, and with defaults here every
+-- call of 2 to 4 arguments would match both functions and be ambiguous.
+CREATE OR REPLACE FUNCTION hive.app_register( _name TEXT, _contexts hive.contexts_group, _process_procedure TEXT, _completed_block_function TEXT, _health_function TEXT )
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -71,6 +74,19 @@ BEGIN
     ON CONFLICT ( name ) DO UPDATE
     SET contexts = EXCLUDED.contexts, process_procedure = EXCLUDED.process_procedure, completed_block_function = EXCLUDED.completed_block_function,
         health_function = EXCLUDED.health_function;
+END;
+$BODY$
+;
+
+-- Registers without a health function; re-registering through it clears one.
+CREATE OR REPLACE FUNCTION hive.app_register( _name TEXT, _contexts hive.contexts_group, _process_procedure TEXT = NULL, _completed_block_function TEXT = NULL )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM hive.app_register( _name, _contexts, _process_procedure, _completed_block_function, NULL::TEXT );
 END;
 $BODY$
 ;

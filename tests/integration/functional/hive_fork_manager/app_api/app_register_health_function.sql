@@ -26,7 +26,7 @@ DECLARE
     __error TEXT;
 BEGIN
     BEGIN
-        PERFORM hive.app_register( 'app5', ARRAY[ 'ctx5' ], _health_function => 'x.missing' );
+        PERFORM hive.app_register( 'app5', ARRAY[ 'ctx5' ], NULL, NULL, 'x.missing' );
     EXCEPTION WHEN raise_exception THEN
         GET STACKED DIAGNOSTICS __error = MESSAGE_TEXT;
     END;
