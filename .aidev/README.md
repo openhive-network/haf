@@ -526,10 +526,21 @@ allow them around it as `serve.sh` does.
 `registry.gitlab.syncad.com/hive/haf:<tag>@sha256:<digest>` image of the version,
 pinned by digest (the registry deletes old tags, so the digest is what keeps it
 pullable), and `HAF_VERSION` to the full HAF commit that image was built from
-(the pipeline's `HAF_COMMIT`). AIDEV keeps the hosting session's service checkout
-fixed, so a push does not restart a running service: restart it to switch. The
-new version is replayed beside the old one, whose directory can be destroyed once
-nothing uses it.
+(the pipeline's `HAF_COMMIT`). The service restarts on its own when its
+definition changes, and only then (aidev `docs/operations/project-service-stacks.md`,
+*Shared services*): every 5 minutes a hosting session resyncs its branch to the
+target, and when the tip it lands changes the governed `sandbox.shared.haf`
+declaration, `shared-haf.compose.yml`, or a path the service builds from or
+bind-mounts (`shared-haf/`, `docker/config_5M.ini`), the session restarts the
+service on that tip. Any other push leaves a running service where it is. A pin
+change is such a change, so landing it restarts the fixture on every hosting
+session with no manual step: #426's promote landed at about 23:34Z on 2026-11-10,
+and `haf-shared`, `haf-shared-alleghany` and `haf-shared-pl` were serving the new
+image by 23:47-23:55Z. The restart ends every consumer's connections, and the
+new version is served from its own cluster, so every running clone is gone for
+its run; promote a pin change at a time you choose, when no consumer's run
+depends on its clone, and tell the consumers. The new version is replayed beside
+the old one, whose directory can be destroyed once nothing uses it.
 
 The replay fits inside `readiness_timeout` (1800 s, AIDEV's ceiling): on session24.pl
 (32 cores, ZFS on NVMe) the whole seed of 17c8606f took about 6 minutes. A slower host
