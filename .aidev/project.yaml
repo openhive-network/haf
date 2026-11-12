@@ -107,9 +107,9 @@ verification:
       - name: haf_system
         adapter: command
         args: [".aidev/run-haf-system.sh"]
-        # The testnet HAF image of develop a5f9302d7 (its hived has #433's fix) with
+        # The testnet HAF image of develop 2841847e (its hived has #433's and #468's fixes) with
         # the haf-local-tools venv: .aidev/runtime/build.sh --system --push.
-        image: "registry.gitlab.syncad.com/hive/haf/aidev-system-tests@sha256:a7594b26090434b25a15f49afb15179e308de4f51ee8720e57b653abb3c69278"
+        image: "registry.gitlab.syncad.com/hive/haf/aidev-system-tests@sha256:2be6e583da0b5f8c2884e0caf5ebb71f0ac4b0eb651a4e4bdb1350bf14400c61"
         select: [".aidev/haf-system-select.sh"]
         # Its container has no network and no docker, so the host copies the
         # candidate's testnet libhfm out of the tree's source image into
