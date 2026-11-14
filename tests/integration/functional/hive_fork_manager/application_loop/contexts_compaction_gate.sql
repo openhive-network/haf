@@ -1,7 +1,8 @@
 -- hived's compaction of hafd.contexts, as contexts_compactor runs it, gets its locks while an
--- application iterates and commits every few seconds: with the gate (hive.contexts_compaction_gate_key)
--- held exclusively no iteration runs, new ones wait for it, and VACUUM FULL gets its lock within a
--- short lock_timeout. The application and hived run in their own sessions (dblink).
+-- application iterates and commits every few seconds: polling pg_try_advisory_lock for the gate
+-- (hive.contexts_compaction_gate_key) gets it between the iterations, with the gate held exclusively
+-- no iteration runs, new ones wait for it, and VACUUM FULL gets its lock within a short lock_timeout.
+-- The application and hived run in their own sessions (dblink).
 -- Each run must rewrite the table (a new relfilenode); how many dead rows the rewrite reclaims depends
 -- on the snapshots of other sessions, which this test does not control.
 
@@ -64,6 +65,27 @@ END;
 $BODY$
 ;
 
+-- contexts_compactor::enter_gate: try the key every 50 ms until the timeout, never queue for it
+CREATE OR REPLACE FUNCTION public.poll_gate( _timeout INTERVAL )
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS
+$BODY$
+DECLARE
+    __deadline TIMESTAMPTZ := clock_timestamp() + _timeout;
+BEGIN
+    LOOP
+        IF pg_try_advisory_lock( hive.contexts_compaction_gate_key() ) THEN
+            RETURN TRUE;
+        END IF;
+        EXIT WHEN clock_timestamp() >= __deadline;
+        PERFORM pg_sleep( 0.05 );
+    END LOOP;
+    RETURN FALSE;
+END;
+$BODY$
+;
+
 CREATE OR REPLACE PROCEDURE haf_admin_test_given()
         LANGUAGE 'plpgsql'
 AS
@@ -120,6 +142,7 @@ DECLARE
     __compacted BOOLEAN;
     __error TEXT;
     __filenode OID;
+    __entered BOOLEAN;
 BEGIN
     FOR __i IN 1 .. 10 LOOP
         CALL hive.app_next_iteration( ARRAY[ 'iterating' ], __blocks, _wait => FALSE );
@@ -144,10 +167,10 @@ BEGIN
         __compacted := FALSE;
         __error := NULL;
         BEGIN
-            PERFORM dblink_exec( 'hived', 'SET lock_timeout = ''5s''' );
             __started_at := clock_timestamp();
-            PERFORM * FROM dblink( 'hived', 'SELECT pg_advisory_lock( hive.contexts_compaction_gate_key() )' ) AS t( r TEXT );
+            __entered := ( SELECT entered FROM dblink( 'hived', 'SELECT public.poll_gate( INTERVAL ''5 seconds'' )' ) AS t( entered BOOLEAN ) );
             __gate_wait := clock_timestamp() - __started_at;
+            ASSERT __entered, format( 'no gate after %s of polling', __gate_wait );
 
             -- a starting application is held back until the gate is released
             PERFORM dblink_send_query( 'starting_app', 'CALL hive.app_next_iteration( ARRAY[ ''starting'' ], NULL, _wait => FALSE )' );

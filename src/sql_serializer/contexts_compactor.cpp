@@ -1,7 +1,7 @@
 #include <hive/plugins/sql_serializer/contexts_compactor.hpp>
 
 #include <algorithm>
-#include <memory>
+#include <stdexcept>
 
 #include <fc/log/logger.hpp>
 #include <fc/time.hpp>
@@ -22,13 +22,27 @@ int64_t heap_pages( pqxx::nontransaction& tx )
   return tx.exec( "SELECT hive.contexts_heap_pages() AS pages" )[ 0 ][ "pages" ].as< int64_t >();
 }
 
+const contexts_compactor::settings& validated( const contexts_compactor::settings& s )
+{
+  // PostgreSQL reads a lock_timeout of 0 as "no timeout", which would let a compaction hold every application back.
+  if ( s.gate_timeout.count() <= 0 )
+    throw std::invalid_argument( "psql-contexts-compaction-gate-timeout must be greater than 0 ms" );
+  if ( s.lock_timeout.count() <= 0 )
+    throw std::invalid_argument( "psql-contexts-compaction-lock-timeout must be greater than 0 ms; set psql-contexts-compaction-threshold to 0 to disable the compaction" );
+  if ( s.gate_poll_interval.count() <= 0 )
+    throw std::invalid_argument( "the poll interval of the hafd.contexts compaction gate must be greater than 0 ms" );
+  return s;
+}
+
 } // namespace
 
 contexts_compactor::contexts_compactor( std::string db_url, settings compaction_settings )
   : _db_url( std::move( db_url ) )
-  , _settings( compaction_settings )
+  , _settings( validated( compaction_settings ) )
   , _thread( [this]{ run(); } )
 {
+  if ( !_settings.is_enabled() )
+    ilog( "Compaction of hafd.contexts is disabled (psql-contexts-compaction-threshold is 0)" );
 }
 
 contexts_compactor::~contexts_compactor()
@@ -36,49 +50,100 @@ contexts_compactor::~contexts_compactor()
   {
     std::lock_guard< std::mutex > lock( _mutex );
     _stopping = true;
+    if ( _conn )
+    {
+      try
+      {
+        _conn->cancel_query();
+      }
+      catch ( const std::exception& e )
+      {
+        wlog( "Could not cancel the query of the hafd.contexts compaction in progress: ${e}; shutdown waits for it", ( "e", e.what() ) );
+      }
+    }
   }
-  _requested_cv.notify_one();
+  _cv.notify_one();
   _thread.join();
 }
 
 void contexts_compactor::on_block( bool is_live )
 {
-  if ( !is_live )
+  if ( !is_live || !_settings.is_enabled() )
     return;
 
   {
     std::lock_guard< std::mutex > lock( _mutex );
     _requested = true;
   }
-  _requested_cv.notify_one();
+  _cv.notify_one();
 }
 
 void contexts_compactor::run()
 {
-  std::unique_ptr< pqxx::connection > conn;
   for ( ;; )
   {
     {
       std::unique_lock< std::mutex > lock( _mutex );
-      _requested_cv.wait( lock, [this]{ return _requested || _stopping; } );
+      _cv.wait( lock, [this]{ return _requested || _stopping; } );
       if ( _stopping )
         return;
-      _requested = false;
     }
 
+    const char* error = nullptr;
+    std::string what;
     try
     {
-      if ( !conn )
-        conn = std::make_unique< pqxx::connection >( _db_url );
-      compact_if_needed( *conn );
+      connect_if_needed();
+      compact_if_needed( *_conn );
     }
-    catch ( const pqxx::failure& e )
+    catch ( const std::exception& e )
+    {
+      what = e.what();
+      error = what.c_str();
+    }
+    catch ( ... )
+    {
+      error = "unknown exception";
+    }
+
+    if ( error )
     {
       // Dropping the connection also releases the gate, a session-level advisory lock.
-      elog( "Compaction of hafd.contexts failed: ${e}; it will be retried at a later block", ( "e", e.what() ) );
-      conn.reset();
+      drop_connection();
+      if ( !is_stopping() )
+        elog( "Compaction of hafd.contexts failed: ${e}; it will be retried at a later block", ( "e", error ) );
+    }
+
+    {
+      // Blocks applied during this run do not start the next one: it waits for a new block.
+      std::lock_guard< std::mutex > lock( _mutex );
+      _requested = false;
     }
   }
+}
+
+void contexts_compactor::connect_if_needed()
+{
+  if ( _conn )
+    return;
+  auto conn = std::make_unique< pqxx::connection >( _db_url );
+  std::lock_guard< std::mutex > lock( _mutex );
+  _conn = std::move( conn );
+}
+
+void contexts_compactor::drop_connection()
+{
+  std::unique_ptr< pqxx::connection > conn;
+  {
+    std::lock_guard< std::mutex > lock( _mutex );
+    conn = std::move( _conn );
+  }
+}
+
+bool contexts_compactor::is_stopping()
+{
+  std::lock_guard< std::mutex > lock( _mutex );
+  return _stopping;
 }
 
 void contexts_compactor::compact_if_needed( pqxx::connection& conn )
@@ -93,38 +158,37 @@ void contexts_compactor::compact_if_needed( pqxx::connection& conn )
   const int64_t pages_before = heap_pages( tx );
 
   const auto gate_start = fc::time_point::now();
-  tx.exec( "SET lock_timeout = " + std::to_string( _settings.gate_timeout.count() ) );
-  try
+  if ( !enter_gate( tx ) )
   {
-    tx.exec( "SELECT pg_advisory_lock( hive.contexts_compaction_gate_key() )" );
-  }
-  catch ( const pqxx::sql_error& e )
-  {
-    if ( e.sqlstate() != LOCK_NOT_AVAILABLE )
-      throw;
-    tx.exec( "RESET lock_timeout" );
-    skipped( "applications' iterations kept the gate", pages_before, milliseconds_since( gate_start ) );
+    if ( !is_stopping() )
+      skipped( "applications' iterations kept the gate", pages_before, milliseconds_since( gate_start ) );
     return;
   }
   const int64_t gate_wait = milliseconds_since( gate_start );
 
-  tx.exec( "SET lock_timeout = " + std::to_string( _settings.lock_timeout.count() ) );
-  const auto rewrite_start = fc::time_point::now();
-  bool compacted = true;
-  try
+  bool compacted = false;
+  int64_t rewrite_duration = 0;
+  if ( !is_stopping() )
   {
-    tx.exec( "VACUUM FULL hafd.contexts" );
+    tx.exec( "SET lock_timeout = " + std::to_string( _settings.lock_timeout.count() ) );
+    const auto rewrite_start = fc::time_point::now();
+    try
+    {
+      tx.exec( "VACUUM FULL hafd.contexts" );
+      compacted = true;
+    }
+    catch ( const pqxx::sql_error& e )
+    {
+      if ( e.sqlstate() != LOCK_NOT_AVAILABLE )
+        throw;
+    }
+    rewrite_duration = milliseconds_since( rewrite_start );
+    tx.exec( "RESET lock_timeout" );
   }
-  catch ( const pqxx::sql_error& e )
-  {
-    if ( e.sqlstate() != LOCK_NOT_AVAILABLE )
-      throw;
-    compacted = false;
-  }
-  const int64_t rewrite_duration = milliseconds_since( rewrite_start );
-  tx.exec( "RESET lock_timeout" );
   tx.exec( "SELECT pg_advisory_unlock( hive.contexts_compaction_gate_key() )" );
 
+  if ( is_stopping() )
+    return;
   if ( !compacted )
   {
     skipped( "another session held a lock on hafd.contexts", pages_before, gate_wait );
@@ -141,14 +205,33 @@ void contexts_compactor::compact_if_needed( pqxx::connection& conn )
   _consecutive_skips = 0;
 }
 
+// Never queues for the gate: a waiting exclusive request would hold back every application's
+// iteration that asks for the gate after it, however long the iterations already holding it run.
+bool contexts_compactor::enter_gate( pqxx::nontransaction& tx )
+{
+  const auto deadline = std::chrono::steady_clock::now() + _settings.gate_timeout;
+  for ( ;; )
+  {
+    if ( tx.exec( "SELECT pg_try_advisory_lock( hive.contexts_compaction_gate_key() ) AS entered" )[ 0 ][ "entered" ].as< bool >() )
+      return true;
+
+    const auto now = std::chrono::steady_clock::now();
+    if ( now >= deadline )
+      return false;
+    std::unique_lock< std::mutex > lock( _mutex );
+    if ( _cv.wait_until( lock, std::min( now + _settings.gate_poll_interval, deadline ), [this]{ return _stopping; } ) )
+      return false;
+  }
+}
+
 void contexts_compactor::skipped( const char* reason, int64_t pages, int64_t gate_wait )
 {
   ++_consecutive_skips;
   if ( _consecutive_skips >= _settings.skips_before_warning )
-    wlog( "Compaction of hafd.contexts (${pages} pages) skipped ${n} times in a row: ${reason} (gate wait ${gate} ms); it will be retried at the next block",
+    wlog( "Compaction of hafd.contexts (${pages} pages) skipped ${n} times in a row: ${reason} (gate wait ${gate} ms); it will be retried at a later block",
           ( "pages", pages )( "n", _consecutive_skips )( "reason", reason )( "gate", gate_wait ) );
   else
-    ilog( "Compaction of hafd.contexts (${pages} pages) skipped, ${n} times in a row: ${reason} (gate wait ${gate} ms); it will be retried at the next block",
+    ilog( "Compaction of hafd.contexts (${pages} pages) skipped, ${n} times in a row: ${reason} (gate wait ${gate} ms); it will be retried at a later block",
           ( "pages", pages )( "n", _consecutive_skips )( "reason", reason )( "gate", gate_wait ) );
 }
 
