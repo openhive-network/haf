@@ -682,12 +682,12 @@ END;
 $BODY$
 ;
 
--- Waits (when _wait) for the next block only while the app is not gated by a
--- dependency; dependency progress does not NOTIFY, so a gated app polls with a
--- short timeout instead. hive.app_next_iteration passes _wait => FALSE for
--- drivers that go idle on their own connection (see Readme: block processing
--- drivers); an idle client consumes its LISTEN notifications, which the eternal
--- CALL main() sessions never could (issue #341).
+-- Returns the next range of blocks, NULL to ask again at once, or an empty range
+-- (first_block > last_block) when there is no block yet: the caller then waits with
+-- hive.app_wait_for_new_block, in a transaction of its own when it can (see
+-- hive.app_next_iteration), so the wait holds no lock on hafd.contexts.
+-- _wait: unused, the caller decides whether to wait.
+-- _block_limit: highest block that may be delivered (see hive.app_process_event).
 CREATE OR REPLACE FUNCTION hive.app_next_block_forking_app( _context_names hive.contexts_group, _wait BOOLEAN = TRUE, _block_limit INT = NULL )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
@@ -704,39 +704,17 @@ BEGIN
     SELECT ARRAY_AGG( hive.app_process_event(contexts.*, __context_state, _block_limit) ) INTO __result
     FROM unnest( _context_names ) as contexts;
 
-    IF __result[1].first_block > __result[1].last_block THEN
-        IF NOT _wait THEN
-            RETURN NULL;
-        END IF;
-        IF _block_limit IS NOT NULL THEN
-            PERFORM pg_sleep( 0.25 );
-            RETURN NULL;
-        END IF;
-        -- Wait for a new reversible block. hive.app_next_iteration has
-        -- subscribed to haf_new_block; once that LISTEN is committed a
-        -- NOTIFY from hive.push_block wakes this call. The 4 s timeout
-        -- (> 3 s block interval) is the fallback while the LISTEN is not
-        -- yet effective and a safety net for missed signals.
-        -- Issue #341 mitigation for eternal CALL main() sessions: they never
-        -- return to idle, so they can never consume their LISTEN
-        -- notifications and PostgreSQL keeps re-signalling them as queue
-        -- laggards -- the latch wake above can fire hundreds of times per
-        -- second, turning the empty-iteration path into a busy-spin. Floor
-        -- latch-woken empty iterations at 0.25 s (a genuine timeout needs no
-        -- extra sleep). Applications run by a driver with _wait => FALSE never
-        -- get here.
-        IF hive.wait_for_new_block( 4000 ) THEN
-            PERFORM pg_sleep( 0.25 );
-        END IF;
-        RETURN NULL;
-    END IF;
-
     RETURN __result[1];
 END;
 $BODY$
 ;
 
--- _wait / _block_limit: see hive.app_next_block_forking_app
+-- Returns as hive.app_next_block_forking_app.
+-- _wait: while hived replays with pruning enabled the next irreversible block is
+--        expected within milliseconds, so a caller that waits polls here for up to
+--        1.5 s instead of going through its main loop again; hived compacts
+--        hafd.contexts only while live, so this short wait is harmless to it.
+-- _block_limit: see hive.app_next_block_forking_app
 CREATE OR REPLACE FUNCTION hive.app_next_block_non_forking_app( _context_names hive.contexts_group, _wait BOOLEAN = TRUE, _block_limit INT = NULL )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
@@ -753,8 +731,6 @@ BEGIN
     PERFORM hive.wait_for_ready_instance_for_contexts(_context_names, '178000000 years'::interval);
     SELECT hive.is_pruning_enabled() INTO __is_pruning_enabled;
 
-    -- Passive polling for new blocks using a FOR loop to be sure that app won't
-    -- stay here for more than 1.5s
     FOR __i IN 1..150 LOOP
         SELECT * FROM hive.squash_and_get_state( _context_names ) INTO __context_state;
 
@@ -763,45 +739,102 @@ BEGIN
 
         SELECT hive.get_sync_state() INTO __hive_sync_state;
 
-        IF NOT( __result[1].first_block > __result[1].last_block ) THEN
+        IF NOT( __result[1].first_block > __result[1].last_block )
+           OR NOT _wait
+           OR _block_limit IS NOT NULL
+           OR NOT __is_pruning_enabled
+           OR (__hive_sync_state != 'REINDEX'::hafd.sync_state
+               AND __hive_sync_state != 'P2P'::hafd.sync_state
+           )
+        THEN
             RETURN __result[1];
         END IF;
 
-        IF NOT _wait THEN
-            RETURN NULL;
-        END IF;
-        IF _block_limit IS NOT NULL THEN
-            PERFORM pg_sleep( 0.25 );
-            RETURN NULL;
-        END IF;
-
-       -- currently there are no more blocks to process
-        IF  NOT __is_pruning_enabled
-            OR (__hive_sync_state != 'REINDEX'::hafd.sync_state
-                AND __hive_sync_state != 'P2P'::hafd.sync_state
-            )
-        THEN
-            -- Wait for a new irreversible block. hive.app_next_iteration
-            -- has subscribed to haf_new_irreversible; once that LISTEN is
-            -- committed a NOTIFY from hive.set_irreversible / push_block_lite
-            -- wakes this call. The 4 s timeout (> 3 s block interval) is the
-            -- fallback while the LISTEN is not yet effective and a safety
-            -- net for missed signals.
-            -- Issue #341 mitigation for eternal CALL main() sessions, see
-            -- hive.app_next_block_forking_app.
-            IF hive.wait_for_new_block( 4000 ) THEN
-                PERFORM pg_sleep( 0.25 );
-            END IF;
-            EXIT;
-        END IF;
-
-        -- During reindex/p2p we expect new blocks within milliseconds
-        -- Stay in this loop to avoid expensive application main loop overhead
         PERFORM pg_sleep( 0.01 );
     END LOOP;
     RETURN NULL;
 END;
 $BODY$;
+
+-- Body of hive.app_next_block without the wait for a block: returns the next
+-- range, NULL to ask again at once, or an empty range (first_block > last_block)
+-- when there is no block yet and the caller should wait with
+-- hive.app_wait_for_new_block.
+-- _block_limit: highest block that may be delivered, NULL for no limit.
+CREATE OR REPLACE FUNCTION hive.app_find_next_block( _context_names hive.contexts_group, _wait BOOLEAN, _block_limit INT )
+    RETURNS hive.blocks_range
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __hive_sync_state hafd.sync_state;
+BEGIN
+    PERFORM hive.app_check_contexts_synchronized( _context_names );
+
+    -- prevent auto-detaching the context when app is actively asking for new blocks
+    UPDATE hafd.contexts
+    SET last_active_at = NOW()
+    WHERE name =ANY(_context_names);
+
+    PERFORM hive.register_pending_custom_json_type_indexes( _context_names );
+
+    IF hive.app_is_paused( _context_names ) THEN
+        IF _wait THEN
+            PERFORM pg_sleep( 1 );
+        END IF;
+        RETURN NULL;
+    END IF;
+
+    SELECT hive.get_sync_state() INTO __hive_sync_state;
+
+    -- if there there is  registered table for given context
+    -- In lite mode, always use the non-forking path (defense-in-depth)
+    -- Detached early contexts process irreversible blocks while hived replays, see hive.app_next_iteration
+    IF NOT hive.is_lite_mode() AND hive.app_are_forking( _context_names ) AND ( __hive_sync_state = 'LIVE' OR NOT hive.is_pruning_enabled() )
+       AND ( hive.is_instance_ready() OR hive.app_context_are_attached( _context_names ) )
+    THEN
+        RETURN hive.app_next_block_forking_app( _context_names, _wait, _block_limit );
+    END IF;
+
+    RETURN hive.app_next_block_non_forking_app( _context_names, _wait, _block_limit );
+END;
+$BODY$
+;
+
+-- Waits for the next block after hive.app_next_block_forking_app /
+-- hive.app_next_block_non_forking_app found none.
+-- _block_limit: the dependency limit the block was searched with. Dependency
+-- progress does not NOTIFY, so a gated application polls with a short sleep.
+-- Otherwise the wait ends on a NOTIFY on haf_new_block / haf_new_irreversible
+-- (hive.push_block, hive.set_irreversible, hive.push_block_lite), which
+-- hive.app_next_iteration has subscribed to; the 4 s timeout (> 3 s block
+-- interval) is the fallback while the LISTEN is not committed yet and a safety
+-- net for missed signals.
+-- Issue #341 mitigation for eternal CALL main() sessions: they never return to
+-- idle, so they can never consume their LISTEN notifications and PostgreSQL
+-- keeps re-signalling them as queue laggards -- the latch wake can fire hundreds
+-- of times per second, turning the empty-iteration path into a busy-spin. Floor
+-- latch-woken empty iterations at 0.25 s (a genuine timeout needs no extra
+-- sleep). Applications run by a driver with _wait => FALSE never get here.
+CREATE OR REPLACE FUNCTION hive.app_wait_for_new_block( _block_limit INT )
+    RETURNS VOID
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    IF _block_limit IS NOT NULL THEN
+        PERFORM pg_sleep( 0.25 );
+        RETURN;
+    END IF;
+
+    IF hive.wait_for_new_block( 4000 ) THEN
+        PERFORM pg_sleep( 0.25 );
+    END IF;
+END;
+$BODY$
+;
 
 CREATE OR REPLACE FUNCTION hive.update_one_state_providers( _first_block hafd.blocks.num%TYPE, _last_block hafd.blocks.num%TYPE, _state_provider hafd.state_providers, _context hafd.context_name )
     RETURNS void

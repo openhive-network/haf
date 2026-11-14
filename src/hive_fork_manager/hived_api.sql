@@ -921,3 +921,35 @@ AS $$
     UNION ALL
     SELECT 'VACUUM hafd.hive_state;'::text
 $$;
+
+-- The plain VACUUM above cannot shrink hafd.contexts (vacuum_truncate=false), so hived rewrites it
+-- with VACUUM FULL once it outgrows a threshold. That needs a moment when no session holds a lock on
+-- the table, which applications iterating on staggered schedules never leave on their own: every
+-- transaction of hive.app_next_iteration that touches hafd.contexts holds this advisory key shared
+-- (hive.app_enter_contexts_gate), and hived's compaction takes it exclusively. Once the compaction
+-- holds the key no iteration is running, and new ones wait until it is released.
+CREATE OR REPLACE FUNCTION hive.contexts_compaction_gate_key()
+RETURNS BIGINT
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT hashtext( 'hafd.contexts compaction gate' )::BIGINT;
+$$;
+
+CREATE OR REPLACE FUNCTION hive.contexts_heap_pages()
+RETURNS BIGINT
+LANGUAGE sql
+VOLATILE
+AS $$
+    SELECT pg_relation_size( 'hafd.contexts' ) / current_setting( 'block_size' )::BIGINT;
+$$;
+
+-- Whether hived should compact hafd.contexts now: only while it is live, never during a replay or
+-- a massive sync, and only once the heap has grown past _threshold_pages.
+CREATE OR REPLACE FUNCTION hive.is_contexts_compaction_needed( _threshold_pages BIGINT )
+RETURNS BOOLEAN
+LANGUAGE sql
+VOLATILE
+AS $$
+    SELECT hive.get_sync_state() = 'LIVE' AND hive.contexts_heap_pages() > _threshold_pages;
+$$;

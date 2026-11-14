@@ -92,6 +92,7 @@ namespace hive::plugins::sql_serializer {
       void move_irreversible_blocks( cached_data_t& cached_data );
       void flush_all_cached_data( cached_data_t& cached_data, int last_block_num );
       bool is_pruning_enabled() const { return _psql_pruning_tail_size > 0; }
+      bool is_live() const { return get_state() == INDEXATION::LIVE; }
 
     private:
       void force_trigger_flush_with_all_data( cached_data_t& cached_data, int last_block_num );
