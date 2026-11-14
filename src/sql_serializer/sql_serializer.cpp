@@ -13,6 +13,7 @@
 
 #include <hive/plugins/sql_serializer/sql_serializer_objects.hpp>
 #include <hive/plugins/sql_serializer/vacuum_cleaner.h>
+#include <hive/plugins/sql_serializer/contexts_compactor.hpp>
 
 #include <hive/chain/util/impacted.hpp>
 #include <hive/chain/util/supplement_operations.hpp>
@@ -313,6 +314,7 @@ public:
     , bool     _psql_lite_schema
     , uint32_t _psql_index_monitor_retry_budget
     , massive_index_policy _psql_massive_index_policy
+    , contexts_compactor::settings _contexts_compaction_settings
   )
   :   db_url{url},
       chain_db{_chain_db},
@@ -339,7 +341,8 @@ public:
                          _psql_lite_mode,
                          _psql_index_monitor_retry_budget,
                          _psql_massive_index_policy),
-      _vacuum_cleaner( db_url )
+      _vacuum_cleaner( db_url ),
+      _contexts_compactor( db_url, _contexts_compaction_settings )
   {
     HIVE_ADD_PLUGIN_INDEX(chain_db, account_ops_seq_index);
     _is_database_initialized = is_database_initialized();
@@ -430,6 +433,7 @@ public:
   bool _is_database_initialized;
   bool _is_hfm_informed_about_starting = false;
   vacuum_cleaner _vacuum_cleaner;
+  contexts_compactor _contexts_compactor;
   custom_json_type_cache _custom_json_cache;
 
   void log_statistics()
@@ -849,6 +853,7 @@ void sql_serializer_plugin_impl::on_post_apply_block(const block_notification& n
     filter.clear();
 
     _vacuum_cleaner.vacuum( _indexation_state.is_pruning_enabled(), note.block_num );
+    _contexts_compactor.on_block( _indexation_state.is_live() );
 
     if(note.block_num % 100'000 == 0)
     {
@@ -1014,6 +1019,9 @@ void sql_serializer_plugin::set_program_options(appbase::options_description &cl
                     ("psql-prune-blocks", appbase::bpo::value<uint32_t>()->default_value( 0 ), "number of recent blocks to keep; older processed blocks are pruned. 0 disables pruning")
                     ("psql-lite-mode", appbase::bpo::bool_switch()->default_value( false ), "enable lite mode: only irreversible blocks are pushed to the database, no fork handling")
                     ("psql-lite-schema", appbase::bpo::bool_switch()->default_value( false ), "enable lite schema: permanently strip reversible tables, fork table, and forking columns from the database (implies --psql-lite-mode)")
+                    ("psql-contexts-compaction-threshold", appbase::bpo::value<uint32_t>()->default_value( contexts_compactor::settings{}.threshold_pages ), "while live, hafd.contexts is rewritten with VACUUM FULL once its heap has more pages than this")
+                    ("psql-contexts-compaction-gate-timeout", appbase::bpo::value<uint32_t>()->default_value( static_cast<uint32_t>( contexts_compactor::settings{}.gate_timeout.count() ) ), "milliseconds a compaction of hafd.contexts waits for the applications' iterations in progress before it is skipped until the next block")
+                    ("psql-contexts-compaction-lock-timeout", appbase::bpo::value<uint32_t>()->default_value( static_cast<uint32_t>( contexts_compactor::settings{}.lock_timeout.count() ) ), "milliseconds a compaction of hafd.contexts waits for its table lock, and hived's own statements on the table wait behind it, before it is skipped until the next block")
                     ;
 }
 
@@ -1052,6 +1060,11 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     , options["psql-lite-schema"].as<bool>()
     , options["psql-index-monitor-retry-budget"].as<uint32_t>()
     , parse_massive_index_policy( options["psql-massive-index-policy"].as<std::string>() )
+    , contexts_compactor::settings{
+          options["psql-contexts-compaction-threshold"].as<uint32_t>()
+        , std::chrono::milliseconds( options["psql-contexts-compaction-gate-timeout"].as<uint32_t>() )
+        , std::chrono::milliseconds( options["psql-contexts-compaction-lock-timeout"].as<uint32_t>() )
+      }
   );
 
   // settings

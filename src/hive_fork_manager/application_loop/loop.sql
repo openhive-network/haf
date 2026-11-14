@@ -238,8 +238,25 @@ END;
 $BODY$
 ;
 
+-- Holds hived's compaction of hafd.contexts back until the current transaction
+-- ends, and waits for one in progress; see hive.contexts_compaction_gate_key.
+CREATE OR REPLACE FUNCTION hive.app_enter_contexts_gate()
+    RETURNS VOID
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM pg_advisory_xact_lock_shared( hive.contexts_compaction_gate_key() );
+END;
+$BODY$
+;
+
 -- _wait: TRUE (default) waits inside the database for the next block when there
 --        is nothing to process, as the classic eternal CALL main() loops expect.
+--        When the procedure may commit (see __had_prior_xact) it commits before
+--        waiting, so the wait holds no lock on hafd.contexts and does not keep
+--        hived from compacting it.
 --        FALSE returns NULL immediately; the caller then idles on its own
 --        connection until a NOTIFY on haf_new_block / haf_new_irreversible
 --        arrives (see Readme: block processing drivers).
@@ -264,11 +281,11 @@ BEGIN
     -- COMMIT below; capture it up front because the heartbeat UPDATE later
     -- in this procedure assigns an XID itself. When it is false the caller
     -- is driving us inside an explicit transaction block (e.g. the example
-    -- apps), where issuing COMMIT is not allowed, so we skip both COMMITs.
+    -- apps), where issuing COMMIT is not allowed, so we skip every COMMIT.
     __had_prior_xact := pg_current_xact_id_if_assigned() IS NOT NULL;
 
-    -- Subscribe to block-arrival notifications so hive.app_next_block can
-    -- wait on hive.wait_for_new_block instead of polling with pg_sleep
+    -- Subscribe to block-arrival notifications so hive.app_wait_for_new_block
+    -- can wait on hive.wait_for_new_block instead of polling with pg_sleep
     -- (issue #328). LISTEN is idempotent, so this is a no-op after the
     -- first iteration in a session. The registration becomes effective at
     -- the next COMMIT -- either the gated one below or, for callers that
@@ -280,9 +297,14 @@ BEGIN
     -- 1. commit if there is a pending transaction.
     -- This should be the first statement in the procedure. (A second
     -- COMMIT follows the heartbeat UPDATE below, see issue #328.)
+    -- Every transaction below that touches hafd.contexts first enters the
+    -- compaction gate, see hive.contexts_compaction_gate_key.
     IF __had_prior_xact THEN
         COMMIT;
+        PERFORM hive.app_enter_contexts_gate();
         PERFORM hive.app_perform_maintenance( _contexts );
+    ELSE
+        PERFORM hive.app_enter_contexts_gate();
     END IF;
 
     SELECT last_active_at INTO __previous_active_at_time
@@ -296,13 +318,14 @@ BEGIN
     WHERE ctx.name = ANY(_contexts);
     PERFORM hive.register_pending_custom_json_type_indexes( _contexts );
     -- Commit the heartbeat immediately so this write transaction is not
-    -- held open across the wait inside hive.app_next_block during live
+    -- held open across the rest of the iteration during live
     -- sync, which would pin the global snapshot horizon and throttle
     -- HOT-prune / autovacuum (issue #328). Only when we are allowed to
     -- COMMIT here (see __had_prior_xact); otherwise the heartbeat is
     -- committed by the caller's own transaction control.
     IF __had_prior_xact THEN
         COMMIT;
+        PERFORM hive.app_enter_contexts_gate();
     END IF;
 
     IF _limit IS NOT NULL
@@ -312,9 +335,22 @@ BEGIN
         END IF;
     END IF;
 
+    -- Each wait below runs after a COMMIT when the procedure may commit, so it
+    -- holds no lock on hafd.contexts nor the compaction gate. What this
+    -- iteration wrote before deciding to wait is what the caller would have
+    -- committed after the procedure returned, only committed earlier; that
+    -- includes the events_id move the __skip_attach lock protects below, which
+    -- hived's events cleanup sees once committed. The XID taken after the wait
+    -- keeps __had_prior_xact true for the next call of an eternal loop.
     IF hive.app_is_paused( _contexts ) THEN
         IF _wait THEN
+            IF __had_prior_xact THEN
+                COMMIT;
+            END IF;
             PERFORM pg_sleep( 1 );
+            IF __had_prior_xact THEN
+                PERFORM pg_current_xact_id();
+            END IF;
         END IF;
         RETURN;
     END IF;
@@ -322,7 +358,13 @@ BEGIN
     IF NOT hive.is_instance_ready_for_contexts( _contexts ) THEN
         PERFORM hive.set_waiting_for_haf_stage( _contexts );
         IF _wait THEN
+            IF __had_prior_xact THEN
+                COMMIT;
+            END IF;
             PERFORM pg_sleep( 0.5 );
+            IF __had_prior_xact THEN
+                PERFORM pg_current_xact_id();
+            END IF;
         END IF;
         RETURN;
     END IF;
@@ -403,7 +445,22 @@ BEGIN
         -- app next block return range of irreversible blocks which are already synced
         -- but sync is in progress in sqlserializer and we may got millions of blocks
         -- here is no sense to switch the contexts
-        SELECT * FROM hive.app_next_block( _contexts, _wait, __block_limit ) INTO _blocks_range;
+        SELECT * FROM hive.app_find_next_block( _contexts, _wait, __block_limit ) INTO _blocks_range;
+        IF _blocks_range.first_block > _blocks_range.last_block
+        THEN
+            -- no block yet
+            _blocks_range := NULL;
+            IF _wait THEN
+                IF __had_prior_xact THEN
+                    COMMIT;
+                END IF;
+                PERFORM hive.app_wait_for_new_block( __block_limit );
+                IF __had_prior_xact THEN
+                    PERFORM pg_current_xact_id();
+                END IF;
+            END IF;
+            RETURN;
+        END IF;
         IF _blocks_range IS NULL
         THEN
             RETURN;
@@ -439,7 +496,13 @@ BEGIN
             -- a dependency has not committed the next block yet
             _blocks_range := NULL;
             IF _wait THEN
+                IF __had_prior_xact THEN
+                    COMMIT;
+                END IF;
                 PERFORM pg_sleep( 0.25 );
+                IF __had_prior_xact THEN
+                    PERFORM pg_current_xact_id();
+                END IF;
             END IF;
             RETURN;
         END IF;

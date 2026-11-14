@@ -236,6 +236,9 @@ $BODY$
 -- _block_limit: highest block that may be delivered; NULL computes it from the
 --        application registry (hive.app_dependencies_block_limit).
 -- Paused applications (hive.app_pause) get NULL.
+-- The wait runs inside the caller's transaction; hive.app_next_iteration commits
+-- before it waits instead. Holds hived's compaction of hafd.contexts back until
+-- the caller's transaction ends (hive.app_enter_contexts_gate).
 CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names hive.contexts_group, _wait BOOLEAN = TRUE, _block_limit INT = NULL )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
@@ -243,37 +246,21 @@ CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names hive.contexts_gro
 AS
 $BODY$
 DECLARE
-    __hive_sync_state hafd.sync_state;
-    __block_limit INT := COALESCE( _block_limit, hive.app_dependencies_block_limit( _context_names ) );
+    __block_limit INT;
+    __result hive.blocks_range;
 BEGIN
-    PERFORM hive.app_check_contexts_synchronized( _context_names );
+    PERFORM hive.app_enter_contexts_gate();
+    __block_limit := COALESCE( _block_limit, hive.app_dependencies_block_limit( _context_names ) );
+    __result := hive.app_find_next_block( _context_names, _wait, __block_limit );
 
-    -- prevent auto-detaching the context when app is actively asking for new blocks
-    UPDATE hafd.contexts
-    SET last_active_at = NOW()
-    WHERE name =ANY(_context_names);
-
-    PERFORM hive.register_pending_custom_json_type_indexes( _context_names );
-
-    IF hive.app_is_paused( _context_names ) THEN
+    IF __result.first_block > __result.last_block THEN
         IF _wait THEN
-            PERFORM pg_sleep( 1 );
+            PERFORM hive.app_wait_for_new_block( __block_limit );
         END IF;
         RETURN NULL;
     END IF;
 
-    SELECT hive.get_sync_state() INTO __hive_sync_state;
-
-    -- if there there is  registered table for given context
-    -- In lite mode, always use the non-forking path (defense-in-depth)
-    -- Detached early contexts process irreversible blocks while hived replays, see hive.app_next_iteration
-    IF NOT hive.is_lite_mode() AND hive.app_are_forking( _context_names ) AND ( __hive_sync_state = 'LIVE' OR NOT hive.is_pruning_enabled() )
-       AND ( hive.is_instance_ready() OR hive.app_context_are_attached( _context_names ) )
-    THEN
-        RETURN hive.app_next_block_forking_app( _context_names, _wait, __block_limit );
-    END IF;
-
-    RETURN hive.app_next_block_non_forking_app( _context_names, _wait, __block_limit );
+    RETURN __result;
 END;
 $BODY$
 ;

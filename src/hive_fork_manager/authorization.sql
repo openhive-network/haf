@@ -297,6 +297,9 @@ GRANT EXECUTE ON FUNCTION
     , hive.get_sync_state()
     , hive.get_vacuum_full_prune_commands(schema_name TEXT)
     , hive.get_vacuum_periodic_commands()
+    , hive.contexts_compaction_gate_key()
+    , hive.contexts_heap_pages()
+    , hive.is_contexts_compaction_needed( _threshold_pages BIGINT )
 TO hived_group;
 
 GRANT USAGE ON SCHEMA hive to haf_maintainer;

@@ -30,6 +30,7 @@ ADD_LIBRARY(
     all_accounts_dumper.cpp
     write_ahead_log.cpp
     vacuum_cleaner.cpp
+    contexts_compactor.cpp
     ${HEADERS}
 )
 

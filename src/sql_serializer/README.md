@@ -51,6 +51,9 @@ The sql_serializer extends hived with these new parameters:
   When there are blocks already dumped, then the limit is omitted.
 * **psql-prune-blocks** [default: 0] if set to a value greater than 0, enables pruning of older blocks from the database. Blocks older than
   the specified value (e.g., `psql-prune-blocks=10000` keeps the latest 10,000 blocks) will be removed. If set to 0, no pruning is performed, retaining all blocks indefinitely.
+* **psql-contexts-compaction-threshold**[default: 64] while hived is live (never during a replay or massive sync), `hafd.contexts` is rewritten with `VACUUM FULL` once its heap has more pages than this. Plain `VACUUM` cannot shrink the table (`vacuum_truncate=false`). The rewrite runs on its own thread and connection: it first takes the advisory key `hive.contexts_compaction_gate_key()` exclusively, which waits for the applications' iterations in progress and holds new ones back, then runs `VACUUM FULL hafd.contexts`. A rewrite that gets neither within the timeouts below is skipped and retried at the next block; after 100 consecutive skips each further skip is logged as a warning. Each rewrite logs the pages before and after, the gate wait and the rewrite time.
+* **psql-contexts-compaction-gate-timeout**[default: 5000] milliseconds a compaction of `hafd.contexts` waits for the gate.
+* **psql-contexts-compaction-lock-timeout**[default: 100] milliseconds `VACUUM FULL hafd.contexts` waits for its table lock; hived's own statements on the table wait behind it for at most that long, plus the rewrite itself.
 
 ## Filter parameters
 * **psql-enable-filter**[default: true] enable filtering accounts and operations

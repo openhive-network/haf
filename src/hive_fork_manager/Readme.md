@@ -174,7 +174,14 @@ ranges arrive, and otherwise idles on its connection until a notification (or a 
 (which a session stuck in an eternal `CALL main()` never can), the backend shows as idle in
 `pg_stat_activity`, and no transaction is ever held open across a wait. `hive.push_block` notifies
 `haf_new_block`, `hive.set_irreversible` notifies `haf_new_irreversible`. The default
-`_wait => TRUE` keeps the classic eternal `CALL main()` loops working unchanged.
+`_wait => TRUE` keeps the classic eternal `CALL main()` loops working unchanged; such a loop commits
+the iteration before it waits, so a waiting application holds no lock on `hafd.contexts`.
+Each transaction of `hive.app_next_iteration` (and `hive.app_next_block`) that touches `hafd.contexts`
+holds the advisory key `hive.contexts_compaction_gate_key()` shared until it ends. While live,
+hived takes it exclusively to rewrite `hafd.contexts` with `VACUUM FULL` once the table outgrows
+`psql-contexts-compaction-threshold`, so an iteration's transaction that stays open (e.g. a driver's
+own `BEGIN ... COMMIT` around a long range) delays that compaction, and new iterations wait for a
+compaction in progress.
 A driver that owns the transaction (`BEGIN; CALL hive.app_next_iteration(...); CALL <process_procedure>(range);
 COMMIT`) must also call `hive.app_perform_maintenance( _contexts )` after committing: it performs the
 periodic shadow-table vacuum that `hive.app_next_iteration` can only do itself when it controls the

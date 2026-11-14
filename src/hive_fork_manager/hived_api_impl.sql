@@ -346,6 +346,7 @@ $BODY$
 DECLARE
     __upper_bound_events_id BIGINT := NULL;
     __max_block_num INTEGER := NULL;
+    __min_context_events_id BIGINT := NULL;
 BEGIN
     SELECT consistent_block INTO __max_block_num FROM hafd.hive_state;
 
@@ -365,12 +366,16 @@ BEGIN
     -- a target row might have already been updated (or deleted or locked) by another concurrent transaction by the
     -- time it is found.
     --
-    -- It means that SELECT from USING clause will return min event = 10, but in case of a bug an application
+    -- It means that SELECT below will return min event = 10, but in case of a bug an application
     -- context may back to event 9 and then when DELETE is being committed it will violate FK(event_queue(id)<->contexts(events_id))
+    --
+    -- The minimum is read once, before the DELETE: as a subquery joined to events_queue the cached generic
+    -- plan re-scanned hafd.contexts, which has no index on events_id, once per events_queue row.
+    -- events_id is not indexed on purpose: nearly every event updates it, and an index would make those updates non-HOT.
+    SELECT MIN( hc.events_id ) INTO __min_context_events_id FROM hafd.contexts hc;
 
     DELETE FROM hafd.events_queue heq
-    USING ( SELECT MIN( hc.events_id) as id FROM hafd.contexts hc ) as min_event
-    WHERE ( heq.id < __upper_bound_events_id OR __upper_bound_events_id IS NULL )  AND ( heq.id < min_event.id OR min_event.id IS NULL ) AND heq.id != 0 AND heq.id != hive.unreachable_event_id();
+    WHERE ( heq.id < __upper_bound_events_id OR __upper_bound_events_id IS NULL )  AND ( heq.id < __min_context_events_id OR __min_context_events_id IS NULL ) AND heq.id != 0 AND heq.id != hive.unreachable_event_id();
 
 END;
 $BODY$
