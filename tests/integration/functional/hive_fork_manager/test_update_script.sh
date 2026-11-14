@@ -628,6 +628,45 @@ exec_sql "CALL update_test_app.process_blocks('update_test_app', update_test_app
 exec_sql "CALL update_test_app.worker_loop('update_test_app')"
 exec_sql "CALL update_test_app.process_blocks_buffered('update_test_app')"
 
+printf "\nTEST: Upgrade a database whose app view reads the views of two contexts, with another app view built on it. The update should restore each view once, with its definition, owner, privileges and comment.\n"
+prepare_database
+exec_sql "DO \$\$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'span_test_owner') THEN CREATE ROLE span_test_owner IN ROLE hive_applications_owner_group; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'span_test_reader') THEN CREATE ROLE span_test_reader; END IF;
+          END \$\$;
+          CREATE SCHEMA span_account AUTHORIZATION span_test_owner;
+          CREATE SCHEMA span_posts AUTHORIZATION span_test_owner;
+          SET ROLE span_test_owner;
+          SELECT hive.app_create_context('span_account_ctx', 'span_account');
+          SELECT hive.app_create_context('span_posts_ctx', 'span_posts');
+          CREATE VIEW span_posts.profiles AS
+              SELECT a.num AS account_block, p.num AS posts_block
+              FROM span_account.blocks_view a JOIN span_posts.blocks_view p ON p.num = a.num;
+          GRANT SELECT ON span_posts.profiles TO span_test_reader;
+          COMMENT ON VIEW span_posts.profiles IS 'profiles over both contexts';
+          COMMENT ON COLUMN span_posts.profiles.posts_block IS 'block of span_posts_ctx';
+          CREATE VIEW span_posts.profile_count AS SELECT count(*) AS profiles FROM span_posts.profiles;
+          GRANT SELECT ON span_posts.profile_count TO span_test_reader;
+          RESET ROLE;"
+span_views="SELECT string_agg(concat_ws('|', c.oid::regclass::text, pg_get_viewdef(c.oid), pg_get_userbyid(c.relowner), c.relacl::text,
+                                        obj_description(c.oid, 'pg_class'), col_description(c.oid, 2)), E'\n' ORDER BY c.oid::regclass::text)
+    FROM pg_class c WHERE c.relnamespace IN ('span_account'::regnamespace, 'span_posts'::regnamespace) AND c.relkind = 'v'"
+span_before=$(exec_sql "$span_views")
+[ "$(exec_sql "SELECT has_table_privilege('span_test_reader', 'span_posts.profiles', 'SELECT')")" = "t" ] \
+    || { echo "TEST FAILED: could not grant span_test_reader SELECT on span_posts.profiles"; exit 64; }
+update_output=$(update_database 2>&1) || { echo "$update_output"; exit 65; }
+echo "$update_output"
+check_table_is_empty hafd.deps_saved_ddl
+[ "$(deployed_version)" != "1.0" ] || { echo "TEST FAILED: the extension was not updated"; exit 66; }
+[ "$(exec_sql "$span_views")" = "$span_before" ] \
+    || { printf "TEST FAILED: the update changed the views of the two contexts:\nBefore:\n%s\nAfter:\n%s\n" "$span_before" "$(exec_sql "$span_views")"; exit 67; }
+[ "$(grep -c "Restoring span_posts.profiles$" <<< "$update_output")" = "1" ] \
+    || { echo "TEST FAILED: span_posts.profiles was not restored exactly once"; exit 68; }
+check_relation_comment span_account.operations_view_extended "$(exec_sql "SELECT hive.context_view_shape('operations_view_extended')")" || exit 69
+check_relation_comment span_posts.operations_view_extended "$(exec_sql "SELECT hive.context_view_shape('operations_view_extended')")" || exit 69
+[ "$(exec_sql "SELECT profiles FROM span_posts.profile_count")" = "0" ] \
+    || { echo "TEST FAILED: the app view built on span_posts.profiles does not work after the update"; exit 70; }
+
 printf "\nTEST: Upgrade while another session holds a lock on a hive object. The session should be ended and the database reopened afterwards.\n"
 prepare_database
 create_app_depending_on_hive
