@@ -6,163 +6,85 @@ DROP SCHEMA IF EXISTS hive_update CASCADE;
 CREATE SCHEMA hive_update;
 
 /**
-Easy way to save and recreate table or view dependencies, when you need to alter
-something in them.
-See http://pretius.com/postgresql-stop-worrying-about-table-and-view-dependencies/.
-Enhanced by Wojciech Barcik wbarcik@syncad.com (handling of rules).
-Modified to also store and restore object definition itself.
+Saves a view or materialized view in `deps_saved_ddl`, under its own schema and name and without the views built on it:
+its definition, rules (or indexes, for a materialized view), owner, privileges and comments. Each view built on it is
+saved on its own, so a view built on several saved views is saved once. Use function `deps_restore_dependencies` to
+restore it. Based on http://pretius.com/postgresql-stop-worrying-about-table-and-view-dependencies/, with the DDL of
+rules by Wojciech Barcik wbarcik@syncad.com.
 */
-
-CREATE OR REPLACE FUNCTION hive_update.deps_save_and_drop_dependencies(
-    p_view_schema character varying,
-    p_view_name character varying,
-    drop_relation BOOLEAN DEFAULT true
-)
+CREATE OR REPLACE FUNCTION hive_update.deps_save_view( _view OID )
     RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
+    LANGUAGE plpgsql
     VOLATILE
     -- the saved definitions name every object with its schema, so they do not depend on the restoring session's search_path
     SET search_path = ''
 AS $BODY$
-/**
-From http://pretius.com/postgresql-stop-worrying-about-table-and-view-dependencies/
-@wojtek added DDL for rules.
+DECLARE
+    __schema TEXT;
+    __name TEXT;
+    __kind "char";
+BEGIN
+    SELECT n.nspname, c.relname, c.relkind INTO __schema, __name, __kind
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.oid = _view;
 
-Saves view and it's dependencies in table `deps_saved_ddl`, for
-future restoration. Use function `deps_restore_dependencies` to restore them.
-*/
-declare
-    v_curr record;
-begin
-    for v_curr in
-        (
-            select obj_schema, obj_name, obj_type from
-                (
-                    with recursive recursive_deps(obj_schema, obj_name, obj_type, depth) as
-                                       (
-                                           SELECT p_view_schema COLLATE "C", p_view_name COLLATE "C", relkind::VARCHAR, 0
-                                           FROM pg_class
-                                                    JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
-                                           WHERE pg_namespace.nspname = p_view_schema AND pg_class.relname = p_view_name
-                                           union
-                                           select dep_schema::varchar, dep_name::varchar, dep_type::varchar,
-                                                  recursive_deps.depth + 1 from
-                                               (
-                                                   select ref_nsp.nspname ref_schema, ref_cl.relname ref_name,
-                                                          rwr_cl.relkind dep_type, rwr_nsp.nspname dep_schema,
-                                                          rwr_cl.relname dep_name
-                                                   from pg_depend dep
-                                                            join pg_class ref_cl on dep.refobjid = ref_cl.oid
-                                                            join pg_namespace ref_nsp on ref_cl.relnamespace = ref_nsp.oid
-                                                            join pg_rewrite rwr on dep.objid = rwr.oid
-                                                            join pg_class rwr_cl on rwr.ev_class = rwr_cl.oid
-                                                            join pg_namespace rwr_nsp on rwr_cl.relnamespace = rwr_nsp.oid
-                                                   where dep.deptype = 'n'
-                                                     and dep.classid = 'pg_rewrite'::regclass
-                                               ) deps
-                                                   join recursive_deps on deps.ref_schema = recursive_deps.obj_schema
-                                                   and deps.ref_name = recursive_deps.obj_name
-                                           where (deps.ref_schema != deps.dep_schema or deps.ref_name != deps.dep_name)
-                                       )
-                    select obj_schema, obj_name, obj_type, depth
-                    from recursive_deps
-                    --  where depth > 0
-                ) t
-            group by obj_schema, obj_name, obj_type
-            order by max(depth) desc
-        ) loop
+    INSERT INTO hafd.deps_saved_ddl( deps_view_schema, deps_view_name, deps_ddl_to_run )
+    SELECT __schema, __name, 'COMMENT ON ' || CASE WHEN __kind = 'm' THEN 'MATERIALIZED VIEW' ELSE 'VIEW' END
+                             || ' ' || __schema || '.' || __name || ' IS ''' || replace( d.description, '''', '''''' ) || ''';'
+    FROM pg_description d
+    WHERE d.objoid = _view AND d.classoid = 'pg_class'::regclass AND d.objsubid = 0 AND d.description IS NOT NULL;
 
-            insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
-            select p_view_schema, p_view_name, 'COMMENT ON ' ||
-                                               case
-                                                   when c.relkind = 'v' then 'VIEW'
-                                                   when c.relkind = 'm' then 'MATERIALIZED VIEW'
-                                                   else ''
-                                                   end
-                                                   || ' ' || n.nspname || '.' || c.relname || ' IS '''
-                                                   || replace(d.description, '''', '''''') || ''';'
-            from pg_class c
-                     join pg_namespace n on n.oid = c.relnamespace
-                     join pg_description d on d.objoid = c.oid and d.objsubid = 0
-            where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name
-              and d.description is not null;
+    INSERT INTO hafd.deps_saved_ddl( deps_view_schema, deps_view_name, deps_ddl_to_run )
+    SELECT __schema, __name, 'COMMENT ON COLUMN ' || __schema || '.' || __name || '.' || a.attname
+                             || ' IS ''' || replace( d.description, '''', '''''' ) || ''';'
+    FROM pg_attribute a
+    JOIN pg_description d ON d.objoid = a.attrelid AND d.classoid = 'pg_class'::regclass AND d.objsubid = a.attnum
+    WHERE a.attrelid = _view AND d.description IS NOT NULL;
 
-            insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
-            select p_view_schema, p_view_name, 'COMMENT ON COLUMN ' || n.nspname || '.'
-                                                   || c.relname || '.' || a.attname || ' IS '''
-                                                   || replace(d.description, '''', '''''') || ''';'
-            from pg_class c
-                     join pg_attribute a on c.oid = a.attrelid
-                     join pg_namespace n on n.oid = c.relnamespace
-                     join pg_description d on d.objoid = c.oid and d.objsubid = a.attnum
-            where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name
-              and d.description is not null;
+    -- statements are restored in reverse order: the owner, then the privileges reset, then the grants in their original order
+    INSERT INTO hafd.deps_saved_ddl( deps_view_schema, deps_view_name, deps_ddl_to_run )
+    SELECT __schema, __name, format( 'GRANT %s ON %I.%I TO %s%s', acl.privilege_type, __schema, __name,
+                                     CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE quote_ident( pg_get_userbyid( acl.grantee ) ) END,
+                                     CASE WHEN acl.is_grantable THEN ' WITH GRANT OPTION' ELSE '' END )
+    FROM pg_class c
+    CROSS JOIN LATERAL aclexplode( c.relacl ) WITH ORDINALITY AS acl
+    WHERE c.oid = _view
+    ORDER BY acl.ordinality DESC;
 
-            -- statements are restored in reverse order: the owner, then the privileges reset, then the grants in their original order
-            insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
-            select p_view_schema, p_view_name, format('GRANT %s ON %I.%I TO %s%s', acl.privilege_type, n.nspname, c.relname,
-                                                   case when acl.grantee = 0 then 'PUBLIC' else quote_ident(pg_get_userbyid(acl.grantee)) end,
-                                                   case when acl.is_grantable then ' WITH GRANT OPTION' else '' end)
-            from pg_class c
-                     join pg_namespace n on n.oid = c.relnamespace
-                     cross join lateral aclexplode(c.relacl) with ordinality as acl
-            where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name
-            order by acl.ordinality desc;
+    INSERT INTO hafd.deps_saved_ddl( deps_view_schema, deps_view_name, deps_ddl_to_run )
+    SELECT __schema, __name, format( 'REVOKE ALL ON %I.%I FROM PUBLIC, %I', __schema, __name, pg_get_userbyid( c.relowner ) )
+    FROM pg_class c
+    WHERE c.oid = _view AND c.relacl IS NOT NULL;
 
-            insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
-            select p_view_schema, p_view_name, format('REVOKE ALL ON %I.%I FROM PUBLIC, %I', n.nspname, c.relname, pg_get_userbyid(c.relowner))
-            from pg_class c
-                     join pg_namespace n on n.oid = c.relnamespace
-            where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name and c.relacl is not null;
+    INSERT INTO hafd.deps_saved_ddl( deps_view_schema, deps_view_name, deps_ddl_to_run )
+    SELECT __schema, __name, format( 'ALTER %s %I.%I OWNER TO %I', CASE WHEN __kind = 'm' THEN 'MATERIALIZED VIEW' ELSE 'VIEW' END,
+                                     __schema, __name, pg_get_userbyid( c.relowner ) )
+    FROM pg_class c
+    WHERE c.oid = _view;
 
-            insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
-            select p_view_schema, p_view_name, format('ALTER %s %I.%I OWNER TO %I',
-                                                   case when c.relkind = 'm' then 'MATERIALIZED VIEW' else 'VIEW' end,
-                                                   n.nspname, c.relname, pg_get_userbyid(c.relowner))
-            from pg_class c
-                     join pg_namespace n on n.oid = c.relnamespace
-            where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name;
+    IF __kind = 'v' THEN
+        INSERT INTO hafd.deps_saved_ddl( deps_view_schema, deps_view_name, deps_ddl_to_run )
+        SELECT __schema, __name, definition
+        FROM pg_catalog.pg_rules
+        WHERE schemaname = __schema AND tablename = __name;
 
-            if v_curr.obj_type = 'v' then
+        INSERT INTO hafd.deps_saved_ddl( deps_view_schema, deps_view_name, deps_ddl_to_run )
+        SELECT __schema, __name, 'CREATE VIEW ' || __schema || '.' || __name || ' AS ' || view_definition
+        FROM information_schema.views
+        WHERE table_schema = __schema AND table_name = __name;
+    ELSE
+        INSERT INTO hafd.deps_saved_ddl( deps_view_schema, deps_view_name, deps_ddl_to_run )
+        SELECT __schema, __name, pg_get_indexdef( i.indexrelid )
+        FROM pg_index i
+        WHERE i.indrelid = _view;
 
-                insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
-                select p_view_schema, p_view_name, definition
-                from pg_catalog.pg_rules
-                where schemaname = v_curr.obj_schema and tablename = v_curr.obj_name;
-
-                insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
-                select p_view_schema, p_view_name, 'CREATE VIEW '
-                                                       || v_curr.obj_schema || '.' || v_curr.obj_name || ' AS ' || view_definition
-                from information_schema.views
-                where table_schema = v_curr.obj_schema and table_name = v_curr.obj_name;
-
-            elsif v_curr.obj_type = 'm' then
-                insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
-                select p_view_schema, p_view_name, pg_get_indexdef(i.indexrelid)
-                from pg_index i
-                         join pg_class c on c.oid = i.indrelid
-                         join pg_namespace n on n.oid = c.relnamespace
-                where n.nspname = v_curr.obj_schema and c.relname = v_curr.obj_name;
-
-                insert into hafd.deps_saved_ddl(deps_view_schema, deps_view_name, deps_ddl_to_run)
-                select p_view_schema, p_view_name, 'CREATE MATERIALIZED VIEW '
-                                                       || v_curr.obj_schema || '.' || v_curr.obj_name || ' AS ' || definition
-                from pg_matviews
-                where schemaname = v_curr.obj_schema and matviewname = v_curr.obj_name;
-            end if;
-
-            if drop_relation = true then
-                execute 'DROP ' ||
-                        case
-                            when v_curr.obj_type = 'v' then 'VIEW'
-                            when v_curr.obj_type = 'm' then 'MATERIALIZED VIEW'
-                            end
-                            || ' ' || v_curr.obj_schema || '.' || v_curr.obj_name;
-            end if;
-
-        end loop;
-end;
+        INSERT INTO hafd.deps_saved_ddl( deps_view_schema, deps_view_name, deps_ddl_to_run )
+        SELECT __schema, __name, 'CREATE MATERIALIZED VIEW ' || __schema || '.' || __name || ' AS ' || definition
+        FROM pg_matviews
+        WHERE schemaname = __schema AND matviewname = __name;
+    END IF;
+END;
 $BODY$;
 
 
@@ -183,7 +105,7 @@ AS $BODY$
 /**
 From http://pretius.com/postgresql-stop-worrying-about-table-and-view-dependencies/
 
-Restores dependencies dropped by function `deps_save_and_drop_dependencies`.
+Restores an object saved by function `deps_save_view` or `deps_save_routine`.
 */
 declare
     v_curr record;
@@ -345,22 +267,16 @@ BEGIN
             USING HINT = 'Drop them before the update and recreate them after it.';
     END IF;
 
-    -- deps_save_and_drop_dependencies also saves the views built on a view, so start from views built on no other saved view
+    -- each view is saved on its own: restore_hive_dependents restores a view once the views it is built on are restored,
+    -- whichever saved views they are
     FOR __object IN
-        SELECT v.object_schema, c.relname
+        SELECT v.objid, v.object_schema, c.relname
         FROM hive_dependents v
         JOIN pg_class c ON c.oid = v.objid
         WHERE v.relkind IN ( 'v', 'm' )
-          AND NOT EXISTS (
-              SELECT 1
-              FROM pg_rewrite r
-              JOIN pg_depend dep ON dep.classid = 'pg_rewrite'::regclass AND dep.objid = r.oid AND dep.deptype = 'n'
-              JOIN hive_dependents base ON base.classid = dep.refclassid AND base.objid = dep.refobjid AND base.relkind IN ( 'v', 'm' )
-              WHERE r.ev_class = v.objid AND base.objid <> v.objid
-          )
         ORDER BY v.object_identity
     LOOP
-        PERFORM hive_update.deps_save_and_drop_dependencies( __object.object_schema::VARCHAR, __object.relname::VARCHAR, FALSE );
+        PERFORM hive_update.deps_save_view( __object.objid );
         RETURN NEXT format( 'Saving %s.%s', __object.object_schema, __object.relname );
     END LOOP;
 
@@ -375,7 +291,8 @@ $BODY$;
 
 /**
 Restores everything saved in `deps_saved_ddl`. An object whose restore fails is retried once the others
-are restored, as it may need one of them (a function returning a view's row type, a view calling a function).
+are restored, as it may need one of them (a view built on other saved views, a function returning a view's row type,
+a view calling a function).
 Raises an exception naming each object that still cannot be restored, so the update fails instead of losing it.
 Returns a line for each restored object.
 */
