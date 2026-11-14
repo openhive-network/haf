@@ -181,7 +181,8 @@ holds the advisory key `hive.contexts_compaction_gate_key()` shared until it end
 hived takes it exclusively to rewrite `hafd.contexts` with `VACUUM FULL` once the table outgrows
 `psql-contexts-compaction-threshold`, so an iteration's transaction that stays open (e.g. a driver's
 own `BEGIN ... COMMIT` around a long range) delays that compaction, and new iterations wait for a
-compaction in progress.
+compaction in progress. hived never queues for the key, so an iteration that stays open never makes
+the other applications' iterations wait.
 A driver that owns the transaction (`BEGIN; CALL hive.app_next_iteration(...); CALL <process_procedure>(range);
 COMMIT`) must also call `hive.app_perform_maintenance( _contexts )` after committing: it performs the
 periodic shadow-table vacuum that `hive.app_next_iteration` can only do itself when it controls the
