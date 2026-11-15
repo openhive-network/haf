@@ -13,6 +13,7 @@ export LOG_FILE=replay_with_update.log
 # shellcheck source=./ci_common.sh
 source "$SCRIPTSDIR/maintenance-scripts/ci_common.sh"
 
+restart_postgresql
 
 test_start
 

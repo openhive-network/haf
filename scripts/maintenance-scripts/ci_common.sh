@@ -17,6 +17,19 @@ export OP_BODY_FILTER_PATH=${OP_BODY_FILTER_PATH:-"${REPO_DIR}haf-testnet-binari
 export DB_NAME=haf_block_log
 export DB_ADMIN="haf_admin"
 
+# A preceding apt install may have upgraded the PostgreSQL minor version on disk under the server
+# the entrypoint already started; that old binary cannot load the new libraries (e.g. plpgsql.so).
+restart_postgresql() {
+  sudo -n /etc/init.d/postgresql restart
+  local attempt
+  for attempt in $(seq 60); do
+    pg_isready -h /var/run/postgresql -q && return 0
+    echo "Waiting for PostgreSQL to accept connections (attempt ${attempt})..."
+    sleep 1
+  done
+  pg_isready -h /var/run/postgresql
+}
+
 test_start() {
   pushd "${REPO_DIR}"
   git config --global --add safe.directory "$(realpath "${REPO_DIR}")"

@@ -23,6 +23,8 @@ export LOG_FILE=hfm_functional_tests.log
 # shellcheck source=./ci_common.sh
 source "$SCRIPTSDIR/maintenance-scripts/ci_common.sh"
 
+restart_postgresql
+
 # Use CI_PROJECT_DIR - source is already checked out by GitLab
 HAF_SOURCE_DIR="${CI_PROJECT_DIR}"
 HAF_BUILD_DIR="/home/hived/build"
