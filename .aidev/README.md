@@ -50,7 +50,12 @@ see *The test runtime image*.
 Otherwise it reads the test list from the `ADD_SQL_FUNCTIONAL_TEST` lines and `RUN_SERIAL`
 properties of `tests/integration/functional/{hive_fork_manager,query_supervisor}/CMakeLists.txt`,
 and runs each through `tools/test.sh` (8 at a time; `HFM_TEST_JOBS`), so no CMake configure
-and no `hive` submodule checkout is needed. The entrypoint needs the image's
+and no `hive` submodule checkout is needed. With them it runs the `ADD_EXAMPLES_FUNCTIONAL_TESTS`
+of `hive_fork_manager` (the Python example applications, `hfm-functional::hive_fork_manager/examples/<name>`)
+through `hive_fork_manager/test_examples.sh`, which pip-installs their dependencies (pexpect,
+psycopg, sqlalchemy, jinja2; the HAF image has none of them) into a venv. AIDEV runs the
+container without a network, so where the package index is unreachable each example is
+recorded skipped with that reason, and only a run with network access exercises them. The entrypoint needs the image's
 sudo-capable `hived` user, uid 1000 — the uid AIDEV's pull hosts and workers run as;
 `run-checks.sh` fails with that reason under any other uid.
 

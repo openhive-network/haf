@@ -448,8 +448,9 @@ BEGIN
         SELECT * FROM hive.app_find_next_block( _contexts, _wait, __block_limit ) INTO _blocks_range;
         IF _blocks_range.first_block > _blocks_range.last_block
         THEN
-            -- no block yet
-            _blocks_range := NULL;
+            -- no block yet: a row of NULLs, not NULL, as when hive.app_next_block returned
+            -- NULL into it; clients reading the OUT value expect (,)
+            _blocks_range := ROW( NULL, NULL )::hive.blocks_range;
             IF _wait THEN
                 IF __had_prior_xact THEN
                     COMMIT;
