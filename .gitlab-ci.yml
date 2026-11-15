@@ -861,7 +861,9 @@ haf_image_build:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
     HIVE_NETWORK_TYPE: mainnet
     # The default image runs PostgreSQL 18 since 1.29; haf_image_build_pg17
-    # below publishes the previous major under hive/haf/pg17.
+    # below publishes the previous major under hive/haf/pg17. POSTGRES_VERSION
+    # also selects the oldest accepted minor, POSTGRES_<major>_MINOR_VERSION in
+    # the Dockerfile (build_instance.sh forwards no other PostgreSQL build-arg).
     POSTGRES_VERSION: "18"
   tags:
     - bigjob
@@ -952,6 +954,7 @@ haf_image_build_pg17:
   variables:
     BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-pg17-binaries"
     HIVE_NETWORK_TYPE: mainnet
+    # Oldest accepted minor: POSTGRES_17_MINOR_VERSION in the Dockerfile.
     POSTGRES_VERSION: "17"
     PG_IMAGE_SUBPATH: "pg17"
   tags:
