@@ -282,9 +282,12 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     BOOST_SCOPE_EXIT(void) { ilog("Exiting hived->postgresql write-ahead log processing thread"); } BOOST_SCOPE_EXIT_END
     for (;;)
     {
-      // dequeue the next command into command_to_run, waiting if the queue is empty
-      sql_command_with_sequence_t command_to_run;
-      unsigned commands_remaining;
+      // dequeue every queued command into commands_to_run, waiting if the queue is empty.
+      // They run in one transaction: each commit waits for its WAL flush and, because hive.push_block and
+      // hive.set_irreversible NOTIFY, for PostgreSQL's cluster-wide notify lock, which every HAF instance on
+      // the server takes in turn. Committing a backlog command by command under I/O load made catching up,
+      // and draining the queue at shutdown, take many seconds.
+      std::deque<sql_command_with_sequence_t> commands_to_run;
       {
         std::unique_lock<std::mutex> lock(_mutex);
         _condition_variable.wait(lock, [&](){ return _shutdown_requested || !_command_queue.empty(); });
@@ -296,22 +299,26 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
           break;
         }
         else if (_shutdown_requested)
-          ilog("Dumping wal as part of shutdown");
+          ilog("Dumping wal as part of shutdown: ${n} commands", ("n", _command_queue.size()));
 
-        command_to_run = std::move(_command_queue.front());
-        _command_queue.pop_front();
-        commands_remaining = _command_queue.size();
+        commands_to_run.swap(_command_queue);
       }
       _condition_variable.notify_one();
-      dlog("processing thread is working on transaction with sequence number ${seq}, ${commands_remaining} remaining in queue", ("seq", command_to_run.first)(commands_remaining));
+      const write_ahead_log_manager::sequence_number_t last_sequence_number = commands_to_run.back().first;
+      dlog("processing thread is working on ${n} transactions with sequence numbers up to ${seq}", ("n", commands_to_run.size())("seq", last_sequence_number));
 
-      // execute the command
+      // execute the commands
       try
       {
         auto transaction = _transactions_controller->openTx();
-        transaction->exec(command_to_run.second);
-        transaction->exec("SELECT hive.update_wal_sequence_number(" + std::to_string(command_to_run.first) + ")");
-        if ( _pruning > 0 && command_to_run.first % 10 == 0 ) {
+        bool prune = false;
+        for (const auto& command : commands_to_run)
+        {
+          transaction->exec(command.second);
+          prune = prune || command.first % 10 == 0;
+        }
+        transaction->exec("SELECT hive.update_wal_sequence_number(" + std::to_string(last_sequence_number) + ")");
+        if ( _pruning > 0 && prune ) {
             transaction->exec("SELECT hive.prune_blocks_data(" + std::to_string(_pruning) +");");
         }
         transaction->commit();
@@ -341,8 +348,8 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
         throw;
       }
 
-      // notify the WAL that we've completed it
-      _write_ahead_log.transaction_completed(command_to_run.first);
+      // notify the WAL that we've completed them
+      _write_ahead_log.transaction_completed(last_sequence_number);
     }
   }
 

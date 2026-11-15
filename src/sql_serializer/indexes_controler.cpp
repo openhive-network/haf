@@ -498,7 +498,9 @@ indexes_controler::indexes_controler( std::string db_url, uint32_t psql_index_th
 , _psql_index_threshold( psql_index_threshold )
 , _monitor_retry_budget_seconds( monitor_retry_budget_seconds )
 , _index_policy( index_policy )
-, _interruptor(_db_url, app)
+// Index builds and vacuums of the haf_monitor thread run as haf_maintainer, a superuser, whose
+// queries only a superuser may cancel.
+, _interruptor(db_url_with_hived_app_as_haf_maintainer(_db_url), app)
 , theApp( app )
 {
 }
