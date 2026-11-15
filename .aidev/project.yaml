@@ -101,6 +101,10 @@ verification:
       - name: hfm_functional
         adapter: command
         args: [".aidev/run-checks.sh", "full", "hfm-functional", "cxx-scope"]
+        # Its container has no network, so the host downloads the Python example
+        # applications' dependencies as wheels into test-results/example-wheels/
+        # first, with the suite image's own Python; a no-op once they are there.
+        prepare: [".aidev/fetch-example-wheels.sh"]
         artifacts: ["test-results/full/"]
         honor_quarantine: true
         rerun: *hfm_rerun
