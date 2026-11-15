@@ -6,6 +6,15 @@ POSTGRES_VERSION="${POSTGRES_VERSION:-17}"
 sudo apt-get -y install git cmake ninja-build build-essential liburing-dev libboost-all-dev libssl-dev bzip2 libbz2-dev libsnappy-dev \
   python3-jinja2 libreadline-dev postgresql-server-dev-${POSTGRES_VERSION} zopfli libpqxx-dev libzstd-dev libjitterentropy3-dev
 
+# The install above may upgrade the PostgreSQL minor version under the server the entrypoint
+# already started; the old binary cannot load the new on-disk libraries (e.g. plpgsql.so).
+sudo -n /etc/init.d/postgresql restart
+for _ in $(seq 60); do
+  pg_isready -h /var/run/postgresql -q && break
+  sleep 1
+done
+pg_isready -h /var/run/postgresql
+
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SCRIPTSDIR="$SCRIPTPATH/.."
 
