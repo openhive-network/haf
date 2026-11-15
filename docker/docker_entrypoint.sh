@@ -126,9 +126,19 @@ psql -U haf_admin -d haf_block_log -c "CHECKPOINT;" || echo "Warning: CHECKPOINT
 # On production, autovacuum maintains these continuously, so this is skipped
 # by default to keep shutdown fast (VACUUM ANALYZE on fully-replayed tables
 # can take 30s-9min, easily exceeding the 2-minute stop_grace_period).
+# The tables are frozen, not just vacuumed, and the freezes hived queued after its massive
+# sync (hive.request_freeze_of_irreversible) are marked done: a replay that exits before
+# sync never runs them, so every restore of the saved instance would otherwise start with
+# hived's VACUUM (FREEZE, ANALYZE) rewriting hafd.operations and resampling its statistics
+# while the applications under test already query it.
 if [ "${SHUTDOWN_VACUUM_ANALYZE:-false}" = "true" ]; then
-  echo "Running VACUUM ANALYZE on key tables (SHUTDOWN_VACUUM_ANALYZE=true)..."
-  psql -U haf_admin -d haf_block_log -c "VACUUM ANALYZE hafd.account_operations, hafd.operations, hafd.transactions, hafd.blocks;" || echo "Warning: VACUUM ANALYZE failed"
+  echo "Running VACUUM (FREEZE, ANALYZE) on key tables (SHUTDOWN_VACUUM_ANALYZE=true)..."
+  psql -U haf_admin -d haf_block_log -v ON_ERROR_STOP=1 \
+    -c "VACUUM (FREEZE, ANALYZE) hafd.account_operations, hafd.operations, hafd.transactions, hafd.blocks, hafd.accounts, hafd.transactions_multisig;" \
+    -c "UPDATE hafd.vacuum_requests SET status = 'vacuumed', last_vacuumed_time = NOW(), error_message = NULL, skip_count = 0, first_skip_time = NULL
+        WHERE schema_name = 'hafd' AND kind = 'freeze' AND status = 'requested'
+          AND table_name IN ('account_operations', 'operations', 'transactions', 'blocks', 'accounts', 'transactions_multisig');" \
+    || echo "Warning: VACUUM (FREEZE, ANALYZE) failed"
 else
   echo "Skipping VACUUM ANALYZE (set SHUTDOWN_VACUUM_ANALYZE=true to enable, e.g. for CI cache saves)"
 fi
