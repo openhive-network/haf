@@ -6,6 +6,8 @@ SRC_DIR="$SCRIPT_DIR/.."
 set -euo pipefail
 
 POSTGRES_VERSION="${POSTGRES_VERSION:-17}"
+# Oldest acceptable minor release of POSTGRES_VERSION (e.g. 18.7); the Dockerfile sets it.
+POSTGRES_MINOR_VERSION="${POSTGRES_MINOR_VERSION:-}"
 
 # This script installs all packages required to build and run a HAF instance.
 # After changing it, please also update and push to the registry a docker image defined in https://gitlab.syncad.com/hive/haf/-/blob/develop/Dockerfile
@@ -20,6 +22,7 @@ print_help () {
     echo "  --ai                      Install pgai"
     echo "  --user                    Install packages to a subdirectory of the user's home directory."
     echo "  --hived-account=NAME      Specify the unix account name to be used for hived (UID 1000, with sudo)."
+    echo "  --check-postgres-version  Fail unless the installed PostgreSQL server is at least POSTGRES_MINOR_VERSION."
     echo "  --help                    Display this help screen and exit."
     echo
 }
@@ -31,6 +34,29 @@ assert_is_root() {
     then echo "Please run as root."
     exit 1
   fi
+}
+
+check_postgres_version() {
+  if [ -z "${POSTGRES_MINOR_VERSION}" ]; then
+    echo "ERROR: POSTGRES_MINOR_VERSION is not set; cannot check the installed PostgreSQL version." >&2
+    exit 1
+  fi
+
+  local postgres_bin="/usr/lib/postgresql/${POSTGRES_VERSION}/bin/postgres"
+  local installed
+  # "postgres (PostgreSQL) 18.7 (Ubuntu 18.7-1.pgdg26.04+2)" -> "18.7"
+  installed=$("$postgres_bin" --version | sed -nE 's/^postgres \(PostgreSQL\) ([0-9]+\.[0-9]+).*/\1/p')
+  if [ -z "$installed" ]; then
+    echo "ERROR: cannot determine the PostgreSQL version from '$("$postgres_bin" --version)'." >&2
+    exit 1
+  fi
+
+  # pgdg serves only its newest minor, so this accepts a newer one rather than pinning an exact version.
+  if dpkg --compare-versions "$installed" lt "$POSTGRES_MINOR_VERSION"; then
+    echo "ERROR: installed PostgreSQL ${installed} is older than the required ${POSTGRES_MINOR_VERSION}." >&2
+    exit 1
+  fi
+  echo "Installed PostgreSQL ${installed} (required: at least ${POSTGRES_MINOR_VERSION})."
 }
 
 install_ai_packages() {
@@ -119,6 +145,10 @@ install_all_dev_packages() {
   apt-get clean
   rm -rf /var/lib/apt/lists/*
 
+  if [ -n "${POSTGRES_MINOR_VERSION}" ]; then
+    check_postgres_version
+  fi
+
   pushd /tmp
   git clone https://github.com/citusdata/pg_cron.git
   cd pg_cron
@@ -169,6 +199,9 @@ while [ $# -gt 0 ]; do
     --hived-account=*)
         hived_unix_account="${1#*=}"
         create_hived_account
+        ;;
+    --check-postgres-version)
+        check_postgres_version
         ;;
     --help)
         print_help

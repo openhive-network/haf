@@ -4,12 +4,29 @@
 # To be started from cloned haf source directory.
 ARG CI_REGISTRY_IMAGE=registry.gitlab.syncad.com/hive/haf/
 ARG POSTGRES_VERSION=18
+# Oldest PostgreSQL minor release the images accept, per supported major. Each
+# stage that installs PostgreSQL from pgdg gets the selected value as
+# POSTGRES_MINOR_VERSION (see the *-pg<major> stages below), so bumping it
+# invalidates the cached install layers and the next build reinstalls from pgdg;
+# the build fails if pgdg serves an older minor. Selected by stage rather than
+# passed as its own build-arg because hive's build_instance.sh, which CI builds
+# through, forwards only POSTGRES_VERSION.
+ARG POSTGRES_18_MINOR_VERSION=18.7
+ARG POSTGRES_17_MINOR_VERSION=17.12
 ARG CI_IMAGE_TAG=ubuntu26.04-pg${POSTGRES_VERSION}-1
 
 ARG BUILD_IMAGE_TAG
 ARG IMAGE_TAG_PREFIX
 
-FROM registry.gitlab.syncad.com/hive/hive/minimal-runtime:ubuntu26.04-1 AS minimal-runtime-base
+FROM registry.gitlab.syncad.com/hive/hive/minimal-runtime:ubuntu26.04-1 AS minimal-runtime-pg18
+ARG POSTGRES_18_MINOR_VERSION
+ENV POSTGRES_MINOR_VERSION=${POSTGRES_18_MINOR_VERSION}
+
+FROM registry.gitlab.syncad.com/hive/hive/minimal-runtime:ubuntu26.04-1 AS minimal-runtime-pg17
+ARG POSTGRES_17_MINOR_VERSION
+ENV POSTGRES_MINOR_VERSION=${POSTGRES_17_MINOR_VERSION}
+
+FROM minimal-runtime-pg${POSTGRES_VERSION} AS minimal-runtime-base
 
 ARG POSTGRES_VERSION
 ARG PIP_INDEX_URL
@@ -51,7 +68,8 @@ RUN apt-get update && \
     rm /tmp/pg_search.deb && \
     apt-get remove -y gnupg curl && \
     apt-get autoremove -y && \
-    busybox --install -s
+    busybox --install -s && \
+    ./scripts/setup_ubuntu.sh --check-postgres-version
 
 FROM minimal-runtime-base AS pgcron-builder
 
@@ -59,7 +77,8 @@ ARG POSTGRES_VERSION
 
 # Install the build tools and dev packages needed to build pg_cron.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential git postgresql-${POSTGRES_VERSION} postgresql-server-dev-${POSTGRES_VERSION}
+    build-essential git postgresql-${POSTGRES_VERSION} postgresql-server-dev-${POSTGRES_VERSION} && \
+    /usr/local/src/scripts/setup_ubuntu.sh --check-postgres-version
 
 # Clone the pg_cron repository, pinned to a release tag: unpinned master broke the build when
 # upstream added an unconditional -lintl (for mingw64) to SHLIB_LINK, which doesn't exist as a
@@ -108,7 +127,15 @@ RUN useradd -r -s /usr/sbin/nologin -b /nonexistent -c "HAF maintenance service 
 USER hived
 WORKDIR /home/hived
 
-FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-ubuntu:ubuntu26.04-pg18-2 AS ci-base-image
+FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-ubuntu:ubuntu26.04-pg18-2 AS ci-base-image-pg18
+ARG POSTGRES_18_MINOR_VERSION
+ENV POSTGRES_MINOR_VERSION=${POSTGRES_18_MINOR_VERSION}
+
+FROM registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-ubuntu:ubuntu26.04-pg18-2 AS ci-base-image-pg17
+ARG POSTGRES_17_MINOR_VERSION
+ENV POSTGRES_MINOR_VERSION=${POSTGRES_17_MINOR_VERSION}
+
+FROM ci-base-image-pg${POSTGRES_VERSION} AS ci-base-image
 
 ARG POSTGRES_VERSION
 ENV POSTGRES_VERSION=${POSTGRES_VERSION}
