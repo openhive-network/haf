@@ -836,6 +836,57 @@ END;
 $BODY$
 ;
 
+-- hive.app_next_iteration gets its blocks from hive.app_next_block (with its own
+-- _wait), which setups such as hivemind's CI mocks wrap to shape the ranges an
+-- application is given, but waits for a block itself, after a COMMIT. Between
+-- hive.app_begin_deferred_wait and hive.app_end_deferred_wait, in one transaction,
+-- hive.app_next_block that finds no block yet records it instead of waiting
+-- (hive.app_defer_wait_for_new_block); hive.app_end_deferred_wait returns whether
+-- it did and ends the deferral.
+CREATE OR REPLACE FUNCTION hive.app_begin_deferred_wait()
+    RETURNS VOID
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    PERFORM set_config( 'hive.app_next_block_wait', 'deferred', TRUE );
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.app_defer_wait_for_new_block()
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+BEGIN
+    IF current_setting( 'hive.app_next_block_wait', TRUE ) IS DISTINCT FROM 'deferred' THEN
+        RETURN FALSE;
+    END IF;
+
+    PERFORM set_config( 'hive.app_next_block_wait', 'no_block', TRUE );
+    RETURN TRUE;
+END;
+$BODY$
+;
+
+CREATE OR REPLACE FUNCTION hive.app_end_deferred_wait()
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __no_block BOOLEAN := current_setting( 'hive.app_next_block_wait', TRUE ) = 'no_block';
+BEGIN
+    PERFORM set_config( 'hive.app_next_block_wait', '', TRUE );
+    RETURN COALESCE( __no_block, FALSE );
+END;
+$BODY$
+;
+
 CREATE OR REPLACE FUNCTION hive.update_one_state_providers( _first_block hafd.blocks.num%TYPE, _last_block hafd.blocks.num%TYPE, _state_provider hafd.state_providers, _context hafd.context_name )
     RETURNS void
     LANGUAGE plpgsql

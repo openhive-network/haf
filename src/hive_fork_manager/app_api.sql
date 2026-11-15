@@ -236,9 +236,11 @@ $BODY$
 -- _block_limit: highest block that may be delivered; NULL computes it from the
 --        application registry (hive.app_dependencies_block_limit).
 -- Paused applications (hive.app_pause) get NULL.
--- The wait runs inside the caller's transaction; hive.app_next_iteration commits
--- before it waits instead. Holds hived's compaction of hafd.contexts back until
--- the caller's transaction ends (hive.app_enter_contexts_gate).
+-- The wait runs inside the caller's transaction; hive.app_next_iteration, which
+-- gets its blocks from this function, defers it and commits before it waits
+-- instead (hive.app_begin_deferred_wait). Holds hived's compaction of
+-- hafd.contexts back until the caller's transaction ends
+-- (hive.app_enter_contexts_gate).
 CREATE OR REPLACE FUNCTION hive.app_next_block( _context_names hive.contexts_group, _wait BOOLEAN = TRUE, _block_limit INT = NULL )
     RETURNS hive.blocks_range
     LANGUAGE plpgsql
@@ -254,7 +256,7 @@ BEGIN
     __result := hive.app_find_next_block( _context_names, _wait, __block_limit );
 
     IF __result.first_block > __result.last_block THEN
-        IF _wait THEN
+        IF _wait AND NOT hive.app_defer_wait_for_new_block() THEN
             PERFORM hive.app_wait_for_new_block( __block_limit );
         END IF;
         RETURN NULL;

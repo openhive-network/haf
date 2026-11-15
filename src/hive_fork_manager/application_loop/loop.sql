@@ -445,8 +445,13 @@ BEGIN
         -- app next block return range of irreversible blocks which are already synced
         -- but sync is in progress in sqlserializer and we may got millions of blocks
         -- here is no sense to switch the contexts
-        SELECT * FROM hive.app_find_next_block( _contexts, _wait, __block_limit ) INTO _blocks_range;
-        IF _blocks_range.first_block > _blocks_range.last_block
+        -- The blocks come from hive.app_next_block, not from the functions behind it:
+        -- CI setups wrap it to shape the ranges an application is given (hivemind's
+        -- mocks cap the massive sync below its live tail). Its wait is deferred to
+        -- after the COMMIT below.
+        PERFORM hive.app_begin_deferred_wait();
+        SELECT * FROM hive.app_next_block( _contexts, _wait, __block_limit ) INTO _blocks_range;
+        IF hive.app_end_deferred_wait()
         THEN
             -- no block yet: a row of NULLs, not NULL, as when hive.app_next_block returned
             -- NULL into it; clients reading the OUT value expect (,)
