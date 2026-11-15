@@ -176,6 +176,9 @@ ranges arrive, and otherwise idles on its connection until a notification (or a 
 `haf_new_block`, `hive.set_irreversible` notifies `haf_new_irreversible`. The default
 `_wait => TRUE` keeps the classic eternal `CALL main()` loops working unchanged; such a loop commits
 the iteration before it waits, so a waiting application holds no lock on `hafd.contexts`.
+`hive.app_next_iteration` gets its blocks from the 3-argument `hive.app_next_block`, so a setup that
+wraps that function (e.g. hivemind's CI mocks, which cap the ranges to sync a live tail) shapes the
+ranges the loop hands out.
 Each transaction of `hive.app_next_iteration` (and `hive.app_next_block`) that touches `hafd.contexts`
 holds the advisory key `hive.contexts_compaction_gate_key()` shared until it ends. While live,
 hived takes it exclusively to rewrite `hafd.contexts` with `VACUUM FULL` once the table outgrows
