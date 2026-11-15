@@ -514,6 +514,19 @@ BEGIN
         ALTER EXTENSION hive_fork_manager ADD TABLE hafd.custom_json_type_index_requests;
     END IF;
 
+    -- Added to the extension and registered for pg_dump like hafd.custom_json_type_index_requests above.
+    -- Left empty, so the context views keep the default 'initplan' mode.
+    IF to_regclass('hafd.context_view_horizon_mode') IS NULL THEN
+        CREATE TABLE hafd.context_view_horizon_mode(
+              id SMALLINT NOT NULL DEFAULT 1
+            , mode TEXT NOT NULL
+            , CONSTRAINT pk_context_view_horizon_mode PRIMARY KEY( id )
+            , CONSTRAINT ck_context_view_horizon_mode_single_row CHECK( id = 1 )
+            , CONSTRAINT ck_context_view_horizon_mode_mode CHECK( mode IN ( 'initplan', 'c' ) )
+        );
+        ALTER EXTENSION hive_fork_manager ADD TABLE hafd.context_view_horizon_mode;
+    END IF;
+
     -- Storage options the schema sources set; an option the table already has, maybe tuned by its
     -- operator, is kept.
     FOR __table, __option IN VALUES

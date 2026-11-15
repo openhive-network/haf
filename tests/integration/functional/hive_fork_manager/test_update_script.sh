@@ -144,6 +144,8 @@ check_hive_event_triggers_use_new_libhfm() {
 make_hafd_schema_of_last_release() {
     exec_sql "ALTER EXTENSION hive_fork_manager DROP TABLE hafd.custom_json_type_index_requests;
               DROP TABLE hafd.custom_json_type_index_requests;
+              ALTER EXTENSION hive_fork_manager DROP TABLE hafd.context_view_horizon_mode;
+              DROP TABLE hafd.context_view_horizon_mode;
               ALTER TABLE hafd.contexts DROP COLUMN early_block_processing;
               ALTER TABLE hafd.applications DROP COLUMN health_function;
               ALTER TABLE hafd.indexes_constraints DROP COLUMN massive_sync_class;
@@ -159,7 +161,7 @@ make_hafd_schema_of_last_release() {
 
 # The schema hash the update verifies, and what it leaves out: owner, privileges, storage options,
 # extension membership and pg_dump registration of every hafd table, and the full definition of the
-# table the update creates.
+# tables the update creates.
 hafd_schema_snapshot() {
     psql -w -d "$UPDATE_DB_NAME" -v ON_ERROR_STOP=on -q -t -A -f "/usr/share/postgresql/$POSTGRES_VERSION/extension/update.sql" > /dev/null
     exec_sql "SELECT hive_update.create_database_hash()"
@@ -168,6 +170,7 @@ hafd_schema_snapshot() {
                      c.oid = ANY (SELECT unnest(extconfig) FROM pg_extension WHERE extname = 'hive_fork_manager')
               FROM pg_class c WHERE c.relnamespace = 'hafd'::regnamespace AND c.relkind = 'r' ORDER BY 1"
     exec_sql "\d hafd.custom_json_type_index_requests"
+    exec_sql "\d hafd.context_view_horizon_mode"
 }
 
 check_hafd_schema_equals() {
@@ -593,6 +596,22 @@ update_database
 exec_sql "SELECT hive.app_set_health_function('registry_update_app', 'registry_update_app.health')"
 [ "$(exec_sql "SELECT health_function FROM hafd.applications WHERE name = 'registry_update_app'")" = "registry_update_app.health" ] \
     || { echo "TEST FAILED: hive.app_set_health_function did not record the health function on the updated database"; exit 48; }
+
+printf "\nTEST: Upgrade a database from before hafd.context_view_horizon_mode. The table should be created as on a fresh install, empty, so the views keep the initplan mode.\n"
+prepare_database
+fresh_schema=$(hafd_schema_snapshot)
+exec_sql "ALTER EXTENSION hive_fork_manager DROP TABLE hafd.context_view_horizon_mode;
+          DROP TABLE hafd.context_view_horizon_mode;"
+unship_deployed_libhfm
+update_database
+[ "$(deployed_version)" != "1.0" ] || { echo "TEST FAILED: the extension was not updated"; exit 73; }
+check_table_is_empty hafd.context_view_horizon_mode
+check_hafd_schema_equals "$fresh_schema"
+[ "$(exec_sql "SELECT hive.context_view_horizon_mode()")" = "initplan" ] \
+    || { echo "TEST FAILED: the context view horizon mode is not initplan after the update"; exit 74; }
+exec_sql "SELECT hive.set_context_view_horizon_mode('c')"
+[ "$(exec_sql "SELECT hive.context_view_horizon_mode()")" = "c" ] \
+    || { echo "TEST FAILED: hive.set_context_view_horizon_mode did not record the mode on the updated database"; exit 75; }
 
 printf "\nTEST: Upgrade a database that already has hafd.custom_json_type_index_requests. The table and its requests should be left as they are.\n"
 prepare_database
