@@ -53,9 +53,25 @@ and runs each through `tools/test.sh` (8 at a time; `HFM_TEST_JOBS`), so no CMak
 and no `hive` submodule checkout is needed. With them it runs the `ADD_EXAMPLES_FUNCTIONAL_TESTS`
 of `hive_fork_manager` (the Python example applications, `hfm-functional::hive_fork_manager/examples/<name>`)
 through `hive_fork_manager/test_examples.sh`, which pip-installs their dependencies (pexpect,
-psycopg, sqlalchemy, jinja2; the HAF image has none of them) into a venv. AIDEV runs the
-container without a network, so where the package index is unreachable each example is
-recorded skipped with that reason, and only a run with network access exercises them. The entrypoint needs the image's
+psycopg, sqlalchemy, jinja2; the HAF image has none of them; listed in
+`hive_fork_manager/examples/requirements.txt`) into a venv.
+
+The examples' dependencies: AIDEV runs the container without a network, so the `full` slot's
+`hfm_functional` suite declares `.aidev/fetch-example-wheels.sh` as its host-side `prepare`
+step. On the host, it runs the suite image's own Python (`AIDEV_SUITE_RUNTIME_IMAGE`, else
+`environment.image`) with the host's network to download the dependencies as wheels into
+`test-results/example-wheels/`, and does nothing once they are there for the same requirements
+and image. This works whichever of the three runtime images the suite then runs in (CI's
+`hive/haf:<commit8>`, an aidev-built `haf-source` image, or the pinned image), because all of
+them have the same Ubuntu and Python. `hfm-functional.sh` checks that the wheels resolve
+offline with the image's own pip and logs `== the examples install their dependencies from …`.
+It then passes them to `test_examples.sh` as `HAF_EXAMPLES_WHEELS`, which installs with
+`--no-index --find-links`. Without that variable, as in GitLab CI, `test_examples.sh` installs
+from the index as before. When the wheels are missing (in `canary` and `baseline`, which
+have no `prepare` step, unless an earlier `full` run left them in the workspace), or the host
+could not fetch them (the reason is in `test-results/example-wheels.failed`; the step still
+exits 0), or they do not fit the image's Python, and the index is unreachable, each example is
+recorded skipped with that reason. The entrypoint needs the image's
 sudo-capable `hived` user, uid 1000 — the uid AIDEV's pull hosts and workers run as;
 `run-checks.sh` fails with that reason under any other uid.
 

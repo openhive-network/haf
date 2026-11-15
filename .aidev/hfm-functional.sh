@@ -16,9 +16,11 @@
 #    every ADD_EXAMPLES_FUNCTIONAL_TESTS of hive_fork_manager (the Python example
 #    applications of src/hive_fork_manager/doc/examples, through
 #    hive_fork_manager/test_examples.sh, which pip-installs their dependencies
-#    into a venv of its own). Where the package index is unreachable (AIDEV runs
-#    this container without a network) each example is recorded skipped with
-#    that reason.
+#    into a venv of its own). AIDEV runs this container without a network, so
+#    they come from the wheels .aidev/fetch-example-wheels.sh downloads on the
+#    host into test-results/example-wheels/; where those are missing or do not
+#    fit this image's Python and the package index is unreachable, each example
+#    is recorded skipped with that reason.
 # 3. Runs test_update_script.sh (hive_fork_manager/test_update_script) after
 #    them, alone, as CI's ctest does after the functional tests.
 #
@@ -104,11 +106,27 @@ done | sort -u > "$out/hfm/serial.txt"
 echo "$update_test" >> "$out/hfm/serial.txt"
 grep -vxF -f "$out/hfm/serial.txt" "$out/hfm/tests.txt" > "$out/hfm/parallel.txt"
 grep -xF -f "$out/hfm/serial.txt" "$out/hfm/tests.txt" > "$out/hfm/serial-selected.txt"
-# test_examples.sh pip-installs the examples' dependencies; probe the index once
+# test_examples.sh pip-installs the examples' dependencies: from the wheels
+# .aidev/fetch-example-wheels.sh left in the workspace when they resolve here
+# without an index, otherwise from the index, probed once
 examples_skip=""
-if grep -q '\.py$' "$out/hfm/tests.txt" \
-   && ! python3 -m pip download --no-deps --retries 0 --timeout 10 -d "$(mktemp -d)" 'pexpect>=4.9' > "$out/hfm/examples-index.log" 2>&1; then
-    examples_skip="the package index ${PIP_INDEX_URL:-https://pypi.org/simple} is unreachable from this container, so test_examples.sh cannot install the examples' dependencies, which the image lacks (pexpect, psycopg[binary], sqlalchemy, jinja2)"
+wheels="$src/test-results/example-wheels"
+requirements="$src/tests/integration/functional/hive_fork_manager/examples/requirements.txt"
+if grep -q '\.py$' "$out/hfm/tests.txt"; then
+    if [ -d "$wheels" ] \
+       && python3 -m pip download --disable-pip-version-check --no-index --find-links "$wheels" -d "$(mktemp -d)" -r "$requirements" > "$out/hfm/examples-index.log" 2>&1; then
+        echo "== the examples install their dependencies from $wheels"
+        export HAF_EXAMPLES_WHEELS="$wheels"
+    elif ! python3 -m pip download --no-deps --retries 0 --timeout 10 -d "$(mktemp -d)" 'pexpect>=4.9' >> "$out/hfm/examples-index.log" 2>&1; then
+        if [ -d "$wheels" ]; then
+            why="the wheels in test-results/example-wheels do not satisfy $(basename "$requirements") for this image's $(python3 --version 2>&1)"
+        elif [ -f "$src/test-results/example-wheels.failed" ]; then
+            why="the host could not fetch their wheels: $(head -c 400 "$src/test-results/example-wheels.failed")"
+        else
+            why="no wheels in test-results/example-wheels (.aidev/fetch-example-wheels.sh, the full slot's hfm_functional prepare step, did not run here)"
+        fi
+        examples_skip="the package index ${PIP_INDEX_URL:-https://pypi.org/simple} is unreachable from this container and $why, so test_examples.sh cannot install the examples' dependencies, which the image lacks (pexpect, psycopg[binary], sqlalchemy, jinja2)"
+    fi
 fi
 export examples_skip
 

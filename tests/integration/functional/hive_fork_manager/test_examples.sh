@@ -24,17 +24,17 @@ python3 -m venv ".test_examples_$test_name"
 # shellcheck source=/dev/null
 . "./.test_examples_$test_name/bin/activate"
 
-python3 -mpip install --upgrade pip
+# HAF_EXAMPLES_WHEELS: a directory of wheels to install the dependencies from
+# without a package index (.aidev/hfm-functional.sh sets it)
+if [ -n "${HAF_EXAMPLES_WHEELS:-}" ]; then
+  python3 -mpip install --no-index --find-links "$HAF_EXAMPLES_WHEELS" -r ./hive_fork_manager/examples/requirements.txt
+else
+  python3 -mpip install --upgrade pip
 
-python3 -mpip install wheel==0.41.2
+  python3 -mpip install wheel==0.41.2
 
-# The examples connect through SQLAlchemy with postgresql:// URLs, which map to
-# the psycopg (v3) driver since SQLAlchemy 2.1.
-python3 -mpip install \
-  'pexpect>=4.9' \
-  'psycopg[binary]>=3.1' \
-  'sqlalchemy>=2.1' \
-  'jinja2>=2.10'
+  python3 -mpip install -r ./hive_fork_manager/examples/requirements.txt
+fi
 
 ( "$test_path" "$examples_folder" "$DB_NAME" "$postgres_port" )
 
