@@ -220,9 +220,9 @@ aidev test run --slot full --suite haf_system -- --rerun haf-system::test_replay
 ```
 
 **The image** (`runtime/Dockerfile.system`, `registry.gitlab.syncad.com/hive/haf/aidev-system-tests`):
-`hive/haf/testnet:2841847e`, the testnet image of develop 2841847e — newer than the
-mainnet base, so its hived has #433's clean-exit fix and #468's lite-mode fix — pinned
-by digest, plus a venv holding
+`hive/haf/testnet:697e0eb2`, the testnet image of develop 697e0eb2 — newer than the
+mainnet base, so its hived has #433's clean-exit fix, #468's lite-mode fix and #482's
+hafd.contexts compactor — pinned by digest, plus a venv holding
 `tests/integration/haf-local-tools`' locked dependencies (`poetry install --no-root`).
 AIDEV runs a suite container with no network, so nothing is installed at run time,
 unlike CI's `run_haf_system_tests.sh`; `haf_local_tools` itself is imported from the
