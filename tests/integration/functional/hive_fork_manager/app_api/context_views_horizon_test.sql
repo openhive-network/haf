@@ -2,8 +2,8 @@
 -- their horizon from `<schema>.context_data_view` return, in every state of the horizon: a reversible range, a fork
 -- switch, no reversible range, a context behind its irreversible block. The rows are also read as a role which may
 -- only read the views, and through a cached generic plan while the horizon moves. All of it in both modes of
--- hive.set_context_view_horizon_mode: 'initplan', which generates the views as they were before the mode existed,
--- and 'c'.
+-- hive.set_context_view_horizon_mode: 'c', the default, and 'initplan', which generates the views as they were before
+-- the mode existed.
 
 -- The rows `_view` of `_context` must show: the definitions of the views from before they read hive.context_view_horizon.
 CREATE OR REPLACE FUNCTION expected_view_rows( _context TEXT, _view TEXT )
@@ -474,26 +474,33 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 DECLARE
-    __c_definition RECORD;
+    __definition RECORD;
 BEGIN
-    ASSERT hive.context_view_horizon_mode() = 'initplan', format( 'the default mode is %s, not initplan', hive.context_view_horizon_mode() );
-    PERFORM hive.set_context_view_horizon_mode( 'initplan' );
-    PERFORM assert_default_view_definitions( 'after switching to initplan mode' );
-    PERFORM assert_views_in_every_horizon_state( 'initplan' );
-
-    PERFORM hive.set_context_view_horizon_mode( 'c' );
-    ASSERT hive.context_view_horizon_mode() = 'c', 'the mode is not c after switching to it';
-    -- the views call the functions of libhfm themselves: no InitPlan, no ANY( ARRAY[ ... ] )
-    FOR __c_definition IN SELECT * FROM context_view_definitions() LOOP
-        ASSERT __c_definition.definition LIKE '%hive.context_view_horizon_min_block(%'
-            AND __c_definition.definition NOT LIKE '%hive.context_view_horizon(%'
-            AND __c_definition.definition NOT LIKE '%ANY (ARRAY[%'
-            , format( '%s does not read the horizon through the functions of libhfm in c mode: %s', __c_definition.view_name, __c_definition.definition );
+    ASSERT NOT EXISTS ( SELECT 1 FROM hafd.context_view_horizon_mode ), 'the mode table has a row without a mode being set';
+    ASSERT hive.context_view_horizon_mode() = 'c', format( 'the default mode is %s, not c', hive.context_view_horizon_mode() );
+    -- the views of freshly created contexts call the functions of libhfm themselves: no InitPlan, no ANY( ARRAY[ ... ] )
+    FOR __definition IN SELECT * FROM default_view_definitions LOOP
+        ASSERT __definition.definition LIKE '%hive.context_view_horizon_min_block(%'
+            AND __definition.definition NOT LIKE '%hive.context_view_horizon(%'
+            AND __definition.definition NOT LIKE '%ANY (ARRAY[%'
+            , format( '%s does not read the horizon through the functions of libhfm by default: %s', __definition.view_name, __definition.definition );
     END LOOP;
+    PERFORM hive.set_context_view_horizon_mode( 'c' );
+    PERFORM assert_default_view_definitions( 'after switching to c mode' );
     PERFORM assert_views_in_every_horizon_state( 'c' );
 
     PERFORM hive.set_context_view_horizon_mode( 'initplan' );
-    PERFORM assert_default_view_definitions( 'after switching back from c mode' );
+    ASSERT hive.context_view_horizon_mode() = 'initplan', 'the mode is not initplan after switching to it';
+    -- the views read the horizon through InitPlans over hive.context_view_horizon
+    FOR __definition IN SELECT * FROM context_view_definitions() LOOP
+        ASSERT __definition.definition LIKE '%hive.context_view_horizon(%'
+            AND __definition.definition NOT LIKE '%hive.context_view_horizon_min_block(%'
+            , format( '%s does not read the horizon through hive.context_view_horizon in initplan mode: %s', __definition.view_name, __definition.definition );
+    END LOOP;
+    PERFORM assert_views_in_every_horizon_state( 'initplan' );
+
+    PERFORM hive.set_context_view_horizon_mode( 'c' );
+    PERFORM assert_default_view_definitions( 'after switching back from initplan mode' );
 END;
 $BODY$
 ;

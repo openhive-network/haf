@@ -269,6 +269,11 @@ check_app_objects_unchanged() {
     fi
 }
 
+count_mode_app_views_reading() {
+    exec_sql "SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'mode_app'::regnamespace AND c.relkind = 'v'
+              AND c.relname <> 'last_block' AND pg_get_viewdef(c.oid) LIKE '%$1%'"
+}
+
 deployed_version() {
     exec_sql "SELECT extversion FROM pg_extension WHERE extname = 'hive_fork_manager'"
 }
@@ -597,21 +602,45 @@ exec_sql "SELECT hive.app_set_health_function('registry_update_app', 'registry_u
 [ "$(exec_sql "SELECT health_function FROM hafd.applications WHERE name = 'registry_update_app'")" = "registry_update_app.health" ] \
     || { echo "TEST FAILED: hive.app_set_health_function did not record the health function on the updated database"; exit 48; }
 
-printf "\nTEST: Upgrade a database from before hafd.context_view_horizon_mode. The table should be created as on a fresh install, empty, so the views keep the initplan mode.\n"
+printf "\nTEST: Upgrade a database from before hafd.context_view_horizon_mode whose context views read their horizon through InitPlans, the default then. The table should be created as on a fresh install, empty, and the views recreated in the default c mode.\n"
 prepare_database
+exec_sql "CREATE SCHEMA mode_app;
+          SELECT hive.app_create_context('mode_ctx', 'mode_app');
+          CREATE VIEW mode_app.last_block AS SELECT max(num) AS num FROM mode_app.blocks_view;"
 fresh_schema=$(hafd_schema_snapshot)
-exec_sql "ALTER EXTENSION hive_fork_manager DROP TABLE hafd.context_view_horizon_mode;
+exec_sql "SELECT hive.set_context_view_horizon_mode('initplan');
+          ALTER EXTENSION hive_fork_manager DROP TABLE hafd.context_view_horizon_mode;
           DROP TABLE hafd.context_view_horizon_mode;"
+[ "$(count_mode_app_views_reading 'hive.context_view_horizon(')" = "8" ] \
+    || { echo "TEST FAILED: could not give mode_app the views of initplan mode"; exit 76; }
 unship_deployed_libhfm
 update_database
 [ "$(deployed_version)" != "1.0" ] || { echo "TEST FAILED: the extension was not updated"; exit 73; }
 check_table_is_empty hafd.context_view_horizon_mode
 check_hafd_schema_equals "$fresh_schema"
-[ "$(exec_sql "SELECT hive.context_view_horizon_mode()")" = "initplan" ] \
-    || { echo "TEST FAILED: the context view horizon mode is not initplan after the update"; exit 74; }
-exec_sql "SELECT hive.set_context_view_horizon_mode('c')"
 [ "$(exec_sql "SELECT hive.context_view_horizon_mode()")" = "c" ] \
-    || { echo "TEST FAILED: hive.set_context_view_horizon_mode did not record the mode on the updated database"; exit 75; }
+    || { echo "TEST FAILED: the context view horizon mode is not c after the update"; exit 74; }
+[ "$(count_mode_app_views_reading 'hive.context_view_horizon_min_block(')" = "8" ] && [ "$(count_mode_app_views_reading 'hive.context_view_horizon(')" = "0" ] \
+    || { echo "TEST FAILED: the 8 views of mode_ctx are not in c mode after the update"; exit 77; }
+[ "$(exec_sql "SELECT num IS NULL FROM mode_app.last_block")" = "t" ] \
+    || { echo "TEST FAILED: the app view built on mode_app.blocks_view does not work after the update"; exit 78; }
+exec_sql "SELECT hive.set_context_view_horizon_mode('initplan')"
+[ "$(exec_sql "SELECT hive.context_view_horizon_mode()")" = "initplan" ] && [ "$(count_mode_app_views_reading 'hive.context_view_horizon(')" = "8" ] \
+    || { echo "TEST FAILED: hive.set_context_view_horizon_mode did not switch the updated database to initplan mode"; exit 75; }
+
+printf "\nTEST: Upgrade a database whose operator chose initplan mode. The mode and the views of initplan mode should be kept.\n"
+prepare_database
+exec_sql "CREATE SCHEMA mode_app;
+          SELECT hive.app_create_context('mode_ctx', 'mode_app');
+          SELECT hive.set_context_view_horizon_mode('initplan');"
+mode_app_views_before=$(exec_sql "SELECT string_agg(c.relname || ':' || pg_get_viewdef(c.oid), E'\n' ORDER BY c.relname) FROM pg_class c
+                                  WHERE c.relnamespace = 'mode_app'::regnamespace AND c.relkind = 'v'")
+update_database
+[ "$(exec_sql "SELECT mode FROM hafd.context_view_horizon_mode")" = "initplan" ] \
+    || { echo "TEST FAILED: the update did not keep the initplan mode the operator chose"; exit 79; }
+[ "$(exec_sql "SELECT string_agg(c.relname || ':' || pg_get_viewdef(c.oid), E'\n' ORDER BY c.relname) FROM pg_class c
+               WHERE c.relnamespace = 'mode_app'::regnamespace AND c.relkind = 'v'")" = "$mode_app_views_before" ] \
+    || { echo "TEST FAILED: the update changed the views of initplan mode"; exit 80; }
 
 printf "\nTEST: Upgrade a database that already has hafd.custom_json_type_index_requests. The table and its requests should be left as they are.\n"
 prepare_database
@@ -768,8 +797,8 @@ update_database
 [ -z "$(exec_sql "$reading_context_data_view")" ] \
     || { echo "TEST FAILED: views still reading context_data_view after the update: $(exec_sql "$reading_context_data_view")"; exit 50; }
 [ "$(exec_sql "SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'horizon_app'::regnamespace AND c.relkind = 'v'
-               AND pg_get_viewdef(c.oid) LIKE '%hive.context_view_horizon(%'")" = "8" ] \
-    || { echo "TEST FAILED: the 8 views of horizon_ctx do not read hive.context_view_horizon after the update"; exit 51; }
+               AND pg_get_viewdef(c.oid) LIKE '%hive.context_view_horizon_min_block(%'")" = "8" ] \
+    || { echo "TEST FAILED: the 8 views of horizon_ctx do not read hive.context_view_horizon_min_block after the update"; exit 51; }
 [ "$(exec_sql "SELECT string_agg(DISTINCT pg_get_userbyid(c.relowner), ',') FROM pg_class c WHERE c.relnamespace = 'horizon_app'::regnamespace AND c.relkind = 'v'")" = "horizon_test_owner" ] \
     || { echo "TEST FAILED: the update changed the owner of a view of horizon_ctx"; exit 52; }
 [ "$(exec_sql "SELECT (SELECT num FROM horizon_app.last_block) IS NULL AND (SELECT transactions FROM horizon_app.transaction_count) = 0")" = "t" ] \

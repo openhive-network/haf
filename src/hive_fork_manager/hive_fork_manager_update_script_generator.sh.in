@@ -515,7 +515,8 @@ BEGIN
     END IF;
 
     -- Added to the extension and registered for pg_dump like hafd.custom_json_type_index_requests above.
-    -- Left empty, so the context views keep the default 'initplan' mode.
+    -- Left empty, so the context views take the default mode: hive_update.recreate_outdated_context_views
+    -- regenerates the views of the other mode in it.
     IF to_regclass('hafd.context_view_horizon_mode') IS NULL THEN
         CREATE TABLE hafd.context_view_horizon_mode(
               id SMALLINT NOT NULL DEFAULT 1

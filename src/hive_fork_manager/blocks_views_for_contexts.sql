@@ -134,8 +134,8 @@ CREATE OR REPLACE FUNCTION hive.context_view_horizon_reversible_range( _context 
 
 /*
 How the generated views of a context read its horizon, set by hive.set_context_view_horizon_mode:
-- 'initplan' (the default): through hive.context_view_horizon, as InitPlans run once per query;
-- 'c': through the functions of libhfm above, called directly.
+- 'c' (the default): through the functions of libhfm above, called directly;
+- 'initplan': through hive.context_view_horizon, as InitPlans run once per query.
 */
 CREATE OR REPLACE FUNCTION hive.context_view_horizon_mode()
     RETURNS TEXT
@@ -143,7 +143,7 @@ CREATE OR REPLACE FUNCTION hive.context_view_horizon_mode()
     STABLE
 AS
 $BODY$
-    SELECT COALESCE( ( SELECT m.mode FROM hafd.context_view_horizon_mode m ), 'initplan' );
+    SELECT COALESCE( ( SELECT m.mode FROM hafd.context_view_horizon_mode m ), 'c' );
 $BODY$
 ;
 
