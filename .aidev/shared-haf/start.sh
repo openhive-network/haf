@@ -4,7 +4,8 @@
 # Compose bind-mounts <root>/<version>/haf_db_store directly at
 # /home/hived/datadir/haf_db_store — the path the image's postgresql.conf and
 # tablespace were written for. This script checks that mount holds a cluster,
-# adds the clone setting and memory sizing and hands over to the HAF entrypoint, which starts
+# adds the clone setting and memory sizing, removes a previous run's PostgreSQL
+# socket lock files and hands over to the HAF entrypoint, which starts
 # PostgreSQL and then runs serve.sh.
 #
 # Environment: HAF_VERSION, HAF_SHARED_ROOT (as seed.sh; read by serve.sh).
@@ -55,5 +56,17 @@ autovacuum_work_mem = $(at_least "maintenance_work_mem_mb / 4" 16)MB
 EOF
 sudo -n chown postgres:postgres "$conf_d/60-haf-shared-memory.conf"
 echo "Memory limit ${limit_mb}MB, sized for ${sizing_mb}MB: shared_buffers = ${shared_buffers_mb}MB" >&2
+
+# A `docker restart` keeps the container's filesystem, and with it the sockets
+# and socket lock files a previous run left in /var/run/postgresql. No
+# postmaster runs in this container yet, so every one of them is stale, but
+# PostgreSQL refuses to start over a lock naming a PID that another process
+# holds now. postmaster.pid, on the bind-mounted cluster, is left to
+# pg_ctlcluster, which removes it unless its PID is a postgres process.
+for stale in /var/run/postgresql/.s.PGSQL.*; do
+    [ -e "$stale" ] || [ -L "$stale" ] || continue
+    sudo -n rm -f -- "$stale"
+    echo "Removed stale $stale" >&2
+done
 
 exec /home/hived/docker_entrypoint.sh --execute-maintenance-script="$here/serve.sh"
