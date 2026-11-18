@@ -563,11 +563,14 @@ definition changes, and only then (aidev `docs/operations/project-service-stacks
 target, and when the tip it lands changes the governed `sandbox.shared.haf`
 declaration, `shared-haf.compose.yml`, or a path the service builds from or
 bind-mounts (`shared-haf/`, `docker/config_5M.ini`), the session restarts the
-service on that tip. Any other push leaves a running service where it is. AIDEV
-does not yet recognise the bind mounts' `${AIDEV_HOST_CHECKOUT:?...}` spelling,
-so for now a change under `shared-haf/` alone restarts nothing; the comment above
-`x-scripts` in `shared-haf.compose.yml` says how to land one. A pin
-change is such a change, so landing it restarts the fixture on every hosting
+service on that tip. Any other push leaves a running service where it is. A
+change under `shared-haf/` or to `docker/config_5M.ini` alone restarts the
+service as a compose change does: every hosting session restarts its fixture on
+its next resync, dropping the run clones it holds (#497, a change only to
+`shared-haf/start.sh`, restarted all three at 15:16-15:21Z on 2026-11-18), so it
+needs no paired compose edit. `start.sh` removes stale PostgreSQL socket lock
+files on every start (#497), so a restarted service comes back up. A pin
+change is such a change too, so landing it restarts the fixture on every hosting
 session with no manual step: #426's promote landed at about 23:34Z on 2026-11-10,
 and `haf-shared`, `haf-shared-alleghany` and `haf-shared-pl` were serving the new
 image by 23:47-23:55Z. The restart ends every consumer's connections, and the
