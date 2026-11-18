@@ -546,6 +546,14 @@ BEGIN
         END IF;
     END LOOP;
 
+    -- Operation 37 was reset_account_operation, which was never active (there are no such operations in
+    -- the chain); since HF29 it is delegate_rc_operation. hived only adds operation types to a new database,
+    -- so the name is changed here. Note that effective delegate_rc_operation embedded in custom_json_operation
+    -- is reported by hived as separate operation also for blocks before HF29, but such operations from blocks
+    -- that were already synced appear only after the database is synced again.
+    UPDATE hafd.operation_types SET name = 'hive::protocol::delegate_rc_operation'
+    WHERE id = 37 AND name = 'hive::protocol::reset_account_operation';
+
     -- Note: there is intentionally no migration for the rc_cost column of hafd.transactions
     -- and hafd.transactions_reversible - the values cannot be backfilled without a replay,
     -- so the schema hash mismatch reported by verify_table_schema forces one.

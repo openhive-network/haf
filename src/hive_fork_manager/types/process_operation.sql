@@ -53,7 +53,7 @@ BEGIN
     WHEN 34 THEN EXECUTE format('SELECT %I.%I($1, jsonb_populate_record(NULL::hive.cancel_transfer_from_savings_operation, $1.body_value))', namespace, proc) USING op;
     WHEN 35 THEN EXECUTE format('SELECT %I.%I($1, jsonb_populate_record(NULL::hive.custom_binary_operation, $1.body_value))', namespace, proc) USING op;
     WHEN 36 THEN EXECUTE format('SELECT %I.%I($1, jsonb_populate_record(NULL::hive.decline_voting_rights_operation, $1.body_value))', namespace, proc) USING op;
-    WHEN 37 THEN EXECUTE format('SELECT %I.%I($1, jsonb_populate_record(NULL::hive.reset_account_operation, $1.body_value))', namespace, proc) USING op;
+    WHEN 37 THEN EXECUTE format('SELECT %I.%I($1, jsonb_populate_record(NULL::hive.delegate_rc_operation, $1.body_value))', namespace, proc) USING op;
     WHEN 38 THEN EXECUTE format('SELECT %I.%I($1, jsonb_populate_record(NULL::hive.set_reset_account_operation, $1.body_value))', namespace, proc) USING op;
     WHEN 39 THEN EXECUTE format('SELECT %I.%I($1, jsonb_populate_record(NULL::hive.claim_reward_balance_operation, $1.body_value))', namespace, proc) USING op;
     WHEN 40 THEN EXECUTE format('SELECT %I.%I($1, jsonb_populate_record(NULL::hive.delegate_vesting_shares_operation, $1.body_value))', namespace, proc) USING op;

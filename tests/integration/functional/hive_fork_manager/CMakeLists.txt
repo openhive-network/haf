@@ -160,6 +160,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( hived_api/get_block_2_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/get_block_3_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/get_block_reversible_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/get_block_embedded_operations_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/get_block_range_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/are_any_indexes_missing_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/are_any_indexes_missing_2_test.sql )

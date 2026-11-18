@@ -96,17 +96,32 @@ BEGIN
             WHERE htv.block_num BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
             ORDER BY htv.block_num ASC, htv.trx_in_block ASC
         ),
+        -- Operations are taken in the order hived reported them (by id). hived also reports operations that are not
+        -- a direct part of the transaction, but were embedded in one of its operations and became effective
+        -- (f.e. delegate_rc_operation inside custom_json_operation). Such operation is not virtual and it repeats
+        -- op_pos of its carrier, which is reported before it, so only the first operation of each op_pos is a direct
+        -- part of the transaction (virtual operations never share op_pos with others). With _include_virtual all
+        -- reported operations are included, so the embedded ones too.
         operations AS (
                 SELECT
-                       hafd.operation_id_to_block_num(ho.id) as block_num
-                     , ho.trx_in_block
-                     , ARRAY_AGG(ho.body::hafd.operation ORDER BY op_pos ASC) bodies
-                FROM hive.operations_view ho
-                WHERE
-                    ho.op_type_id <= (SELECT ot.id FROM hafd.operation_types ot WHERE (_include_virtual OR ot.is_virtual = FALSE) ORDER BY ot.id DESC LIMIT 1)
-                    AND hafd.operation_id_to_block_num(ho.id) BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
-                GROUP BY hafd.operation_id_to_block_num(ho.id), ho.trx_in_block
-                ORDER BY hafd.operation_id_to_block_num(ho.id) ASC, trx_in_block ASC
+                       o.block_num
+                     , o.trx_in_block
+                     , ARRAY_AGG(o.body::hafd.operation ORDER BY o.id ASC) bodies
+                FROM (
+                    SELECT
+                           hafd.operation_id_to_block_num(ho.id) as block_num
+                         , ho.trx_in_block
+                         , ho.id
+                         , ho.body
+                         , ROW_NUMBER() OVER (PARTITION BY hafd.operation_id_to_block_num(ho.id), ho.trx_in_block, ho.op_pos ORDER BY ho.id ASC) AS pos_rank
+                    FROM hive.operations_view ho
+                    WHERE
+                        ho.op_type_id <= (SELECT ot.id FROM hafd.operation_types ot WHERE (_include_virtual OR ot.is_virtual = FALSE) ORDER BY ot.id DESC LIMIT 1)
+                        AND hafd.operation_id_to_block_num(ho.id) BETWEEN _block_num_start AND ( _block_num_start + _block_count - 1 )
+                ) o
+                WHERE _include_virtual OR o.pos_rank = 1
+                GROUP BY o.block_num, o.trx_in_block
+                ORDER BY o.block_num ASC, o.trx_in_block ASC
         ),
         full_transactions_with_signatures AS MATERIALIZED (
                 SELECT

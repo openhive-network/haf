@@ -82,6 +82,10 @@ CREATE CAST (hafd.operation AS hive.decline_voting_rights_operation)
   WITH FUNCTION hive._operation_to_decline_voting_rights_operation
   AS ASSIGNMENT;
 
+CREATE CAST (hafd.operation AS hive.delegate_rc_operation)
+  WITH FUNCTION hive._operation_to_delegate_rc_operation
+  AS ASSIGNMENT;
+
 CREATE CAST (hafd.operation AS hive.delegate_vesting_shares_operation)
   WITH FUNCTION hive._operation_to_delegate_vesting_shares_operation
   AS ASSIGNMENT;
@@ -140,10 +144,6 @@ CREATE CAST (hafd.operation AS hive.recurrent_transfer_operation)
 
 CREATE CAST (hafd.operation AS hive.request_account_recovery_operation)
   WITH FUNCTION hive._operation_to_request_account_recovery_operation
-  AS ASSIGNMENT;
-
-CREATE CAST (hafd.operation AS hive.reset_account_operation)
-  WITH FUNCTION hive._operation_to_reset_account_operation
   AS ASSIGNMENT;
 
 CREATE CAST (hafd.operation AS hive.set_reset_account_operation)
