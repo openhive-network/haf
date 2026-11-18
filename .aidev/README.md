@@ -399,14 +399,23 @@ reptracker and l2_framework), and refuses to serve when `app-roles/` or
 An app whose user role is NOINHERIT (or in no HAF group) gets no HAF data through
 group membership: its install grants the role its reads per database, which the
 consumer cannot do in a clone, as it holds no grant option on `hafd` and `hive`.
-`shared-haf/app-grants/` holds those per-database grants, one SQL file per app
-that needs them, which `serve.sh` applies as `postgres` in `haf_template` on every
+Nor can the consumer grant itself writes to `hafd` tables, which an app's tests
+may need. `shared-haf/app-grants/` holds those per-database grants, one SQL file
+per app that needs them, which `serve.sh` applies as `postgres` in `haf_template` on every
 start, after the freeze (briefly allowing connections to it), so every later clone
 of any version carries them; clones made before stay as they are:
 
 - `app-grants/haf_stats.sql`: `USAGE` on `hafd` and `hive`, `SELECT` on all their
   tables and `EXECUTE` on all functions in `hive`, to `haf_stats_owner` and
-  `haf_stats_user` (the `hafd`/`hive` block of haf_stats' `db/builtin_roles.sql`). To install an app in its clone, the consumer (the clone's owner) first
+  `haf_stats_user` (the `hafd`/`hive` block of haf_stats' `db/builtin_roles.sql`);
+- `app-grants/hafbe.sql`: `INSERT` on `hafd.blocks` and `hafd.operations` and
+  `UPDATE` on `hafd.hive_state`, to `haf_shared_consumer`, so haf_block_explorer's
+  tavern-mock gate step can load CI's mock blocks (91000001 and up) into its
+  clone, as its `tests/mocks/install_mock_data.sh` does in CI (hafbe#208). Being
+  applied in `haf_template` only, they reach the run clones, never
+  `haf_block_log`.
+
+To install an app in its clone, the consumer (the clone's owner) first
 grants the app's roles the database:
 
 ```sql
