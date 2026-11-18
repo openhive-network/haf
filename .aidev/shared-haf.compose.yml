@@ -28,6 +28,11 @@ x-data-root: &data-root
   type: bind
   source: "${HAF_SHARED_DATA_ROOT:?}"
   target: /haf-shared
+# AIDEV's shared-service restart detection does not yet recognise the
+# ${AIDEV_HOST_CHECKOUT:?...} spelling of the checkout root, so it does not see
+# this mount (nor config_5M.ini's below). Until it does, a change under
+# .aidev/shared-haf/ alone does not restart the hosting fixtures: pair it with
+# an edit to this compose file, or restart the fixtures by hand.
 x-scripts: &scripts
   type: bind
   source: "${AIDEV_HOST_CHECKOUT:?AIDEV_HOST_CHECKOUT must name the checkout as the docker daemon sees it}/.aidev/shared-haf"
