@@ -436,6 +436,24 @@ END;
 $BODY$
 ;
 
+DROP PROCEDURE IF EXISTS check_operation_to_delegate_rc_operation;
+CREATE PROCEDURE check_operation_to_delegate_rc_operation()
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+DECLARE
+  op hive.delegate_rc_operation;
+BEGIN
+  raise notice 'checking conversion to delegate_rc_operation';
+  op := '{"type":"delegate_rc_operation","value":{"from":"alice","delegatees":["bob","carol"],"max_rc":5000000000,"extensions":[]}}'::JSONB::hafd.operation::hive.delegate_rc_operation;
+  ASSERT (select op."from" = 'alice'), format('Unexpected value of delegate_rc_operation.from: %s', op."from");
+  ASSERT (select op.delegatees = array['bob', 'carol']::hafd.account_name_type[]), format('Unexpected value of delegate_rc_operation.delegatees: %s', op.delegatees);
+  ASSERT (select op.max_rc = 5000000000::int8), format('Unexpected value of delegate_rc_operation.max_rc: %s', op.max_rc);
+  ASSERT (select op.extensions = '{}'), format('Unexpected value of delegate_rc_operation.extensions: %s', op.extensions);
+END;
+$BODY$
+;
+
 DROP PROCEDURE IF EXISTS check_operation_to_delegate_vesting_shares_operation;
 CREATE PROCEDURE check_operation_to_delegate_vesting_shares_operation()
 LANGUAGE 'plpgsql'
@@ -721,23 +739,6 @@ BEGIN
   ASSERT (select op.account_to_recover = 'tulpa'), format('Unexpected value of request_account_recovery_operation.account_to_recover: %s', op.account_to_recover);
   ASSERT (select op.new_owner_authority = '(1,"{}","{""(STM6wxeXR9kg8uu7vX5LS4HBgKw8sdqHBpzAaacqPwPxYfRx9h5bS, 2)""}")'::hive.authority), format('Unexpected value of request_account_recovery_operation.new_owner_authority: %s', op.new_owner_authority);
   ASSERT (select op.extensions = '{}'), format('Unexpected value of request_account_recovery_operation.extensions: %s', op.extensions);
-END;
-$BODY$
-;
-
-DROP PROCEDURE IF EXISTS check_operation_to_reset_account_operation;
-CREATE PROCEDURE check_operation_to_reset_account_operation()
-LANGUAGE 'plpgsql'
-AS
-$BODY$
-DECLARE
-  op hive.reset_account_operation;
-BEGIN
-  raise notice 'checking conversion to reset_account_operation';
-  op := '{"type": "reset_account_operation","value": {"account_to_reset": "tulpa","new_owner_authority": {"account_auths": [],"key_auths": [["STM6wxeXR9kg8uu7vX5LS4HBgKw8sdqHBpzAaacqPwPxYfRx9h5bS",2]],"weight_threshold": 1},"reset_account": "nalesnik"}}'::JSONB::hafd.operation::hive.reset_account_operation;
-  ASSERT (select op.reset_account = 'nalesnik'), format('Unexpected value of reset_account_operation.reset_account: %s', op.reset_account);
-  ASSERT (select op.account_to_reset = 'tulpa'), format('Unexpected value of reset_account_operation.account_to_reset: %s', op.account_to_reset);
-  ASSERT (select op.new_owner_authority = '(1,"{}","{""(STM6wxeXR9kg8uu7vX5LS4HBgKw8sdqHBpzAaacqPwPxYfRx9h5bS, 2)""}")'::hive.authority), format('Unexpected value of reset_account_operation.new_owner_authority: %s', op.new_owner_authority);
 END;
 $BODY$
 ;
@@ -1763,6 +1764,7 @@ BEGIN
   CALL check_operation_to_custom_json_operation_empty_json_string();
   CALL check_operation_to_custom_operation();
   CALL check_operation_to_decline_voting_rights_operation();
+  CALL check_operation_to_delegate_rc_operation();
   CALL check_operation_to_delegate_vesting_shares_operation();
   CALL check_operation_to_delete_comment_operation();
   CALL check_operation_to_escrow_approve_operation();
@@ -1778,7 +1780,6 @@ BEGIN
   CALL check_operation_to_recover_account_operation();
   CALL check_operation_to_recurrent_transfer_operation();
   CALL check_operation_to_request_account_recovery_operation();
-  CALL check_operation_to_reset_account_operation();
   CALL check_operation_to_set_reset_account_operation();
   CALL check_operation_to_set_withdraw_vesting_route_operation();
   CALL check_operation_to_transfer_from_savings_operation();

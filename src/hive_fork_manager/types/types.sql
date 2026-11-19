@@ -280,6 +280,14 @@ CREATE TYPE hive.decline_voting_rights_operation AS (
   decline boolean
 );
 
+DROP TYPE IF EXISTS hive.delegate_rc_operation CASCADE;
+CREATE TYPE hive.delegate_rc_operation AS (
+  "from" hafd.account_name_type,
+  delegatees hafd.account_name_type[],
+  max_rc int8,
+  extensions hive.extensions_type
+);
+
 DROP TYPE IF EXISTS hive.delegate_vesting_shares_operation CASCADE;
 CREATE TYPE hive.delegate_vesting_shares_operation AS (
   delegator hafd.account_name_type,
@@ -471,13 +479,6 @@ CREATE TYPE hive.request_account_recovery_operation AS (
   account_to_recover hafd.account_name_type,
   new_owner_authority hive.authority,
   extensions hive.extensions_type
-);
-
-DROP TYPE IF EXISTS hive.reset_account_operation CASCADE;
-CREATE TYPE hive.reset_account_operation AS (
-  reset_account hafd.account_name_type,
-  account_to_reset hafd.account_name_type,
-  new_owner_authority hive.authority
 );
 
 DROP TYPE IF EXISTS hive.set_reset_account_operation CASCADE;

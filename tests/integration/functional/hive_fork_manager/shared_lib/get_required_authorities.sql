@@ -530,15 +530,16 @@ PERFORM assert_get_required_authorities(
 
   PERFORM assert_get_required_authorities(
     '{
-      "type":"reset_account_operation",
+      "type":"delegate_rc_operation",
       "value":{
-        "reset_account":"resetter",
-        "account_to_reset":"bob",
-        "new_owner_authority":{"weight_threshold":1,"account_auths":[],"key_auths":[["STM1111111111111111111111111111111114T1Anm",1]]}
+        "from":"alice",
+        "delegatees":["bob","carol"],
+        "max_rc":5000000000,
+        "extensions":[]
       }
     }',
-    '{"(resetter,active)"}',
-    'Broken get_required_authorities result for reset_account_operation'
+    '{"(alice,posting)"}',
+    'Broken get_required_authorities result for delegate_rc_operation'
   );
 
   PERFORM assert_get_required_authorities(

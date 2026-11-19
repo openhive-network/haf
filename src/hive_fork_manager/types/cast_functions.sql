@@ -124,6 +124,12 @@ CREATE OR REPLACE FUNCTION hive._operation_to_decline_voting_rights_operation(
 AS 'MODULE_PATHNAME',
 'operation_to_decline_voting_rights_operation';
 
+CREATE OR REPLACE FUNCTION hive._operation_to_delegate_rc_operation(
+  hafd.operation
+) RETURNS hive.delegate_rc_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
+AS 'MODULE_PATHNAME',
+'operation_to_delegate_rc_operation';
+
 CREATE OR REPLACE FUNCTION hive._operation_to_delegate_vesting_shares_operation(
   hafd.operation
 ) RETURNS hive.delegate_vesting_shares_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
@@ -213,12 +219,6 @@ CREATE OR REPLACE FUNCTION hive._operation_to_request_account_recovery_operation
 ) RETURNS hive.request_account_recovery_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
 AS 'MODULE_PATHNAME',
 'operation_to_request_account_recovery_operation';
-
-CREATE OR REPLACE FUNCTION hive._operation_to_reset_account_operation(
-  hafd.operation
-) RETURNS hive.reset_account_operation LANGUAGE c IMMUTABLE STRICT PARALLEL SAFE
-AS 'MODULE_PATHNAME',
-'operation_to_reset_account_operation';
 
 CREATE OR REPLACE FUNCTION hive._operation_to_set_reset_account_operation(
   hafd.operation
