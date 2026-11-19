@@ -162,10 +162,10 @@ sandbox:
       # host seeds a version by hand first (README).
       readiness_timeout: 1800
       env:
-        # The HAF image of develop pipeline 186172, pinned by digest, and its
+        # The HAF image of develop pipeline 186956, pinned by digest, and its
         # full HAF commit, which names the version's directory in the data root.
-        HAF_IMAGE: "registry.gitlab.syncad.com/hive/haf:2712c138@sha256:6ef746e0ea993f868325c347c758a520adfe6f8f508337e191e4c9195bb7834d"
-        HAF_VERSION: "2712c13836ad24959e5a71a77decf6dfc1d1f673"
+        HAF_IMAGE: "registry.gitlab.syncad.com/hive/haf:89bfbe78@sha256:0f6843c806610554411714c335ffb634cc967f909ab94eb5c3ab1c54af7b5286"
+        HAF_VERSION: "89bfbe789932cce33700985cb89f5ee2ca47d849"
         HAF_SHARED_DATA_ROOT: "/haf-pool/aidev-shared-haf"
 
 capabilities: []
