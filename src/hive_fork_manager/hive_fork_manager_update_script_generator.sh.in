@@ -492,6 +492,21 @@ BEGIN
         ALTER TABLE hafd.contexts ADD COLUMN early_block_processing BOOL NOT NULL DEFAULT FALSE;
     END IF;
 
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'hafd' AND table_name = 'contexts' AND column_name = 'is_finalizing'
+    ) THEN
+        ALTER TABLE hafd.contexts ADD COLUMN is_finalizing BOOL NOT NULL DEFAULT FALSE;
+    END IF;
+
+    -- Existing rows count as registered at the update, so a pending build is deferred at most from then.
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'hafd' AND table_name = 'indexes_constraints' AND column_name = 'registered_at'
+    ) THEN
+        ALTER TABLE hafd.indexes_constraints ADD COLUMN registered_at timestamptz NOT NULL DEFAULT now();
+    END IF;
+
     -- Registered applications keep their rows, without a health function.
     IF to_regclass('hafd.applications') IS NOT NULL AND NOT EXISTS (
         SELECT 1 FROM information_schema.columns

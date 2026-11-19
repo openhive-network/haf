@@ -314,6 +314,7 @@ public:
     , bool     _psql_lite_schema
     , uint32_t _psql_index_monitor_retry_budget
     , massive_index_policy _psql_massive_index_policy
+    , index_build_deferral _index_build_deferral
     , contexts_compactor::settings _contexts_compaction_settings
   )
   :   db_url{url},
@@ -340,7 +341,8 @@ public:
                          _psql_wal_queue_depth,
                          _psql_lite_mode,
                          _psql_index_monitor_retry_budget,
-                         _psql_massive_index_policy),
+                         _psql_massive_index_policy,
+                         _index_build_deferral),
       _vacuum_cleaner( db_url ),
       _contexts_compactor( db_url, _contexts_compaction_settings )
   {
@@ -1002,6 +1004,8 @@ void sql_serializer_plugin::set_program_options(appbase::options_description &cl
   cfg.add_options()("psql-url", boost::program_options::value<string>(), "postgres connection string")
                     ("psql-index-threshold", appbase::bpo::value<uint32_t>()->default_value( 20'000'000 ), "indexes/constraints will be recreated if `psql_block_number + psql_index_threshold >= head_block_number`")
                     ("psql-massive-index-policy", appbase::bpo::value<std::string>()->default_value( "drop-all" ), "indexes of the irreversible tables dropped during a massive sync (replay or P2P sync above psql-index-threshold): `drop-all` drops all of them; `keep-monotonic` keeps the ones whose key grows with the chain, so applications that opted in with hive.app_context_set_early_block_processing can process blocks while hived replays, and defers the others to the end of the sync")
+                    ("psql-index-build-finalizing-distance", appbase::bpo::value<uint32_t>()->default_value( index_build_deferral{}.finalizing_head_distance ), "while live, hived starts no CREATE INDEX CONCURRENTLY of an index registered with hive.register_index_dependency while an attached context is finalizing its sync: flagged with hive.app_set_finalizing, or in a massive-sync stage at most this many blocks behind the irreversible head")
+                    ("psql-index-build-max-deferral", appbase::bpo::value<uint32_t>()->default_value( static_cast<uint32_t>( index_build_deferral{}.max_deferral.count() ) ), "seconds after its registration an index build stops waiting for finalizing contexts (see psql-index-build-finalizing-distance) and starts anyway")
                     ("psql-index-monitor-retry-budget", appbase::bpo::value<uint32_t>()->default_value( indexation_state::DEFAULT_INDEX_MONITOR_RETRY_BUDGET ), "seconds the live-sync index monitor keeps reconnecting after losing its database connection before hived shuts down")
                     ("psql-operations-threads-number", appbase::bpo::value<uint32_t>()->default_value( 5 ), "number of threads which dump operations to database during reindexing")
                     ("psql-transactions-threads-number", appbase::bpo::value<uint32_t>()->default_value( 2 ), "number of threads which dump transactions to database during reindexing")
@@ -1060,6 +1064,10 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     , options["psql-lite-schema"].as<bool>()
     , options["psql-index-monitor-retry-budget"].as<uint32_t>()
     , parse_massive_index_policy( options["psql-massive-index-policy"].as<std::string>() )
+    , index_build_deferral{
+          options["psql-index-build-finalizing-distance"].as<uint32_t>()
+        , std::chrono::seconds( options["psql-index-build-max-deferral"].as<uint32_t>() )
+      }
     , contexts_compactor::settings{
           options["psql-contexts-compaction-threshold"].as<uint32_t>()
         , std::chrono::milliseconds( options["psql-contexts-compaction-gate-timeout"].as<uint32_t>() )

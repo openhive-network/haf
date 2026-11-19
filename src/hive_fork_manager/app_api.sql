@@ -946,6 +946,30 @@ BEGIN
 END
 $BODY$;
 
+--- _finalizing TRUE tells hived that the contexts are finalizing their sync (e.g. building their own indexes
+--- after a massive sync). While an attached context is finalizing, hived starts no CREATE INDEX CONCURRENTLY
+--- of an index registered with hive.register_index_dependency less than psql-index-build-max-deferral seconds
+--- ago, because its scan would hold back vacuum of the whole database. Clear the flag with _finalizing FALSE.
+CREATE OR REPLACE FUNCTION hive.app_set_finalizing( _contexts hive.contexts_group, _finalizing BOOLEAN DEFAULT TRUE )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __updated INTEGER;
+BEGIN
+    UPDATE hafd.contexts
+    SET is_finalizing = _finalizing
+    WHERE name = ANY( _contexts );
+    GET DIAGNOSTICS __updated = ROW_COUNT;
+
+    IF __updated != ( SELECT COUNT( DISTINCT c ) FROM unnest( _contexts ) AS c ) THEN
+        RAISE EXCEPTION 'Some contexts from group % do not exist', _contexts;
+    END IF;
+END
+$BODY$;
+
 CREATE OR REPLACE FUNCTION hive.app_check_contexts_synchronized( _contexts hive.contexts_group )
     RETURNS VOID
     LANGUAGE plpgsql

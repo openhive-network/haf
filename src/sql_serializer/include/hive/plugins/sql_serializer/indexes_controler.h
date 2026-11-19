@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -24,9 +25,19 @@ namespace hive::plugins::sql_serializer {
   massive_index_policy parse_massive_index_policy( const std::string& name );
   const char* to_string( massive_index_policy policy );
 
+  // How long the live-sync index monitor holds back a CREATE INDEX CONCURRENTLY while a context is
+  // finalizing its sync (hive.missing_index_builds)
+  struct index_build_deferral
+  {
+    // a context in a massive-sync stage at most this many blocks behind the irreversible head is finalizing
+    uint32_t finalizing_head_distance = 1'000;
+    // counted from the index's registration; after it the build starts anyway
+    std::chrono::seconds max_deferral{ 6 * 60 * 60 };
+  };
+
   class indexes_controler{
   public:
-    indexes_controler( std::string db_url, uint32_t psql_index_threshold, uint32_t monitor_retry_budget_seconds, massive_index_policy index_policy, appbase::application& app );
+    indexes_controler( std::string db_url, uint32_t psql_index_threshold, uint32_t monitor_retry_budget_seconds, massive_index_policy index_policy, index_build_deferral build_deferral, appbase::application& app );
     void disable_indexes_depends_on_blocks( uint32_t number_of_blocks_to_insert );
     void enable_indexes();
     bool disable_constraints( uint32_t number_of_blocks_to_insert );
@@ -45,6 +56,7 @@ namespace hive::plugins::sql_serializer {
     const uint32_t _psql_index_threshold;
     const uint32_t _monitor_retry_budget_seconds;
     const massive_index_policy _index_policy;
+    const index_build_deferral _build_deferral;
     indexes_interruptor _interruptor;
     appbase::application& theApp;
   };

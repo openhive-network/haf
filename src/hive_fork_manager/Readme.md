@@ -261,6 +261,32 @@ SELECT hive.register_index_dependency(
 This request is stored in **`hafd.indexes_constraints`**, and `hived` will later process and
 create the required indexes.
 
+**Register an index on a HAF table at application install or start, before HAF leaves massive sync.**
+When the registration is made in time, `hived` builds the index non-concurrently when it enters LIVE
+sync, as part of the restore of that table's indexes (`hive.restore_indexes`), together with HAF's
+own indexes. An index registered later is built by `hived` while LIVE with `CREATE INDEX CONCURRENTLY`.
+Such a build holds back vacuum for the whole database while it scans the table, which for
+`hafd.operations` can take hours, and it waits for every transaction older than itself before it
+finishes.
+
+`hived` does not start such a concurrent build while any attached context is finalizing its sync:
+- the application flagged the context with **`hive.app_set_finalizing`**, or
+- the context's stage is a massive-sync one (any stage but `live` and `wait_for_haf`) while it is at
+  most `psql-index-build-finalizing-distance` blocks (default 1000) behind the irreversible head.
+
+An index waits at most `psql-index-build-max-deferral` seconds (default 6 hours) from its
+registration; after that it is built anyway. A build already running is never cancelled. While
+builds are deferred, `hived` logs the deferred indexes and the contexts that defer them.
+`hive.missing_index_builds` shows the indexes waiting to be built and what defers each of them.
+
+##### Example Usage:
+```sql
+-- before the application's own finalization (building its indexes, a long final transaction)
+SELECT hive.app_set_finalizing( ARRAY[ 'my_app_context' ] );
+-- ...
+SELECT hive.app_set_finalizing( ARRAY[ 'my_app_context' ], FALSE );
+```
+
 ##### - Indexing custom_json operations by type
 
 An application that reads `custom_json` operations of a few types requests a partial index on
@@ -298,6 +324,13 @@ Applications can check if `hived` has finished creating the registered indexes u
 SELECT hive.check_if_registered_indexes_created('my_app_context');
 ```
 - Returns `TRUE` if all indexes registered under the given application context are created.
+
+##### - Flagging a context as finalizing
+
+**`hive.app_set_finalizing( _contexts, _finalizing => TRUE )`** stores the flag in `hafd.contexts.is_finalizing`.
+While it is set on an attached context, `hived` defers the concurrent builds of registered indexes
+(see *Registering an Index Dependency*). Set it before the application's own finalization and clear it
+with `_finalizing => FALSE` afterwards; a flag left set defers a build only up to `psql-index-build-max-deferral`.
 - Returns `FALSE` if any index is still missing.
 
 ##### - Removing Index Dependencies

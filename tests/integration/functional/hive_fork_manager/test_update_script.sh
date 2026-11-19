@@ -147,6 +147,8 @@ make_hafd_schema_of_last_release() {
               ALTER EXTENSION hive_fork_manager DROP TABLE hafd.context_view_horizon_mode;
               DROP TABLE hafd.context_view_horizon_mode;
               ALTER TABLE hafd.contexts DROP COLUMN early_block_processing;
+              ALTER TABLE hafd.contexts DROP COLUMN is_finalizing;
+              ALTER TABLE hafd.indexes_constraints DROP COLUMN registered_at;
               ALTER TABLE hafd.applications DROP COLUMN health_function;
               ALTER TABLE hafd.indexes_constraints DROP COLUMN massive_sync_class;
               ALTER TABLE hafd.vacuum_requests DROP CONSTRAINT pk_hive_vacuum_requests;
