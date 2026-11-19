@@ -41,12 +41,20 @@ same-SHA flake detection) and `honor_quarantine: true`: a failing test listed in
 How the functional tests run (`.aidev/hfm-functional.sh`): inside the HAF image, as the
 maintenance script of `/home/hived/docker_entrypoint.sh` (which starts PostgreSQL), the
 way CI's `hfm_functional_tests` runs `scripts/maintenance-scripts/run_hfm_functional_tests.sh`.
-It installs the candidate's extension SQL as `Dockerfile.sql-overlay` does
+Before starting the entrypoint, `run-checks.sh` installs the candidate's extension SQL
+(`.aidev/install-candidate-hfm.sh`) as `Dockerfile.sql-overlay` does
 (`scripts/generate_extension_sql.sh`, then `libhfm-<version>.so` pointed at the image's own
-`libhfm`). If that SQL declares a C function the image's `libhfm` does not export
-(`.aidev/missing_c_symbols.py`), it records a single failing case `hfm/libhfm-symbols`
-naming the symbols and runs no test: the image's libhfm was not built from these sources,
-see *The test runtime image*.
+`libhfm`), as the default version `aidev<timestamp>`. The entrypoint then creates
+`hive_fork_manager` in `haf_block_log` from that SQL, not from the image's own, which in an
+image AIDEV built (*The test runtime image*) is the base's and older than its libhfm: a
+candidate that drops a C function (as the operation list changes when `hive` is bumped) would
+otherwise fail the entrypoint's `CREATE EXTENSION` before any test. If the candidate's SQL
+declares a C function the image's `libhfm` does not export (`.aidev/missing_c_symbols.py`),
+the entrypoint is not started: a single failing case `hfm/libhfm-symbols` names the symbols,
+the SQL's version and the library file with its version, and no test runs; the image's libhfm
+was not built from these sources. `hfm-functional.sh` then checks that `haf_block_log`'s
+extension is the installed candidate version, and otherwise records a single failing case
+`hfm/extension-version` naming both and runs no test.
 Otherwise it reads the test list from the `ADD_SQL_FUNCTIONAL_TEST` lines and `RUN_SERIAL`
 properties of `tests/integration/functional/{hive_fork_manager,query_supervisor}/CMakeLists.txt`,
 and runs each through `tools/test.sh` (8 at a time; `HFM_TEST_JOBS`), so no CMake configure
@@ -280,8 +288,9 @@ the testnet image has the same Ubuntu, PostgreSQL and boost as the base.
 
 Because the image is reused by source commit, the recipe reads only source paths:
 `CMakeLists.txt`, `cmake/`, `common_includes/`, `src/`, `hive/` and the two
-`setup_ubuntu.sh` scripts. It installs no extension SQL (`*.sql` is excluded; the
-suites install the candidate's own). The root `CMakeLists.txt` adds `tests/`, which
+`setup_ubuntu.sh` scripts. It installs no extension SQL (`*.sql` is excluded), so the
+image's extension SQL stays the base's and may declare C functions the candidate's libhfm
+no longer has; the suites install the candidate's own before anything creates the extension. The root `CMakeLists.txt` adds `tests/`, which
 is not a source path, so the build configures with an empty stand-in. The `hive`
 submodule reaches the context because AIDEV checks out a candidate worktree with
 its submodules; the build fails at once, as the candidate's build failure, when

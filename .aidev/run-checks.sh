@@ -86,8 +86,21 @@ functional() {  # [filter]
         echo "the HAF entrypoint needs the image's sudo-capable hived user (uid 1000); running as uid $(id -u)"
         return 1
     fi
+    # The entrypoint creates hive_fork_manager in haf_block_log with the extension SQL installed in the image.
+    # In an image built by .aidev/runtime/Dockerfile.source that SQL is the base image's, older than the libhfm
+    # built from this tree, so the candidate's SQL is installed first: the entrypoint and every test then
+    # create the extension from this tree's SQL, SQL and library agreeing (a failed install starts no test).
     local rc=0
+    bash .aidev/install-candidate-hfm.sh "$out/hfm" || rc=$?
+    if [ "$rc" -eq 3 ]; then
+        printf 'case\thfm/libhfm-symbols\tfail\t0\t%s\t%s\n' "$(< "$out/hfm/libhfm-symbols.log")" "$out/hfm/libhfm-symbols.log" \
+            > "$out/hfm-functional.tsv"
+        python3 .aidev/junit_cases.py "$out/hfm-functional.xml" hfm-functional "$out/hfm-functional.tsv"
+        return 1
+    fi
+    [ "$rc" -eq 0 ] || return 1
     HFM_TEST_OUT="$PWD/$out" HFM_TEST_FILTER="${1:-.}" HFM_TEST_JOBS="${HFM_TEST_JOBS:-8}" \
+        HFM_EXTENSION_VERSION="$(< "$out/hfm/extension-version")" \
         /home/hived/docker_entrypoint.sh --execute-maintenance-script="$PWD/.aidev/hfm-functional.sh" || rc=$?
     if [ -f "$out/hfm-functional.tsv" ]; then
         python3 .aidev/junit_cases.py "$out/hfm-functional.xml" hfm-functional "$out/hfm-functional.tsv"

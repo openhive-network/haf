@@ -5,9 +5,11 @@
 #
 # AIDEV tags the result by that source commit and reuses it, so this reads only
 # `source_image.paths` from the context, and nothing those paths exclude reaches
-# the image: no extension SQL is installed (the suites install the candidate's
-# own, .aidev/hfm-functional.sh). Each library keeps the file name the base image
-# gives it, so the base's extension files still name it.
+# the image: no extension SQL is installed, so the image's is the base's and may
+# not match the candidate's libhfm (a dropped operation cast). The suites install
+# the candidate's own before the entrypoint creates the extension
+# (.aidev/run-checks.sh). Each library keeps the file name the base image gives
+# it, so the base's extension files still name it.
 #
 # The builder is the `ci-base-image` stage of ../../Dockerfile: the CI toolchain
 # image it starts from, pinned by digest, plus setup_ubuntu.sh --dev. Only the two
