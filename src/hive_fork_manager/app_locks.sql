@@ -13,6 +13,8 @@
 -- lock of a broken app, so a crash-looping loop never blocks its own repair.
 -- An installer whose app has no row at all waits the same, then proceeds without
 -- the lock; block-processors do take the lock of an app not registered yet.
+-- An app without contexts (an API layer with no block-processor) gets a row to be
+-- treated as registered through hive.app_register_lock_only.
 --
 -- Installers of an app are serialized by a separate per-app installer lock, which
 -- block-processors never take: an installer takes it first and keeps it for as
