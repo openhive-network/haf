@@ -150,6 +150,8 @@ make_hafd_schema_of_last_release() {
               ALTER TABLE hafd.contexts DROP COLUMN is_finalizing;
               ALTER TABLE hafd.indexes_constraints DROP COLUMN registered_at;
               ALTER TABLE hafd.applications DROP COLUMN health_function;
+              ALTER TABLE hafd.applications DROP CONSTRAINT chk_hive_applications_contexts,
+                  ADD CONSTRAINT chk_hive_applications_contexts CHECK( CARDINALITY( contexts ) > 0 );
               ALTER TABLE hafd.indexes_constraints DROP COLUMN massive_sync_class;
               ALTER TABLE hafd.vacuum_requests DROP CONSTRAINT pk_hive_vacuum_requests;
               ALTER TABLE hafd.vacuum_requests DROP COLUMN kind, DROP COLUMN skip_count, DROP COLUMN first_skip_time;
@@ -603,6 +605,22 @@ update_database
 exec_sql "SELECT hive.app_set_health_function('registry_update_app', 'registry_update_app.health')"
 [ "$(exec_sql "SELECT health_function FROM hafd.applications WHERE name = 'registry_update_app'")" = "registry_update_app.health" ] \
     || { echo "TEST FAILED: hive.app_set_health_function did not record the health function on the updated database"; exit 48; }
+
+printf "\nTEST: Upgrade a database with registered applications whose hafd.applications requires contexts. The registrations should be kept and a lock-only application registrable afterwards.\n"
+prepare_database
+exec_sql "CREATE SCHEMA lock_only_update_app;
+          SELECT hive.app_create_context('lock_only_update_ctx', 'lock_only_update_app');
+          SELECT hive.app_register('lock_only_update_app', ARRAY['lock_only_update_ctx']);
+          SELECT hive.app_pause('lock_only_update_app');
+          ALTER TABLE hafd.applications DROP CONSTRAINT chk_hive_applications_contexts,
+              ADD CONSTRAINT chk_hive_applications_contexts CHECK( CARDINALITY( contexts ) > 0 );"
+registrations_before=$(exec_sql "SELECT name, contexts, process_procedure, completed_block_function, paused, owner, health_function FROM hafd.applications ORDER BY name")
+update_database
+[ "$(exec_sql "SELECT name, contexts, process_procedure, completed_block_function, paused, owner, health_function FROM hafd.applications ORDER BY name")" = "$registrations_before" ] \
+    || { echo "TEST FAILED: the update changed the registrations in hafd.applications"; exit 81; }
+exec_sql "SELECT hive.app_register_lock_only('lock_only_update_api')"
+[ "$(exec_sql "SELECT contexts FROM hafd.applications WHERE name = 'lock_only_update_api'")" = "{}" ] \
+    || { echo "TEST FAILED: a lock-only application could not be registered on the updated database"; exit 82; }
 
 printf "\nTEST: Upgrade a database from before hafd.context_view_horizon_mode whose context views read their horizon through InitPlans, the default then. The table should be created as on a fresh install, empty, and the views recreated in the default c mode.\n"
 prepare_database

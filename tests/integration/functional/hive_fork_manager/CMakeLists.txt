@@ -312,6 +312,7 @@ ADD_SQL_FUNCTIONAL_TEST( app_api/install_lock_unregistered_app.sql )
 ADD_SQL_FUNCTIONAL_TEST( app_api/install_lock_concurrent_unregistered_installers.sql )
 ADD_SQL_FUNCTIONAL_TEST( app_api/app_set_health_function.sql )
 ADD_SQL_FUNCTIONAL_TEST( app_api/app_register_signature.sql )
+ADD_SQL_FUNCTIONAL_TEST( app_api/app_register_lock_only.sql )
 
  ADD_SQL_FUNCTIONAL_TEST( application_loop/validate_stages.sql )
  ADD_SQL_FUNCTIONAL_TEST( application_loop/current_stage.sql )

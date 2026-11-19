@@ -515,6 +515,18 @@ BEGIN
         ALTER TABLE hafd.applications ADD COLUMN health_function TEXT;
     END IF;
 
+    -- Lets lock-only applications (no contexts) be registered; existing rows all satisfy it.
+    IF to_regclass('hafd.applications') IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM pg_constraint c
+        WHERE c.conrelid = to_regclass('hafd.applications') AND c.conname = 'chk_hive_applications_contexts'
+          AND pg_get_constraintdef( c.oid ) LIKE '%process_procedure%'
+    ) THEN
+        ALTER TABLE hafd.applications
+            DROP CONSTRAINT IF EXISTS chk_hive_applications_contexts,
+            ADD CONSTRAINT chk_hive_applications_contexts
+                CHECK( CARDINALITY( contexts ) > 0 OR ( process_procedure IS NULL AND completed_block_function IS NULL ) );
+    END IF;
+
     -- Created here, outside the extension script, so it is added to the extension explicitly; the update
     -- script (custom_json_type_schema_update.sql) then registers it with pg_extension_config_dump, which
     -- only an extension script may call.

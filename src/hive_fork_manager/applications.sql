@@ -10,12 +10,18 @@
 -- dependent sees. Processing order and parallelism follow from that gating alone;
 -- no runner has to sequence applications itself.
 --
+-- A lock-only application (hive.app_register_lock_only) has no contexts, no
+-- process procedure and no completed block function: it is registered only so
+-- that the install-lock helpers (app_locks.sql) treat its lock name as a
+-- registered application. Nothing can depend on it and no driver can run it.
+--
 -- These tables live in hafd so that they survive extension updates and are part
 -- of dumps, like hafd.contexts.
 
 CREATE TABLE IF NOT EXISTS hafd.applications(
     name TEXT NOT NULL,
-    contexts TEXT[] NOT NULL,          -- contexts group; contexts[1] is the lead context
+    contexts TEXT[] NOT NULL,          -- contexts group; contexts[1] is the lead context; empty for a
+                                       -- lock-only application
     process_procedure TEXT,            -- '<schema>.<procedure>' taking ( hive.blocks_range ), or NULL for
                                        -- self-driven applications that run their own loop
     completed_block_function TEXT,     -- '<schema>.<function>' returning INT: the highest block whose data
@@ -28,7 +34,7 @@ CREATE TABLE IF NOT EXISTS hafd.applications(
                                        -- healthy, otherwise why it is broken; see hive._app_broken_reason
     CONSTRAINT pk_hive_applications PRIMARY KEY( name ),
     CONSTRAINT chk_hive_applications_name CHECK( LENGTH( name ) != 0 ),
-    CONSTRAINT chk_hive_applications_contexts CHECK( CARDINALITY( contexts ) > 0 )
+    CONSTRAINT chk_hive_applications_contexts CHECK( CARDINALITY( contexts ) > 0 OR ( process_procedure IS NULL AND completed_block_function IS NULL ) )
 );
 SELECT pg_catalog.pg_extension_config_dump('hafd.applications', '');
 

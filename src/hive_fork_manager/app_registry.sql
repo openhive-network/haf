@@ -3,6 +3,8 @@
 -- Registers (or re-registers, keeping the paused flag) an application: a group of
 -- contexts owned by the caller, and optionally the procedure a block-processing
 -- driver calls with each delivered range. Contexts may belong to one application only.
+-- _contexts cannot be empty (hive.contexts_group refuses it): an application without
+-- contexts registers with hive.app_register_lock_only.
 -- _completed_block_function: for applications whose committed position is not
 -- their contexts' current_block_num (e.g. a massive sync that commits the position
 -- before the batch's data), '<schema>.<function>' returning INT; see
@@ -69,6 +71,38 @@ BEGIN
     ON CONFLICT ( name ) DO UPDATE
     SET contexts = EXCLUDED.contexts, process_procedure = EXCLUDED.process_procedure, completed_block_function = EXCLUDED.completed_block_function,
         health_function = NULL;
+END;
+$BODY$
+;
+
+-- Registers (or re-registers, keeping the paused flag) a lock-only application
+-- owned by the caller: one without contexts, process procedure or completed block
+-- function, such as an API layer over HAF tables. It exists so that the install-lock
+-- helpers (app_locks.sql) treat _name as a registered application: an installer
+-- skips while the lock is held, and waits then fails while the application is
+-- broken as its health function reports. Nothing can depend on it and no driver can
+-- run it. Refuses a name registered with contexts. Re-registering clears the health
+-- function; set it again with hive.app_set_health_function.
+CREATE OR REPLACE FUNCTION hive.app_register_lock_only( _name TEXT )
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS
+$BODY$
+DECLARE
+    __contexts TEXT[];
+BEGIN
+    PERFORM pg_advisory_xact_lock( hashtext('hive_catalog_modification') );
+
+    SELECT a.contexts INTO __contexts FROM hafd.applications a WHERE a.name = _name;
+    IF CARDINALITY( __contexts ) > 0 THEN
+        RAISE EXCEPTION 'Cannot register application % as lock-only: it is registered with contexts %', _name, __contexts;
+    END IF;
+
+    INSERT INTO hafd.applications( name, contexts, process_procedure, completed_block_function, health_function, owner )
+    VALUES ( _name, '{}', NULL, NULL, NULL, current_user )
+    ON CONFLICT ( name ) DO UPDATE
+    SET health_function = NULL;
 END;
 $BODY$
 ;
@@ -152,6 +186,9 @@ BEGIN
     END IF;
     IF _name = _depends_on THEN
         RAISE EXCEPTION 'Application % cannot depend on itself', _name;
+    END IF;
+    IF EXISTS ( SELECT 1 FROM hafd.applications WHERE name = _depends_on AND CARDINALITY( contexts ) = 0 ) THEN
+        RAISE EXCEPTION 'Application % cannot depend on %: it is a lock-only application, which processes no blocks', _name, _depends_on;
     END IF;
 
     -- adding _name -> _depends_on closes a cycle iff _name is reachable from _depends_on

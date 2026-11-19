@@ -148,6 +148,22 @@ SELECT hive.app_add_dependency( 'hivesense', 'hivemind' );
   the session, like the application's lock, so an installer proceeding without the application's
   lock still keeps others out. A second installer finding it held returns FALSE at once, with a
   NOTICE naming the installer that holds it.
+* `hive.app_register_lock_only( _name )` registers (or re-registers, keeping the paused flag and
+  clearing the health function) a *lock-only* application owned by the caller: one without
+  contexts, process procedure or completed block function, such as HAfAH, an API layer over HAF
+  tables with no block processor. It gives the application a registration under its lock name, so
+  its installer takes part in the install lock like any registered application's: it skips while
+  the lock is held by a healthy application, instead of installing without the lock after waiting,
+  and waits then fails while the application's health function (set with
+  `hive.app_set_health_function`) reports it broken. Do not register such an application with a
+  context that never advances instead: an attached context left behind holds back HAF-wide work
+  such as the reversible data cleanup. Nothing may depend on it (`hive.app_add_dependency`
+  refuses), no block-processing driver can run it, and it refuses a name already registered with
+  contexts. `hive.app_register` still requires at least one context.
+  ```sql
+  SELECT hive.app_register_lock_only( 'hafah' );
+  SELECT hive.try_acquire_app_install_lock( 'hafah' );
+  ```
 * `hive.app_set_health_function( _name, _health_function )` sets (NULL clears) the application's
   health function, after `hive.app_register`, which clears it on re-registration. It requires the
   same authority as re-registering the application. `_health_function => '<schema>.<function>'`
