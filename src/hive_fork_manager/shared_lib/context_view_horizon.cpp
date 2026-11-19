@@ -76,9 +76,11 @@ snapshot_key key_of( Snapshot snapshot )
   key.suboverflowed = snapshot->suboverflowed;
   key.curcid = snapshot->curcid;
   key.xids_hash = 0;
-  if ( snapshot->xcnt > 0 )
+  // CopySnapshot keeps the counts but leaves an array NULL when it is empty or, for subxip, overflowed outside
+  // recovery: the counts and suboverflowed are in the key already, so a missing array adds nothing to compare
+  if ( snapshot->xip != nullptr && snapshot->xcnt > 0 )
     key.xids_hash = hash_bytes_extended( reinterpret_cast< const unsigned char* >( snapshot->xip ), snapshot->xcnt * sizeof( TransactionId ), key.xids_hash );
-  if ( snapshot->subxcnt > 0 )
+  if ( snapshot->subxip != nullptr && snapshot->subxcnt > 0 && ( !snapshot->suboverflowed || snapshot->takenDuringRecovery ) )
     key.xids_hash = hash_bytes_extended( reinterpret_cast< const unsigned char* >( snapshot->subxip ), snapshot->subxcnt * sizeof( TransactionId ), key.xids_hash );
   return key;
 }
