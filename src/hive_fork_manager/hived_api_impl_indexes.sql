@@ -7,7 +7,9 @@ CREATE TYPE hafd.index_status AS ENUM ('missing', 'creating', 'created', 'invali
 -- NULL marks rows the policy does not govern (foreign keys, reversible tables, app indexes).
 -- A row gets hive.default_massive_sync_index_class() when it is first saved; an operator may
 -- UPDATE it afterwards and later massive syncs keep the new value.
--- Existing installs get the column from hive_fork_manager_update_script_generator.sh
+-- registered_at is when the row was first saved; it bounds how long hived's index monitor defers
+-- the row's CREATE INDEX CONCURRENTLY while a context is finalizing (hive.missing_index_builds).
+-- Existing installs get the columns from hive_fork_manager_update_script_generator.sh
 CREATE TABLE IF NOT EXISTS hafd.indexes_constraints (
     table_name text NOT NULL,
     index_constraint_name text NOT NULL,
@@ -18,6 +20,7 @@ CREATE TABLE IF NOT EXISTS hafd.indexes_constraints (
     contexts int[] NOT NULL, 
     status hafd.index_status NOT NULL DEFAULT 'missing',
     massive_sync_class text,
+    registered_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_hive_indexes_constraints UNIQUE( table_name, index_constraint_name ),
     CONSTRAINT indexes_constraints_massive_sync_class_check CHECK ( massive_sync_class IN ('keep', 'defer') )
 );

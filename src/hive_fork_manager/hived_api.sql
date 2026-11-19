@@ -681,7 +681,69 @@ BEGIN
     ELSE
         RETURN TRUE;
     END IF;
- 
+
+END;
+$BODY$;
+
+-- The attached contexts that are finalizing their sync: flagged with hive.app_set_finalizing, or whose
+-- committed stage is a massive-sync one while they are at most _head_distance blocks behind the
+-- irreversible head. An application whose stage stays a massive-sync one until it has built its own
+-- indexes (hivemind's MASSIVE_WITH_INDEXES) is caught by the latter.
+CREATE OR REPLACE FUNCTION hive.finalizing_contexts( _head_distance INTEGER )
+    RETURNS TABLE( name TEXT )
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+BEGIN
+    RETURN QUERY
+    SELECT ctx.name::TEXT
+    FROM hafd.contexts ctx
+    JOIN hafd.contexts_attachment hca ON hca.context_id = ctx.id
+    WHERE hca.is_attached
+      AND (
+            ctx.is_finalizing
+         OR (
+                (ctx.loop).current_stage IS NOT NULL
+            AND (ctx.loop).current_stage != hafd.live_stage()
+            AND (ctx.loop).current_stage != hafd.wait_for_haf_stage()
+            AND hive.app_get_irreversible_block() - ctx.current_block_num <= _head_distance
+         )
+      )
+    ORDER BY ctx.name;
+END;
+$BODY$;
+
+-- The missing indexes of the irreversible tables that hived's index monitor builds with
+-- CREATE INDEX CONCURRENTLY, except on a table where such a build is in progress.
+-- deferred_by names the finalizing contexts (hive.finalizing_contexts) the build of a row waits for;
+-- it is NULL when the build may start: no context is finalizing, or the row was registered at least
+-- _max_deferral ago.
+CREATE OR REPLACE FUNCTION hive.missing_index_builds( _head_distance INTEGER, _max_deferral INTERVAL )
+    RETURNS TABLE( table_name TEXT, index_constraint_name TEXT, command TEXT, deferred_by TEXT[] )
+    LANGUAGE plpgsql
+    STABLE
+AS
+$BODY$
+DECLARE
+    __finalizing TEXT[];
+BEGIN
+    SELECT array_agg( f.name ) INTO __finalizing FROM hive.finalizing_contexts( _head_distance ) f;
+
+    RETURN QUERY
+    SELECT
+          ic.table_name
+        , ic.index_constraint_name
+        , ic.command
+        , CASE WHEN ic.registered_at > now() - _max_deferral THEN __finalizing END
+    FROM hafd.indexes_constraints ic
+    WHERE ic.status = 'missing'
+      AND ic.table_name LIKE 'hafd.%'
+      AND NOT EXISTS (
+          SELECT 1 FROM hafd.indexes_constraints creating
+          WHERE creating.table_name = ic.table_name AND creating.status = 'creating'
+      )
+    ORDER BY ic.table_name, ic.index_constraint_name;
 END;
 $BODY$;
 

@@ -255,6 +255,8 @@ GRANT EXECUTE ON FUNCTION
     , hafd.operation_from_jsontext(TEXT)
     , hive.all_indexes_have_status(_status hafd.index_status)
     , hive.are_any_indexes_missing()
+    , hive.finalizing_contexts( _head_distance INTEGER )
+    , hive.missing_index_builds( _head_distance INTEGER, _max_deferral INTERVAL )
     , hive.are_indexes_restored()
     , hive.are_fk_dropped()
     , hive.check_owner( _context hafd.context_name, _context_owner TEXT )

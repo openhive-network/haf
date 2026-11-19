@@ -25,6 +25,9 @@ CREATE TABLE IF NOT EXISTS hafd.contexts(
     -- the context processes blocks as soon as hive.is_instance_ready_for_block_processing() holds,
     -- see hive.app_context_set_early_block_processing
     early_block_processing BOOL NOT NULL DEFAULT FALSE,
+    -- the application is finalizing its sync (see hive.app_set_finalizing): hived does not start
+    -- a CREATE INDEX CONCURRENTLY of a registered index meanwhile
+    is_finalizing BOOL NOT NULL DEFAULT FALSE,
     CONSTRAINT pk_hive_contexts PRIMARY KEY( id ),
     CONSTRAINT uq_hive_context_name UNIQUE ( name )
 );

@@ -7,6 +7,7 @@
 
 #include <appbase/application.hpp>
 
+#include <fc/io/json.hpp>
 #include <fc/io/sstream.hpp>
 #include <fc/log/logger.hpp>
 #include <fc/thread/thread.hpp>
@@ -19,6 +20,7 @@
 #include <optional>
 #include <thread>
 #include <set>
+#include <vector>
 #include <map>
 #include <regex>
 #include <stdexcept>
@@ -97,6 +99,12 @@ std::chrono::milliseconds vacuum_request_lock_timeout(int64_t skip_count, std::c
   return std::min(lock_timeout, MAX_ESCALATED_LOCK_TIMEOUT);
 }
 
+// $1 and $2 are index_build_deferral's finalizing_head_distance and max_deferral in seconds.
+const std::string MISSING_INDEX_BUILDS = "hive.missing_index_builds($1::integer, $2::integer * interval '1 second')";
+
+// A deferral that goes on is logged again at this interval, a change of the finalizing contexts at once.
+const fc::microseconds DEFERRAL_LOG_INTERVAL = fc::minutes(10);
+
 const fc::microseconds POLL_INTERVAL = fc::seconds(10);
 const fc::microseconds MIN_RECONNECT_DELAY = fc::seconds(1);
 const fc::microseconds MAX_RECONNECT_DELAY = fc::seconds(60);
@@ -147,7 +155,14 @@ struct index_builds_state
   std::map<std::string, std::string> indexes_to_reset;
 };
 
-void build_missing_indexes(const std::string& db_url, const std::string& table_name, index_builds_state& state)
+bool may_start_index_build(pqxx::nontransaction& tx, const index_build_deferral& deferral, const std::string& table_name, const std::string& index_constraint_name)
+{
+  return !tx.exec_params(
+    "SELECT 1 FROM " + MISSING_INDEX_BUILDS + " WHERE table_name = $3 AND index_constraint_name = $4 AND deferred_by IS NULL",
+    deferral.finalizing_head_distance, deferral.max_deferral.count(), table_name, index_constraint_name).empty();
+}
+
+void build_missing_indexes(const std::string& db_url, const std::string& table_name, const index_build_deferral& deferral, index_builds_state& state)
 {
   std::string thread_name = table_name;
   if (thread_name.size() > 16)
@@ -159,12 +174,20 @@ void build_missing_indexes(const std::string& db_url, const std::string& table_n
   {
     pqxx::connection conn(db_url);
     pqxx::nontransaction tx(conn);
-    pqxx::result data = tx.exec("SELECT index_constraint_name, command FROM hafd.indexes_constraints WHERE status = 'missing' AND table_name = '" + table_name + "';");
+    pqxx::result data = tx.exec_params(
+      "SELECT index_constraint_name, command FROM " + MISSING_INDEX_BUILDS + " WHERE table_name = $3 AND deferred_by IS NULL",
+      deferral.finalizing_head_distance, deferral.max_deferral.count(), table_name);
     for (const auto& index : data) //iterate over missing indexes and create them concurrently
     {
       std::string index_constraint_name = index["index_constraint_name"].as<std::string>();
       try
       {
+        // an earlier build of this table may have run long enough for a context to start finalizing
+        if (!may_start_index_build(tx, deferral, table_name, index_constraint_name))
+        {
+          ilog("Not starting the creation of index ${index} now: it is deferred while contexts are finalizing.", ("index", index_constraint_name));
+          continue;
+        }
         std::string original_command = index["command"].as<std::string>();
         std::regex create_index_regex(R"((CREATE\s+UNIQUE\s+INDEX|CREATE\s+INDEX))", std::regex::icase);
         std::string command = std::regex_replace(original_command, create_index_regex, "$& CONCURRENTLY");
@@ -257,11 +280,11 @@ public:
     return it != _threads.end() && it->second.joinable();
   }
 
-  void start(std::string db_url, const std::string& table_name)
+  void start(std::string db_url, const std::string& table_name, const index_build_deferral& deferral)
   {
-    _threads[table_name] = std::thread([state = _state, db_url = std::move(db_url), table_name]()
+    _threads[table_name] = std::thread([state = _state, db_url = std::move(db_url), table_name, deferral]()
     {
-      build_missing_indexes(db_url, table_name, *state);
+      build_missing_indexes(db_url, table_name, deferral, *state);
     });
   }
 
@@ -430,27 +453,65 @@ void process_vacuum_requests(pqxx::connection& conn, pqxx::nontransaction& tx)
   }
 }
 
-// Check for tables with missing indexes that are not currently being created
-void start_missing_index_builds(pqxx::connection& conn, pqxx::nontransaction& tx, index_build_threads& builds, const std::string& db_url)
+// Logs the deferred builds when the finalizing contexts change, and again every DEFERRAL_LOG_INTERVAL
+// while they stay the same, rather than at every poll.
+class index_build_deferral_log
+{
+public:
+  void report(const std::string& finalizing_contexts, const std::vector<std::string>& deferred_indexes)
+  {
+    if (deferred_indexes.empty())
+    {
+      if (!_finalizing_contexts.empty())
+        ilog("No index build is deferred any more by finalizing contexts.");
+      _finalizing_contexts.clear();
+      return;
+    }
+
+    const fc::time_point now = fc::time_point::now();
+    if (finalizing_contexts == _finalizing_contexts && now - _logged_at < DEFERRAL_LOG_INTERVAL)
+      return;
+
+    ilog("Deferring CREATE INDEX CONCURRENTLY of ${indexes} while these contexts are finalizing: ${contexts}",
+      ("indexes", fc::json::to_string(deferred_indexes))("contexts", finalizing_contexts));
+    _finalizing_contexts = finalizing_contexts;
+    _logged_at = now;
+  }
+
+private:
+  std::string _finalizing_contexts;
+  fc::time_point _logged_at;
+};
+
+// Start a build for each table with missing indexes that hive.missing_index_builds does not defer
+void start_missing_index_builds(pqxx::connection& conn, pqxx::nontransaction& tx, index_build_threads& builds, const std::string& db_url,
+                                const index_build_deferral& deferral, index_build_deferral_log& deferral_log)
 {
   try
   {
     dlog("Executing query to find tables with missing indexes...");
-    pqxx::result data = tx.exec(
-          "SELECT DISTINCT table_name "
-          "FROM hafd.indexes_constraints "
-          "WHERE status = 'missing' "
-          "AND table_name LIKE 'hafd.%' "
-          "AND table_name NOT IN ("
-          "  SELECT DISTINCT table_name "
-          "  FROM hafd.indexes_constraints "
-          "  WHERE status = 'creating'"
-          ");"
-      );
-    dlog("Query executed. Found ${count} tables with missing indexes.", ("count", data.size()));
-    for (const auto& record : data) //iterate over tables with missing indexes
+    pqxx::result data = tx.exec_params(
+      "SELECT table_name, index_constraint_name, array_to_string(deferred_by, ', ') AS deferred_by FROM " + MISSING_INDEX_BUILDS,
+      deferral.finalizing_head_distance, deferral.max_deferral.count());
+    dlog("Query executed. Found ${count} missing indexes.", ("count", data.size()));
+
+    std::set<std::string> tables_to_build;
+    std::vector<std::string> deferred_indexes;
+    std::string finalizing_contexts;
+    for (const auto& record : data)
     {
-      std::string table_name = record["table_name"].as<std::string>();
+      if (record["deferred_by"].is_null())
+      {
+        tables_to_build.insert(record["table_name"].as<std::string>());
+        continue;
+      }
+      deferred_indexes.push_back(record["index_constraint_name"].as<std::string>());
+      finalizing_contexts = record["deferred_by"].as<std::string>();
+    }
+    deferral_log.report(finalizing_contexts, deferred_indexes);
+
+    for (const auto& table_name : tables_to_build) //iterate over tables with missing indexes
+    {
       dlog("Processing table: ${table_name}", ("table_name", table_name));
       if (builds.is_running(table_name))
       {
@@ -459,7 +520,7 @@ void start_missing_index_builds(pqxx::connection& conn, pqxx::nontransaction& tx
       }
 
       ilog("NOTE: Starting a new thread to create indexes for table: ${table_name}", ("table_name", table_name));
-      builds.start(db_url, table_name);
+      builds.start(db_url, table_name, deferral);
     } //end for tables with missing indexes
     dlog("Finished polling for tables with missing indexes, sleep for 10s.");
   }
@@ -493,11 +554,12 @@ const char* to_string( massive_index_policy policy )
   throw std::invalid_argument( "Unknown massive index policy" );
 }
 
-indexes_controler::indexes_controler( std::string db_url, uint32_t psql_index_threshold, uint32_t monitor_retry_budget_seconds, massive_index_policy index_policy, appbase::application& app )
+indexes_controler::indexes_controler( std::string db_url, uint32_t psql_index_threshold, uint32_t monitor_retry_budget_seconds, massive_index_policy index_policy, index_build_deferral build_deferral, appbase::application& app )
 : _db_url( std::move(db_url) )
 , _psql_index_threshold( psql_index_threshold )
 , _monitor_retry_budget_seconds( monitor_retry_budget_seconds )
 , _index_policy( index_policy )
+, _build_deferral( build_deferral )
 // Index builds and vacuums of the haf_monitor thread run as haf_maintainer, a superuser, whose
 // queries only a superuser may cancel.
 , _interruptor(db_url_with_hived_app_as_haf_maintainer(_db_url), app)
@@ -703,6 +765,7 @@ void indexes_controler::poll_and_create_indexes()
   const std::string db_url = db_url_with_hived_app_as_haf_maintainer(_db_url);
   const fc::microseconds retry_budget = fc::seconds(_monitor_retry_budget_seconds);
   index_build_threads builds;
+  index_build_deferral_log deferral_log;
   std::unique_ptr<pqxx::connection> conn;
   bool interrupted_builds_reset = false;
   std::optional<fc::time_point> failing_since;
@@ -724,7 +787,7 @@ void indexes_controler::poll_and_create_indexes()
         }
         reset_indexes_of_lost_builds(*conn, tx, builds);
         process_vacuum_requests(*conn, tx);
-        start_missing_index_builds(*conn, tx, builds, db_url);
+        start_missing_index_builds(*conn, tx, builds, db_url, _build_deferral, deferral_log);
       }
 
       if (failing_since)
