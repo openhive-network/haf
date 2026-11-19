@@ -12,6 +12,8 @@
 #   src/hive_fork_manager/hived_api.sql   src/sql_serializer/
 #   src/hive_fork_manager/shared_lib/   hive (the submodule pointer)
 #   scripts/dump_instance.sh   scripts/load_instance.sh   scripts/dump_load_common.sh
+#   src/hive_fork_manager/app_api.sql   src/hive_fork_manager/app_api_impl.sql
+#   src/hive_fork_manager/application_loop/loop.sql
 #
 # or to the suite's own files (.aidev/haf-system-select.sh, haf-system.sh,
 # run-haf-system.sh, haf-system-tests.txt, system_test_cases.py,
@@ -21,8 +23,16 @@
 #
 # and then only the tests that change matches: each changed test module
 # (test_*.py directly in tests/integration/system/haf/) that still exists,
-# test_dump_load_instance_scripts.py for the dump/load scripts, plus, for any
-# other path above, the core tests listed in .aidev/haf-system-tests.txt.
+# test_dump_load_instance_scripts.py for the dump/load scripts,
+# test_contexts_compaction.py for hived's hafd.contexts compactor
+# (src/sql_serializer/contexts_compactor.cpp and its contexts_compactor.hpp) and
+# the SQL of its gate (hive.contexts_compaction_gate_key and
+# hive.is_contexts_compaction_needed in hived_api.sql, hive.app_enter_contexts_gate
+# and the commit-before-wait of hive.app_next_iteration in application_loop/loop.sql,
+# the gated hive.app_next_block in app_api.sql, hive.app_find_next_block and
+# hive.app_wait_for_new_block in app_api_impl.sql), plus, for any other path
+# above outside app_api.sql, app_api_impl.sql and application_loop/loop.sql, the
+# core tests listed in .aidev/haf-system-tests.txt.
 # Prints the selected modules, one per line, relative to tests/integration/system/haf/,
 # and exits 0. For a change touching none of the paths it prints a `skipped:`
 # reason as its last line and exits 77, which AIDEV reports as the suite skipped.
@@ -37,6 +47,7 @@ tests_dir=tests/integration/system/haf
 trigger='^(hive$|src/hive_fork_manager/shared_lib/|tests/integration/system/haf/|tests/integration/haf-local-tools/|tests/integration/conftest\.py$|tests/integration/pytest\.ini$|src/hive_fork_manager/hived_api\.sql$|src/sql_serializer/|\.aidev/(haf-system-select\.sh|haf-system\.sh|run-haf-system\.sh|haf-system-tests\.txt|system_test_cases\.py|install-candidate-hfm\.sh|fetch-candidate-libhfm\.sh|run-checks\.sh|runtime/Dockerfile\.(system|source))$)'
 module="^$tests_dir/(test_[^/]*\\.py)\$"
 dump_load_scripts='^scripts/(dump_instance|load_instance|dump_load_common)\.sh$'
+contexts_compaction='^src/(sql_serializer/(contexts_compactor\.cpp|include/hive/plugins/sql_serializer/contexts_compactor\.hpp)|hive_fork_manager/(hived_api|app_api|app_api_impl|application_loop/loop)\.sql)$'
 
 core() {
     grep -vE '^[[:space:]]*(#|$)' .aidev/haf-system-tests.txt
@@ -67,6 +78,7 @@ while IFS= read -r line; do
         selected+=(test_dump_load_instance_scripts.py)
         continue
     fi
+    [[ "$path" =~ $contexts_compaction ]] && selected+=(test_contexts_compaction.py)
     [[ "$path" =~ $trigger ]] || continue
     if [ "$path" = "$line" ] && [[ "$path" =~ $module ]] && [ -f "$path" ]; then
         selected+=("${BASH_REMATCH[1]}")
@@ -76,7 +88,7 @@ while IFS= read -r line; do
 done <<< "$changes"
 
 if [ ${#selected[@]} -eq 0 ] && [ "$wants_core" -eq 0 ]; then
-    echo "skipped: the change touches none of tests/integration/system/haf/, tests/integration/haf-local-tools/, tests/integration/conftest.py, tests/integration/pytest.ini, src/hive_fork_manager/hived_api.sql, src/sql_serializer/, src/hive_fork_manager/shared_lib/, the hive submodule, scripts/{dump_instance,load_instance,dump_load_common}.sh, the suite's own .aidev/ files ({haf-system-select,haf-system,run-haf-system,install-candidate-hfm,fetch-candidate-libhfm,run-checks}.sh, haf-system-tests.txt, system_test_cases.py, runtime/Dockerfile.{system,source})"
+    echo "skipped: the change touches none of tests/integration/system/haf/, tests/integration/haf-local-tools/, tests/integration/conftest.py, tests/integration/pytest.ini, src/hive_fork_manager/hived_api.sql, src/sql_serializer/, src/hive_fork_manager/shared_lib/, the hive submodule, scripts/{dump_instance,load_instance,dump_load_common}.sh, src/hive_fork_manager/{app_api,app_api_impl}.sql, src/hive_fork_manager/application_loop/loop.sql, the suite's own .aidev/ files ({haf-system-select,haf-system,run-haf-system,install-candidate-hfm,fetch-candidate-libhfm,run-checks}.sh, haf-system-tests.txt, system_test_cases.py, runtime/Dockerfile.{system,source})"
     exit 77
 fi
 {
