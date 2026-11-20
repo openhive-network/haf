@@ -39,7 +39,7 @@ END $$;
 -- This avoids indexing high-volume types like Splinterlands that most apps don't use.
 --
 -- The index is keyed on block number and partial on custom_json_type_id, like the ones of
--- hive.create_op_type_partial_index, so it serves block-range scans of the requested types
+-- hive.register_op_type_partial_index, so it serves block-range scans of the requested types
 -- as well as whole-chain lookups of them.
 -- The planner uses a partial index only when the query's custom_json_type_id condition
 -- is provable at plan time: write the ids as literals (custom_json_type_id IN (2, 5)),
@@ -330,12 +330,99 @@ BEGIN
 END;
 $$;
 
--- Function to create an optimized partial index on hafd.operations for specific operation types.
--- Apps that only process a few op types (e.g., reputation_tracker uses 3 out of ~100+) can create
--- a partial index covering just their types, which is ~97% smaller than the full index.
--- The index key is block_num (matching range queries) with op_type_id in the WHERE clause.
--- Example: SELECT hive.create_op_type_partial_index(ARRAY[17, 61, 72]::SMALLINT[]);
--- Note: SECURITY DEFINER allows HAF apps to create indexes on hafd.operations
+-- The CREATE INDEX command of the op-type partial index for the given ids, which must be sorted,
+-- distinct and present in hafd.operation_types. The key is block_num (matching range queries)
+-- with op_type_id in the WHERE clause. The name, hive_operations_op_types_<ids>_idx, is the one
+-- existing nodes already have the index under; a name longer than PostgreSQL's 63 characters
+-- uses a hash of the ids instead.
+CREATE OR REPLACE FUNCTION hive.op_type_partial_index_command(_op_type_ids SMALLINT[])
+RETURNS TEXT
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
+DECLARE
+    __index_name TEXT;
+BEGIN
+    __index_name := 'hive_operations_op_types_' || array_to_string(_op_type_ids, '_') || '_idx';
+    IF length(__index_name) > 63 THEN
+        __index_name := 'hive_operations_op_types_' || left(md5(array_to_string(_op_type_ids, ',')), 20) || '_idx';
+    END IF;
+
+    RETURN format(
+        'CREATE INDEX IF NOT EXISTS %I ON hafd.operations (hafd.operation_id_to_block_num(id)) WHERE op_type_id IN (%s)',
+        __index_name,
+        array_to_string(_op_type_ids, ',')
+    );
+END;
+$$;
+
+-- Requests a partial index on hafd.operations, keyed on block number, for the given operation types
+-- of the context. Apps that only process a few op types (e.g., reputation_tracker uses 3 out of ~100+)
+-- read their block ranges through it; it is ~97% smaller than the full index.
+-- - The index is registered through hive.register_index_dependency, so hived never waits on its build:
+--   requested before HAF leaves the massive sync, it is built by hive.restore_indexes when HAF enters
+--   LIVE; requested later, hived's indexes controller builds it with CREATE INDEX CONCURRENTLY.
+-- - Contexts requesting the same set share one index, which is dropped when no context needs it.
+-- - An index that already exists under its name is registered as created, not rebuilt.
+-- - Requesting the same set again changes nothing.
+-- Raises insufficient_privilege unless the caller can impersonate the context's owner,
+-- and invalid_parameter_value for an empty list or an id missing from hafd.operation_types.
+-- Example: SELECT hive.register_op_type_partial_index('reptracker_app', ARRAY[17, 61, 72]::SMALLINT[]);
+CREATE OR REPLACE FUNCTION hive.register_op_type_partial_index(_context_name TEXT, _op_type_ids SMALLINT[])
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = hive, hafd, pg_catalog
+AS $$
+DECLARE
+    __owner NAME;
+    __op_type_ids SMALLINT[];
+    __parsed RECORD;
+BEGIN
+    SELECT owner INTO __owner
+    FROM hafd.contexts
+    WHERE name = _context_name;
+
+    IF __owner IS NULL THEN
+        RAISE EXCEPTION 'Context "%" not found in hafd.contexts', _context_name;
+    END IF;
+
+    -- see hive.app_remove_index_dependencies
+    IF NOT hive.can_impersonate( session_user, __owner )
+       AND NOT has_table_privilege( session_user, 'hafd.indexes_constraints', 'UPDATE, DELETE' ) THEN
+        RAISE EXCEPTION 'User % is not an owner of context % and cannot register its op type index', session_user, _context_name
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
+    SELECT array_agg(ot.id ORDER BY ot.id)
+    INTO __op_type_ids
+    FROM hafd.operation_types ot
+    WHERE ot.id = ANY(_op_type_ids);
+
+    IF __op_type_ids IS NULL OR EXISTS (
+        SELECT 1 FROM unnest(_op_type_ids) AS op_type_id
+        WHERE op_type_id IS NULL OR op_type_id <> ALL(__op_type_ids)
+    ) THEN
+        RAISE EXCEPTION 'Invalid operation type ids %, expected a non-empty list of ids from hafd.operation_types', _op_type_ids
+            USING ERRCODE = '22023';
+    END IF;
+
+    SELECT * INTO __parsed FROM hive.parse_create_index_command(hive.op_type_partial_index_command(__op_type_ids));
+    PERFORM hive.register_index_dependency(_context_name, __parsed.canonicalized_command);
+
+    -- what a massive sync gives the index when it saves it: kept, like the core block-number indexes
+    UPDATE hafd.indexes_constraints
+    SET massive_sync_class = hive.default_massive_sync_index_class(table_name, index_constraint_name)
+    WHERE table_name = __parsed.table_name AND index_constraint_name = __parsed.index_name
+      AND massive_sync_class IS NULL;
+END;
+$$;
+
+-- DEPRECATED: use hive.register_op_type_partial_index(), this function is going to be removed.
+-- It requests the index of hive.register_op_type_partial_index without a context: hived builds it
+-- (it no longer builds it itself, which blocked hived's writes to hafd.operations), and it is
+-- dropped only when a context that registers the same index releases it. Unknown ids are skipped.
+-- Note: SECURITY DEFINER allows HAF apps to request indexes on hafd.operations
 -- without needing direct ownership of the table.
 CREATE OR REPLACE FUNCTION hive.create_op_type_partial_index(_op_type_ids SMALLINT[])
 RETURNS VOID
@@ -345,9 +432,10 @@ SET search_path = hive, hafd, pg_catalog
 AS $$
 DECLARE
     _valid_ids SMALLINT[];
-    _index_name TEXT;
-    _where_clause TEXT;
+    __parsed RECORD;
 BEGIN
+    RAISE WARNING 'hive.create_op_type_partial_index() is deprecated and will be removed: it only requests the index, which hived builds later. Use hive.register_op_type_partial_index(<context name>, %) instead', quote_literal(_op_type_ids);
+
     -- Validate that all provided IDs exist in hafd.operation_types
     SELECT array_agg(ot.id ORDER BY ot.id)
     INTO _valid_ids
@@ -363,25 +451,26 @@ BEGIN
         RAISE WARNING 'Some operation type IDs were not found. Requested: %, found: %', _op_type_ids, _valid_ids;
     END IF;
 
-    -- Build a deterministic index name from the sorted IDs
-    _index_name := 'hive_operations_op_types_' || array_to_string(_valid_ids, '_') || '_idx';
+    SELECT * INTO __parsed FROM hive.parse_create_index_command(hive.op_type_partial_index_command(_valid_ids));
 
-    -- Build the WHERE clause
-    _where_clause := 'op_type_id IN (' || array_to_string(_valid_ids, ',') || ')';
-
-    -- Check if index already exists
-    IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = _index_name) THEN
-        RAISE NOTICE 'Index % already exists', _index_name;
-        RETURN;
-    END IF;
-
-    -- Create the partial index: key is block_num for range queries, partial on op_type_id
-    RAISE NOTICE 'Creating index % for operation type IDs: %', _index_name, _valid_ids;
-    EXECUTE format(
-        'CREATE INDEX %I ON hafd.operations (hafd.operation_id_to_block_num(id)) WHERE %s',
-        _index_name,
-        _where_clause
-    );
+    RAISE NOTICE 'Requesting index % for operation type IDs: %', __parsed.index_name, _valid_ids;
+    INSERT INTO hafd.indexes_constraints(
+        table_name, index_constraint_name, command, is_constraint, is_index, is_foreign_key, status, contexts, massive_sync_class
+    )
+    VALUES (
+        __parsed.table_name,
+        __parsed.index_name,
+        __parsed.canonicalized_command,
+        FALSE,
+        TRUE,
+        FALSE,
+        CASE WHEN EXISTS (
+            SELECT 1 FROM pg_indexes WHERE schemaname = 'hafd' AND indexname = __parsed.index_name
+        ) THEN 'created'::hafd.index_status ELSE 'missing'::hafd.index_status END,
+        '{}',
+        hive.default_massive_sync_index_class(__parsed.table_name, __parsed.index_name)
+    )
+    ON CONFLICT (table_name, index_constraint_name) DO NOTHING;
 END;
 $$;
 

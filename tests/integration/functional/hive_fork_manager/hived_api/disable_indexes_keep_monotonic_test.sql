@@ -7,7 +7,7 @@ BEGIN
     VALUES ( 1, 'hive::protocol::vote_operation', FALSE )
          , ( 2, 'hive::protocol::comment_operation', FALSE );
     -- an index an app created directly on a hafd table, keyed by block number
-    PERFORM hive.create_op_type_partial_index( ARRAY[ 1, 2 ]::SMALLINT[] );
+    EXECUTE hive.op_type_partial_index_command( ARRAY[ 1, 2 ]::SMALLINT[] );
     PERFORM hive.disable_fk_of_irreversible();
 END;
 $BODY$

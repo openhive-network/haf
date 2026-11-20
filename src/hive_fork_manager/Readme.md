@@ -330,6 +330,26 @@ or a parameter of a generic plan.
 `hive.create_custom_json_type_index` is deprecated and will be removed: it builds its index with a
 plain `CREATE INDEX`, which blocks `hived`'s writes to `hafd.operations`, and raises a `WARNING`.
 
+##### - Indexing operations by type
+
+An application that reads only a few operation types requests a partial index on
+`hafd.operations` for them with **`hive.register_op_type_partial_index`**:
+```sql
+SELECT hive.register_op_type_partial_index('my_app_context', ARRAY[17, 61, 72]::SMALLINT[]);
+```
+- The index, `hive_operations_op_types_<ids>_idx`, is keyed on block number and limited to the
+  requested types (`ON hafd.operations (hafd.operation_id_to_block_num(id)) WHERE op_type_id IN (...)`).
+- It is registered with `hive.register_index_dependency`, so `hived` never waits on its build:
+  requested before HAF leaves the massive sync (e.g. at install), it is built when HAF enters LIVE;
+  requested later, `hived` builds it concurrently.
+- A massive sync keeps it, like the core block-number indexes.
+- Contexts requesting the same types share one index; it is dropped when no context needs it.
+  An index that already exists under its name is registered as created, not rebuilt.
+
+`hive.create_op_type_partial_index(ids)` is deprecated and will be removed. It raises a `WARNING`
+and requests the same index without a context, so `hived` builds it later instead of the caller;
+it no longer builds the index with a plain `CREATE INDEX`, which blocked `hived`'s writes.
+
 ##### - Checking Index Creation Status
 
 Applications can check if `hived` has finished creating the registered indexes using

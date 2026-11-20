@@ -392,7 +392,7 @@ $BODY$
 -- 'defer': the leading key is random with respect to insert order (transaction hash, account,
 -- producer, operation type, json body), so every insert touches a random leaf.
 -- Indexes this function does not know, e.g. ones an app created directly on a hafd table, are
--- deferred, except the block-number-keyed partial indexes of hive.create_op_type_partial_index.
+-- deferred, except the block-number-keyed partial indexes of hive.register_op_type_partial_index.
 CREATE OR REPLACE FUNCTION hive.default_massive_sync_index_class( _table_name TEXT, _index_constraint_name TEXT )
     RETURNS TEXT
     LANGUAGE sql
@@ -415,7 +415,7 @@ SELECT CASE
         , ( 'hafd.accounts', 'uq_hive_accounst_name' )
         , ( 'hafd.accounts', 'hive_accounts_block_num_idx' )
     ) THEN 'keep'
-    WHEN _table_name = 'hafd.operations' AND _index_constraint_name ~ '^hive_operations_op_types_[0-9_]+_idx$' THEN 'keep'
+    WHEN _table_name = 'hafd.operations' AND _index_constraint_name ~ '^hive_operations_op_types_[0-9a-f_]+_idx$' THEN 'keep'
     ELSE 'defer'
 END;
 $function$
