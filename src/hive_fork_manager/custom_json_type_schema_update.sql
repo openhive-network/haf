@@ -14,9 +14,6 @@ SELECT pg_catalog.pg_extension_config_dump('hafd.custom_json_types', '');
 -- the update and adds it to the extension; registering it for pg_dump has to be done in the extension script.
 SELECT pg_catalog.pg_extension_config_dump('hafd.custom_json_type_index_requests', '');
 
--- Likewise created by the update script generator (context_rewind/data_schema.sql on fresh installs).
-SELECT pg_catalog.pg_extension_config_dump('hafd.context_view_horizon_mode', '');
-
 DO $$
 BEGIN
     IF NOT EXISTS (

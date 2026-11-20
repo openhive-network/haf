@@ -1,5 +1,5 @@
--- In 'c' mode of hive.set_context_view_horizon_mode, the horizon libhfm caches per snapshot is as fresh as a read of
--- hafd.contexts: an autocommit statement and each READ COMMITTED statement see another session's committed horizon, a
+-- The horizon libhfm caches per snapshot for the context views is as fresh as a read of hafd.contexts: an autocommit
+-- statement and each READ COMMITTED statement see another session's committed horizon, a
 -- REPEATABLE READ transaction keeps the horizon of its snapshot, one statement sees one horizon, and a rolled back
 -- subtransaction's horizon is not seen after it. A role which may only read the views sees the committed horizon, and
 -- a read of hafd.contexts that fails leaves it the current user. The horizon moves in the `writer` session, and is
@@ -68,8 +68,6 @@ BEGIN
     END IF;
     GRANT USAGE ON SCHEMA a TO context_views_fresh_reader;
     GRANT SELECT ON ALL TABLES IN SCHEMA a TO context_views_fresh_reader;
-
-    PERFORM hive.set_context_view_horizon_mode( 'c' );
 END;
 $BODY$
 ;

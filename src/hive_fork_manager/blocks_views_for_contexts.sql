@@ -74,43 +74,13 @@ $BODY$
 ;
 
 /*
-The horizon of a context's views, read from the context's row in hafd.contexts: any session reading the views
-sees the horizon the context's sync loop last committed. SECURITY DEFINER, so that a reader of the views needs no
-access to hafd.contexts, as when the views joined `<schema>.context_data_view`.
-*/
-CREATE OR REPLACE FUNCTION hive.context_view_horizon(
-      _context TEXT
-    , OUT min_block INTEGER
-    , OUT irreversible_block INTEGER
-    , OUT current_block_num INTEGER
-    , OUT fork_id BIGINT
-    , OUT reversible_range BOOLEAN
-)
-    LANGUAGE sql
-    STABLE
-    PARALLEL SAFE
-    SECURITY DEFINER
-    SET search_path = pg_catalog, pg_temp
-AS
-$BODY$
-    -- min_block: a context behind the irreversible block sees the irreversible blocks up to its current block only
-    SELECT
-          LEAST( hc.irreversible_block, hc.current_block_num )
-        , hc.irreversible_block
-        , hc.current_block_num
-        , hc.fork_id
-        , hc.current_block_num > hc.irreversible_block AND hc.is_forking
-    FROM hafd.contexts hc
-    WHERE hc.name = _context
-$BODY$
-;
-
-/*
-The fields of hive.context_view_horizon, one function each, in libhfm: a field is read from a copy of the context's
-row cached per snapshot (same transaction, subtransaction and visible transactions), so a view may call it directly,
-even on every probe of a nested loop, and the planner evaluates it when estimating a view's rows. Not SECURITY
-DEFINER, which would switch the user on every call: only the read of a row not cached yet runs as the extension's
-owner, so a reader of the views needs no access to hafd.contexts.
+The horizon of a context's views, one field per function, in libhfm, read from the context's row in hafd.contexts:
+any session reading the views sees the horizon the context's sync loop last committed. A field is read from a copy of
+the context's row cached per snapshot (same transaction, subtransaction and visible transactions), so a view may call
+it directly, even on every probe of a nested loop, and the planner evaluates it when estimating a view's rows. Not
+SECURITY DEFINER, which would switch the user on every call: only the read of a row not cached yet runs as the
+extension's owner, so a reader of the views needs no access to hafd.contexts.
+min_block: a context behind the irreversible block sees the irreversible blocks up to its current block only.
 */
 CREATE OR REPLACE FUNCTION hive.context_view_horizon_min_block( _context TEXT )
     RETURNS INTEGER
@@ -133,24 +103,7 @@ CREATE OR REPLACE FUNCTION hive.context_view_horizon_reversible_range( _context 
     AS 'MODULE_PATHNAME', 'context_view_horizon_reversible_range' LANGUAGE C STABLE STRICT PARALLEL SAFE;
 
 /*
-How the generated views of a context read its horizon, set by hive.set_context_view_horizon_mode:
-- 'c' (the default): through the functions of libhfm above, called directly;
-- 'initplan': through hive.context_view_horizon, as InitPlans run once per query.
-*/
-CREATE OR REPLACE FUNCTION hive.context_view_horizon_mode()
-    RETURNS TEXT
-    LANGUAGE sql
-    STABLE
-AS
-$BODY$
-    SELECT COALESCE( ( SELECT m.mode FROM hafd.context_view_horizon_mode m ), 'c' );
-$BODY$
-;
-
-/*
-The SQL of a field of a context's horizon in a view. In 'initplan' mode, a field of hive.context_view_horizon as an
-uncorrelated subquery, which the planner runs once per query as an InitPlan: calling that function directly in a view
-would run it again on every rescan of a nested loop's inner index scan. In 'c' mode, a call of the field's function.
+The SQL of a field of a context's horizon in a view: a call of the field's function.
 */
 CREATE OR REPLACE FUNCTION hive.context_view_horizon_value( _context_name TEXT, _field TEXT )
     RETURNS TEXT
@@ -158,18 +111,12 @@ CREATE OR REPLACE FUNCTION hive.context_view_horizon_value( _context_name TEXT, 
     STABLE
 AS
 $BODY$
-    SELECT CASE hive.context_view_horizon_mode()
-        WHEN 'c' THEN format( 'hive.%I( %L )', 'context_view_horizon_' || _field, _context_name )
-        ELSE format( '( SELECT h.%I FROM hive.context_view_horizon( %L ) h )', _field, _context_name )
-    END;
+    SELECT format( 'hive.%I( %L )', 'context_view_horizon_' || _field, _context_name );
 $BODY$
 ;
 
 /*
 The filter of a context view's irreversible rows, _block_num being the SQL of a row's block number.
-In 'initplan' mode `<= ANY( ARRAY[ x ] )`, which means `<= x` and is still an index condition, but the planner does
-not combine it with a query's own range on the same column: a range bound it cannot estimate (an InitPlan's value)
-would make it estimate the whole range at its 0.5% default. In 'c' mode the planner knows the bound's value.
 */
 CREATE OR REPLACE FUNCTION hive.context_view_irreversible_filter( _context_name TEXT, _block_num TEXT )
     RETURNS TEXT
@@ -177,11 +124,7 @@ CREATE OR REPLACE FUNCTION hive.context_view_irreversible_filter( _context_name 
     STABLE
 AS
 $BODY$
-    SELECT format(
-          CASE hive.context_view_horizon_mode() WHEN 'c' THEN '%s <= %s' ELSE '%s <= ANY( ARRAY[ %s ] )' END
-        , _block_num
-        , hive.context_view_horizon_value( _context_name, 'min_block' )
-    );
+    SELECT format( '%s <= %s', _block_num, hive.context_view_horizon_value( _context_name, 'min_block' ) );
 $BODY$
 ;
 
@@ -244,7 +187,7 @@ $BODY$
 ;
 
 /*
-The comment the generator of a context view reading its horizon through hive.context_view_horizon puts on the view,
+The comment the generator of a context view reading its horizon puts on the view,
 naming the shape it generates now; NULL for a view whose generator puts none. hive_update.recreate_outdated_context_views
 recreates such a view when its comment differs, so a change to the shape of a view bumps its shape here, and a view
 getting its first shape also has its generator put the comment.

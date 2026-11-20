@@ -334,14 +334,65 @@ END;
 $BODY$;
 
 /**
+Creates hive.context_view_horizon, which the updated extension no longer has, so the saved context views that read their
+horizon through it as InitPlans (the views of a database that had 'initplan' in hafd.context_view_horizon_mode, or was
+updated from a version generating them so) can be restored. recreate_outdated_context_views then regenerates them, and
+drop_initplan_context_view_horizon drops the function again.
+*/
+CREATE OR REPLACE FUNCTION hive_update.create_initplan_context_view_horizon()
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS $BODY$
+BEGIN
+    IF to_regprocedure( 'hive.context_view_horizon(text)' ) IS NOT NULL THEN
+        RETURN;
+    END IF;
+
+    CREATE FUNCTION hive.context_view_horizon(
+          _context TEXT
+        , OUT min_block INTEGER
+        , OUT irreversible_block INTEGER
+        , OUT current_block_num INTEGER
+        , OUT fork_id BIGINT
+        , OUT reversible_range BOOLEAN
+    )
+        LANGUAGE sql
+        STABLE
+    AS $FUNCTION$
+        SELECT
+              LEAST( hc.irreversible_block, hc.current_block_num )
+            , hc.irreversible_block
+            , hc.current_block_num
+            , hc.fork_id
+            , hc.current_block_num > hc.irreversible_block AND hc.is_forking
+        FROM hafd.contexts hc
+        WHERE hc.name = _context
+    $FUNCTION$;
+END;
+$BODY$;
+
+/**
+Drops hive.context_view_horizon, created by create_initplan_context_view_horizon. Raises an exception when an object
+still depends on it, so the update fails instead of dropping that object.
+*/
+CREATE OR REPLACE FUNCTION hive_update.drop_initplan_context_view_horizon()
+    RETURNS void
+    LANGUAGE plpgsql
+    VOLATILE
+AS $BODY$
+BEGIN
+    DROP FUNCTION IF EXISTS hive.context_view_horizon( TEXT );
+END;
+$BODY$;
+
+/**
 Recreates, with the updated extension's generators, every view of a context that has an outdated shape:
 - it still reads the context's horizon by joining `<schema>.context_data_view`, the shape of the views before they
-  read it through hive.context_view_horizon. Such views do not depend on the hive schema, so the update neither saves
-  nor drops them.
+  read it through a function. Such views do not depend on the hive schema, so the update neither saves nor drops them.
+- it reads the horizon through hive.context_view_horizon as InitPlans (see create_initplan_context_view_horizon).
 - it reads the horizon, hive.context_view_shape names a shape for it, and its comment is not that shape. The update
   restores such views as they were, with their comment.
-- it reads the horizon in the other mode than hive.context_view_horizon_mode, as the views of a database updated from
-  a version whose default mode was 'initplan' do when hafd.context_view_horizon_mode has no row.
 Views showing all irreversible data (those of a detached context) read no horizon and are left as they are.
 Returns a line for each recreated view.
 */
@@ -370,20 +421,19 @@ BEGIN
         CROSS JOIN LATERAL (
             SELECT
                   bool_or( d.refclassid = 'pg_class'::regclass AND d.refobjid = to_regclass( format( '%I.context_data_view', hc.schema ) ) ) AS reads_context_data_view
-                , bool_or( d.refclassid = 'pg_proc'::regclass AND d.refobjid = 'hive.context_view_horizon(text)'::regprocedure ) AS reads_initplan
+                , bool_or( d.refclassid = 'pg_proc'::regclass AND d.refobjid = to_regprocedure( 'hive.context_view_horizon(text)' ) ) AS reads_initplan
                 , bool_or( d.refclassid = 'pg_proc'::regclass AND d.refobjid = 'hive.context_view_horizon_min_block(text)'::regprocedure ) AS reads_c
             FROM pg_rewrite r
             JOIN pg_depend d ON d.classid = 'pg_rewrite'::regclass AND d.objid = r.oid
             WHERE r.ev_class = cv.oid
         ) dep
         WHERE dep.reads_context_data_view
+           OR dep.reads_initplan
            OR (
-                  ( dep.reads_initplan OR dep.reads_c )
+                  dep.reads_c
               AND hive.context_view_shape( v.view_name ) IS NOT NULL
               AND hive.context_view_shape( v.view_name ) IS DISTINCT FROM obj_description( cv.oid, 'pg_class' )
            )
-           OR ( dep.reads_initplan AND hive.context_view_horizon_mode() = 'c' )
-           OR ( dep.reads_c AND hive.context_view_horizon_mode() = 'initplan' )
         ORDER BY hc.name, v.view_name
     LOOP
         EXECUTE format( 'SELECT %s( %L )', __view.create_function, __view.context_name );

@@ -49,16 +49,6 @@ SELECT pg_catalog.pg_extension_config_dump('hafd.contexts_attachment', '');
 
 CREATE INDEX IF NOT EXISTS hive_contexts_attachment_owner_idx ON hafd.contexts_attachment( owner );
 
--- How the generated context views read the horizon (hive.set_context_view_horizon_mode); no row means 'c'
-CREATE TABLE IF NOT EXISTS hafd.context_view_horizon_mode(
-      id SMALLINT NOT NULL DEFAULT 1
-    , mode TEXT NOT NULL
-    , CONSTRAINT pk_context_view_horizon_mode PRIMARY KEY( id )
-    , CONSTRAINT ck_context_view_horizon_mode_single_row CHECK( id = 1 )
-    , CONSTRAINT ck_context_view_horizon_mode_mode CHECK( mode IN ( 'initplan', 'c' ) )
-);
-SELECT pg_catalog.pg_extension_config_dump('hafd.context_view_horizon_mode', '');
-
 CREATE TABLE IF NOT EXISTS hafd.registered_tables(
    id SERIAL NOT NULL,
    context_id INTEGER NOT NULL,

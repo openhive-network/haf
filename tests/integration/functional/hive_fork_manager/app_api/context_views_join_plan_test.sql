@@ -1,7 +1,6 @@
 -- A single-block join of a context's operations_view with its blocks_view, with no range on blocks_view, probes
 -- pk_hive_blocks once per operation in a nested loop, and a context with no reversible range does not probe the
--- reversible tables. Only the plan's shape is checked: a test database is far too small to show the timing. Both modes
--- of hive.set_context_view_horizon_mode are checked.
+-- reversible tables. Only the plan's shape is checked: a test database is far too small to show the timing.
 
 CREATE OR REPLACE FUNCTION single_block_join_plan( _schema TEXT, _block_num INT )
     RETURNS JSONB
@@ -73,8 +72,8 @@ END;
 $BODY$
 ;
 
--- Asserts the plans of the joins through the views generated in mode _mode.
-CREATE OR REPLACE FUNCTION assert_join_plans( _mode TEXT )
+-- Asserts the plans of the joins through the views.
+CREATE OR REPLACE FUNCTION assert_join_plans()
     RETURNS void
     LANGUAGE plpgsql
     VOLATILE
@@ -83,28 +82,27 @@ $BODY$
 DECLARE
     __plan JSONB;
 BEGIN
-    PERFORM hive.set_context_view_horizon_mode( _mode );
     UPDATE hafd.contexts SET current_block_num = 5000 WHERE name = 'context';
 
     __plan := single_block_join_plan( 'a', 2500 );
-    PERFORM assert_probes_blocks_per_operation( __plan, format( 'a forking context in %s mode', _mode ) );
+    PERFORM assert_probes_blocks_per_operation( __plan, 'a forking context' );
     ASSERT jsonb_path_exists( __plan, 'lax $.** ? ( @."Relation Name" == "blocks_reversible" && @."Actual Loops" == 0 )' )
-        , format( 'the plan of a forking context in %s mode has no reversible branch: %s', _mode, __plan );
+        , format( 'the plan of a forking context has no reversible branch: %s', __plan );
     ASSERT NOT jsonb_path_exists( __plan, 'lax $.** ? ( @."Relation Name" like_regex "_reversible$" && @."Actual Loops" > 0 )' )
-        , format( 'a forking context without a reversible range in %s mode probes the reversible tables: %s', _mode, __plan );
+        , format( 'a forking context without a reversible range probes the reversible tables: %s', __plan );
 
     __plan := single_block_join_plan( 'b', 2500 );
-    PERFORM assert_probes_blocks_per_operation( __plan, format( 'a non-forking context in %s mode', _mode ) );
+    PERFORM assert_probes_blocks_per_operation( __plan, 'a non-forking context' );
     ASSERT NOT jsonb_path_exists( __plan, 'lax $.** ? ( @."Relation Name" like_regex "_reversible$" )' )
-        , format( 'the plan of a non-forking context in %s mode reads the reversible tables: %s', _mode, __plan );
+        , format( 'the plan of a non-forking context reads the reversible tables: %s', __plan );
 
     -- with a reversible range the reversible branch runs, and still returns only the visible fork's operations
     UPDATE hafd.contexts SET current_block_num = 5005 WHERE name = 'context';
     __plan := single_block_join_plan( 'a', 5003 );
     ASSERT jsonb_path_exists( __plan, 'lax $.** ? ( @."Relation Name" == "operations_reversible" && @."Actual Loops" > 0 )' )
-        , format( 'a forking context with a reversible range in %s mode does not read the reversible operations: %s', _mode, __plan );
+        , format( 'a forking context with a reversible range does not read the reversible operations: %s', __plan );
     ASSERT ( SELECT count(*) FROM a.operations_view ov JOIN a.blocks_view bv ON bv.num = ov.block_num WHERE ov.block_num BETWEEN 5003 AND 5003 ) = 10
-        , format( 'the join through the views in %s mode does not return the 10 operations of a reversible block', _mode );
+        , 'the join through the views does not return the 10 operations of a reversible block';
 END;
 $BODY$
 ;
@@ -114,8 +112,7 @@ CREATE OR REPLACE PROCEDURE haf_admin_test_then()
 AS
 $BODY$
 BEGIN
-    PERFORM assert_join_plans( 'initplan' );
-    PERFORM assert_join_plans( 'c' );
+    PERFORM assert_join_plans();
 END;
 $BODY$
 ;

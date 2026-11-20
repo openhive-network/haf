@@ -1,9 +1,8 @@
--- The views of a context return their rows under a snapshot whose subtransaction XIDs have overflowed, in both modes
--- of hive.set_context_view_horizon_mode. Such a snapshot is taken while another transaction holds more live
--- subtransactions with an XID than a backend caches (64); the copy of it a query runs under has no array of
--- subtransaction XIDs, only their count, which is not zero when a transaction listed before the overflowed one holds
--- some. Two `holder` sessions hold the subtransactions, each one overflowed in turn, as the order the snapshot lists
--- them in is not known; the views are read in a third, `reader` session.
+-- The views of a context return their rows under a snapshot whose subtransaction XIDs have overflowed. Such a snapshot
+-- is taken while another transaction holds more live subtransactions with an XID than a backend caches (64); the copy
+-- of it a query runs under has no array of subtransaction XIDs, only their count, which is not zero when a transaction
+-- listed before the overflowed one holds some. Two `holder` sessions hold the subtransactions, each one overflowed in
+-- turn, as the order the snapshot lists them in is not known; the views are read in a third, `reader` session.
 
 -- Opens a transaction in _holder with _subtransactions nested savepoints, each with an XID of its own.
 CREATE OR REPLACE FUNCTION hold_subtransactions( _holder TEXT, _subtransactions INTEGER )
@@ -70,7 +69,6 @@ $BODY$
 DECLARE
     __connection TEXT := format( 'dbname=%s user=%s port=%s host=%s'
         , current_database(), current_user, current_setting( 'port' ), split_part( current_setting( 'unix_socket_directories' ), ',', 1 ) );
-    __mode TEXT;
     __overflowed TEXT;
     __holders CONSTANT TEXT[] := ARRAY[ 'holder_1', 'holder_2' ];
     __holder TEXT;
@@ -81,19 +79,15 @@ BEGIN
         PERFORM dblink_exec( __holder, 'CREATE TEMPORARY TABLE held( n INTEGER )' );
     END LOOP;
 
-    FOREACH __mode IN ARRAY ARRAY[ 'c', 'initplan' ] LOOP
-        PERFORM hive.set_context_view_horizon_mode( __mode );
-        COMMIT;
-        FOREACH __overflowed IN ARRAY __holders LOOP
-            FOREACH __holder IN ARRAY __holders LOOP
-                PERFORM hold_subtransactions( __holder, CASE WHEN __holder = __overflowed THEN 70 ELSE 2 END );
-            END LOOP;
-            -- a snapshot lists a transaction only below its xmax, the XID after the last one completed
-            PERFORM * FROM dblink( 'reader', 'SELECT pg_current_xact_id()::TEXT' ) AS t( x TEXT );
-            PERFORM assert_context_views( format( 'in mode %s while %s holds 70 subtransactions', __mode, __overflowed ) );
-            FOREACH __holder IN ARRAY __holders LOOP
-                PERFORM dblink_exec( __holder, 'ROLLBACK' );
-            END LOOP;
+    FOREACH __overflowed IN ARRAY __holders LOOP
+        FOREACH __holder IN ARRAY __holders LOOP
+            PERFORM hold_subtransactions( __holder, CASE WHEN __holder = __overflowed THEN 70 ELSE 2 END );
+        END LOOP;
+        -- a snapshot lists a transaction only below its xmax, the XID after the last one completed
+        PERFORM * FROM dblink( 'reader', 'SELECT pg_current_xact_id()::TEXT' ) AS t( x TEXT );
+        PERFORM assert_context_views( format( 'while %s holds 70 subtransactions', __overflowed ) );
+        FOREACH __holder IN ARRAY __holders LOOP
+            PERFORM dblink_exec( __holder, 'ROLLBACK' );
         END LOOP;
     END LOOP;
 

@@ -144,8 +144,6 @@ check_hive_event_triggers_use_new_libhfm() {
 make_hafd_schema_of_last_release() {
     exec_sql "ALTER EXTENSION hive_fork_manager DROP TABLE hafd.custom_json_type_index_requests;
               DROP TABLE hafd.custom_json_type_index_requests;
-              ALTER EXTENSION hive_fork_manager DROP TABLE hafd.context_view_horizon_mode;
-              DROP TABLE hafd.context_view_horizon_mode;
               ALTER TABLE hafd.contexts DROP COLUMN early_block_processing;
               ALTER TABLE hafd.contexts DROP COLUMN is_finalizing;
               ALTER TABLE hafd.indexes_constraints DROP COLUMN registered_at;
@@ -174,7 +172,6 @@ hafd_schema_snapshot() {
                      c.oid = ANY (SELECT unnest(extconfig) FROM pg_extension WHERE extname = 'hive_fork_manager')
               FROM pg_class c WHERE c.relnamespace = 'hafd'::regnamespace AND c.relkind = 'r' ORDER BY 1"
     exec_sql "\d hafd.custom_json_type_index_requests"
-    exec_sql "\d hafd.context_view_horizon_mode"
 }
 
 check_hafd_schema_equals() {
@@ -276,6 +273,57 @@ check_app_objects_unchanged() {
 count_mode_app_views_reading() {
     exec_sql "SELECT count(*) FROM pg_class c WHERE c.relnamespace = 'mode_app'::regnamespace AND c.relkind = 'v'
               AND c.relname <> 'last_block' AND pg_get_viewdef(c.oid) LIKE '%$1%'"
+}
+
+# What a database had before the 'initplan' shape of the context views was removed: hafd.context_view_horizon_mode,
+# holding the mode $1 when one is given, hive.context_view_horizon_mode reading it, and hive.context_view_horizon,
+# through which the views of the 'initplan' shape read their horizon.
+make_pre_removal_horizon_mode() {
+    exec_sql "CREATE TABLE hafd.context_view_horizon_mode(
+                    id SMALLINT NOT NULL DEFAULT 1
+                  , mode TEXT NOT NULL
+                  , CONSTRAINT pk_context_view_horizon_mode PRIMARY KEY( id )
+                  , CONSTRAINT ck_context_view_horizon_mode_single_row CHECK( id = 1 )
+                  , CONSTRAINT ck_context_view_horizon_mode_mode CHECK( mode IN ( 'initplan', 'c' ) )
+              );
+              ALTER EXTENSION hive_fork_manager ADD TABLE hafd.context_view_horizon_mode;
+              INSERT INTO hafd.context_view_horizon_mode( id, mode ) SELECT 1, m FROM ( VALUES ( NULLIF( '$1', '' ) ) ) AS v( m ) WHERE m IS NOT NULL;
+              CREATE FUNCTION hive.context_view_horizon_mode() RETURNS TEXT LANGUAGE sql STABLE
+              AS \$BODY\$ SELECT COALESCE( ( SELECT m.mode FROM hafd.context_view_horizon_mode m ), 'c' ) \$BODY\$;
+              ALTER EXTENSION hive_fork_manager ADD FUNCTION hive.context_view_horizon_mode();
+              CREATE FUNCTION hive.context_view_horizon(
+                    _context TEXT
+                  , OUT min_block INTEGER
+                  , OUT irreversible_block INTEGER
+                  , OUT current_block_num INTEGER
+                  , OUT fork_id BIGINT
+                  , OUT reversible_range BOOLEAN
+              ) LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp
+              AS \$BODY\$
+                  SELECT LEAST( hc.irreversible_block, hc.current_block_num ), hc.irreversible_block, hc.current_block_num, hc.fork_id
+                       , hc.current_block_num > hc.irreversible_block AND hc.is_forking
+                  FROM hafd.contexts hc WHERE hc.name = _context
+              \$BODY\$;
+              ALTER EXTENSION hive_fork_manager ADD FUNCTION hive.context_view_horizon(TEXT);"
+}
+
+# Regenerates the views of mode_ctx in the 'initplan' shape, as hive.set_context_view_horizon_mode('initplan') did
+# before its removal: they read each field of the horizon through an InitPlan over hive.context_view_horizon.
+make_initplan_context_views() {
+    exec_sql "CREATE OR REPLACE FUNCTION hive.context_view_horizon_value( _context_name TEXT, _field TEXT ) RETURNS TEXT LANGUAGE sql STABLE
+              AS \$BODY\$ SELECT format( '( SELECT h.%I FROM hive.context_view_horizon( %L ) h )', _field, _context_name ) \$BODY\$;
+              CREATE OR REPLACE FUNCTION hive.context_view_irreversible_filter( _context_name TEXT, _block_num TEXT ) RETURNS TEXT LANGUAGE sql STABLE
+              AS \$BODY\$ SELECT format( '%s <= ANY( ARRAY[ %s ] )', _block_num, hive.context_view_horizon_value( _context_name, 'min_block' ) ) \$BODY\$;
+              SELECT hive.app_create_views_for_contexts('mode_ctx');"
+}
+
+check_context_view_horizon_mode_removed() {
+    if [ "$(exec_sql "SELECT to_regclass('hafd.context_view_horizon_mode') IS NULL
+                      AND NOT EXISTS (SELECT 1 FROM pg_proc WHERE pronamespace = 'hive'::regnamespace
+                                      AND proname IN ('context_view_horizon', 'context_view_horizon_mode', 'set_context_view_horizon_mode'))")" != "t" ]; then
+        echo "TEST FAILED: the update left hafd.context_view_horizon_mode or a function of the initplan shape"
+        return 74
+    fi
 }
 
 deployed_version() {
@@ -622,45 +670,40 @@ exec_sql "SELECT hive.app_register_lock_only('lock_only_update_api')"
 [ "$(exec_sql "SELECT contexts FROM hafd.applications WHERE name = 'lock_only_update_api'")" = "{}" ] \
     || { echo "TEST FAILED: a lock-only application could not be registered on the updated database"; exit 82; }
 
-printf "\nTEST: Upgrade a database from before hafd.context_view_horizon_mode whose context views read their horizon through InitPlans, the default then. The table should be created as on a fresh install, empty, and the views recreated in the default c mode.\n"
+printf "\nTEST: Upgrade a database whose operator chose the initplan shape of the context views, since removed. The views should be recreated in the c shape, the only one, and the mode table and the InitPlan horizon function dropped.\n"
 prepare_database
 exec_sql "CREATE SCHEMA mode_app;
           SELECT hive.app_create_context('mode_ctx', 'mode_app');
           CREATE VIEW mode_app.last_block AS SELECT max(num) AS num FROM mode_app.blocks_view;"
 fresh_schema=$(hafd_schema_snapshot)
-exec_sql "SELECT hive.set_context_view_horizon_mode('initplan');
-          ALTER EXTENSION hive_fork_manager DROP TABLE hafd.context_view_horizon_mode;
-          DROP TABLE hafd.context_view_horizon_mode;"
+make_pre_removal_horizon_mode initplan
+make_initplan_context_views
 [ "$(count_mode_app_views_reading 'hive.context_view_horizon(')" = "8" ] \
-    || { echo "TEST FAILED: could not give mode_app the views of initplan mode"; exit 76; }
+    || { echo "TEST FAILED: could not give mode_app the views of the initplan shape"; exit 76; }
 unship_deployed_libhfm
 update_database
 [ "$(deployed_version)" != "1.0" ] || { echo "TEST FAILED: the extension was not updated"; exit 73; }
-check_table_is_empty hafd.context_view_horizon_mode
+check_context_view_horizon_mode_removed
 check_hafd_schema_equals "$fresh_schema"
-[ "$(exec_sql "SELECT hive.context_view_horizon_mode()")" = "c" ] \
-    || { echo "TEST FAILED: the context view horizon mode is not c after the update"; exit 74; }
 [ "$(count_mode_app_views_reading 'hive.context_view_horizon_min_block(')" = "8" ] && [ "$(count_mode_app_views_reading 'hive.context_view_horizon(')" = "0" ] \
-    || { echo "TEST FAILED: the 8 views of mode_ctx are not in c mode after the update"; exit 77; }
+    || { echo "TEST FAILED: the 8 views of mode_ctx are not in the c shape after the update"; exit 77; }
 [ "$(exec_sql "SELECT num IS NULL FROM mode_app.last_block")" = "t" ] \
     || { echo "TEST FAILED: the app view built on mode_app.blocks_view does not work after the update"; exit 78; }
-exec_sql "SELECT hive.set_context_view_horizon_mode('initplan')"
-[ "$(exec_sql "SELECT hive.context_view_horizon_mode()")" = "initplan" ] && [ "$(count_mode_app_views_reading 'hive.context_view_horizon(')" = "8" ] \
-    || { echo "TEST FAILED: hive.set_context_view_horizon_mode did not switch the updated database to initplan mode"; exit 75; }
 
-printf "\nTEST: Upgrade a database whose operator chose initplan mode. The mode and the views of initplan mode should be kept.\n"
+printf "\nTEST: Upgrade a database whose context views are in the c shape, with an empty hafd.context_view_horizon_mode. The views should be kept as they are, and the mode table dropped.\n"
 prepare_database
 exec_sql "CREATE SCHEMA mode_app;
-          SELECT hive.app_create_context('mode_ctx', 'mode_app');
-          SELECT hive.set_context_view_horizon_mode('initplan');"
+          SELECT hive.app_create_context('mode_ctx', 'mode_app');"
+make_pre_removal_horizon_mode ''
 mode_app_views_before=$(exec_sql "SELECT string_agg(c.relname || ':' || pg_get_viewdef(c.oid), E'\n' ORDER BY c.relname) FROM pg_class c
                                   WHERE c.relnamespace = 'mode_app'::regnamespace AND c.relkind = 'v'")
 update_database
-[ "$(exec_sql "SELECT mode FROM hafd.context_view_horizon_mode")" = "initplan" ] \
-    || { echo "TEST FAILED: the update did not keep the initplan mode the operator chose"; exit 79; }
+check_context_view_horizon_mode_removed
 [ "$(exec_sql "SELECT string_agg(c.relname || ':' || pg_get_viewdef(c.oid), E'\n' ORDER BY c.relname) FROM pg_class c
                WHERE c.relnamespace = 'mode_app'::regnamespace AND c.relkind = 'v'")" = "$mode_app_views_before" ] \
-    || { echo "TEST FAILED: the update changed the views of initplan mode"; exit 80; }
+    || { echo "TEST FAILED: the update changed the views of the c shape"; exit 80; }
+[ "$(count_mode_app_views_reading 'hive.context_view_horizon_min_block(')" = "8" ] \
+    || { echo "TEST FAILED: the 8 views of mode_ctx are not in the c shape after the update"; exit 79; }
 
 printf "\nTEST: Upgrade a database that already has hafd.custom_json_type_index_requests. The table and its requests should be left as they are.\n"
 prepare_database
