@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Runs inside the HAF image as the maintenance script of its entrypoint, after
-# PostgreSQL is up (.aidev/run-checks.sh starts it):
+# PostgreSQL is up. .aidev/run-checks.sh starts it once it has installed the
+# candidate's hive_fork_manager extension SQL (.aidev/install-candidate-hfm.sh: as
+# Dockerfile.sql-overlay does, against the image's own libhfm, which under aidev
+# is built from the tree's own sources, .aidev/README.md), so the entrypoint
+# creates the extension in haf_block_log from it:
 #
 #   /home/hived/docker_entrypoint.sh --execute-maintenance-script=/work/.aidev/hfm-functional.sh
 #
-# 1. Installs the candidate's hive_fork_manager extension SQL into PostgreSQL
-#    (.aidev/install-candidate-hfm.sh: as Dockerfile.sql-overlay does, against the
-#    image's own libhfm, which under aidev is built from the tree's own sources,
-#    .aidev/README.md). When that SQL declares a C symbol the image's libhfm
-#    lacks, records one failing case (hfm/libhfm-symbols) naming them and runs no
-#    test.
+# 1. Checks that haf_block_log's hive_fork_manager is the candidate's version
+#    (HFM_EXTENSION_VERSION); otherwise records one failing case
+#    (hfm/extension-version) naming both versions and runs no test.
 # 2. Runs every ADD_SQL_FUNCTIONAL_TEST of tests/integration/functional/
 #    {hive_fork_manager,query_supervisor} through tools/test.sh, as CI's ctest
 #    does, HFM_TEST_JOBS at a time, and records one case per test; with them
@@ -24,7 +25,8 @@
 # 3. Runs test_update_script.sh (hive_fork_manager/test_update_script) after
 #    them, alone, as CI's ctest does after the functional tests.
 #
-# Environment: HFM_TEST_OUT (report dir, required), HFM_TEST_FILTER (optional
+# Environment: HFM_TEST_OUT (report dir, required), HFM_EXTENSION_VERSION (the
+# version install-candidate-hfm.sh installed, required), HFM_TEST_FILTER (optional
 # Perl regex over the test names the cases are reported under,
 # <folder>/<path without .sql>; selecting no test fails), HFM_TEST_JOBS (default 4).
 set -uo pipefail
@@ -33,13 +35,15 @@ src="$PWD"
 out="${HFM_TEST_OUT:?HFM_TEST_OUT must name the report directory}"
 mkdir -p "$out/hfm"
 cases="$out/hfm-functional.tsv"; : > "$cases"
-rc=0
-bash .aidev/install-candidate-hfm.sh "$out/hfm" || rc=$?
-if [ "$rc" -eq 3 ]; then
-    printf 'case\thfm/libhfm-symbols\tfail\t0\t%s\t%s\n' "$(< "$out/hfm/libhfm-symbols.log")" "$out/hfm/libhfm-symbols.log" >> "$cases"
+expected="${HFM_EXTENSION_VERSION:?HFM_EXTENSION_VERSION must name the installed candidate extension version}"
+created="$(psql -U haf_admin -d haf_block_log -tAc "select extversion from pg_extension where extname = 'hive_fork_manager'" 2>&1)"
+if [ "$created" != "$expected" ]; then
+    echo "test image mismatch: haf_block_log's hive_fork_manager is version '$created', not the candidate's $expected that .aidev/install-candidate-hfm.sh installed: the entrypoint did not create the extension from this tree's SQL" \
+        | tee "$out/hfm/extension-version.log"
+    printf 'case\thfm/extension-version\tfail\t0\t%s\t%s\n' "$(< "$out/hfm/extension-version.log")" "$out/hfm/extension-version.log" >> "$cases"
     exit 1
 fi
-[ "$rc" -eq 0 ] || exit 1
+echo "== haf_block_log has hive_fork_manager $created, the candidate's"
 
 # test.sh connects as these roles through localhost with password 'test'
 cd tests/integration/functional || exit 1

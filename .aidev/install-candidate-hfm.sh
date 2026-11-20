@@ -2,8 +2,9 @@
 # Installs the candidate's hive_fork_manager extension SQL into the HAF image's
 # PostgreSQL the way Dockerfile.sql-overlay does: scripts/generate_extension_sql.sh,
 # then the control file's libhfm-<version>.so pointed at the image's own libhfm.
-# Runs inside the HAF image, as its sudo-capable hived user, from either suite's
-# maintenance script (.aidev/hfm-functional.sh, .aidev/haf-system.sh).
+# Runs inside the HAF image, as its sudo-capable hived user, before the image's
+# entrypoint creates the extension (.aidev/run-checks.sh) or from the haf_system
+# suite's maintenance script (.aidev/haf-system.sh). It needs no running PostgreSQL.
 #
 #   [HFM_CANDIDATE_LIBHFM_DIR=DIR] .aidev/install-candidate-hfm.sh LOG_DIR
 #
@@ -14,11 +15,13 @@
 # instead of the link to the image's own; otherwise, or without the directory, the
 # image's libhfm is used, as it is when the variable is unset.
 #
-# Exit 0: installed, as the extension's default version. Exit 3: the candidate
-# SQL declares C symbols the libhfm it is installed with lacks, so CREATE EXTENSION
-# would fail in every test; the message naming them, and why the candidate's
-# library was not used, is printed and written to LOG_DIR/libhfm-symbols.log, and
-# nothing is installed. Any other status: the install failed
+# Exit 0: installed, as the extension's default version, which is written to
+# LOG_DIR/extension-version. Exit 3: the candidate SQL declares C symbols the
+# libhfm it is installed with lacks, so CREATE EXTENSION would fail in every test;
+# the message naming them, the SQL's version and the library's file (which names
+# the version it was installed as), and why the candidate's library was not used,
+# is printed and written to LOG_DIR/libhfm-symbols.log, and nothing is installed.
+# Any other status: the install failed
 # (generate_extension_sql.sh's output is in LOG_DIR/generate.log).
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -58,7 +61,12 @@ fi
 checked_so="${candidate_so:-$libdir/$base_so}"
 missing="$(python3 .aidev/missing_c_symbols.py "$checked_so" "$ext"/hive_fork_manager*.sql)" || exit 1
 if [ -n "$missing" ]; then
-    echo "$checked_so lacks C symbols the candidate SQL declares: $(echo "$missing" | tr '\n' ' ')- it was not built from these sources${fallback:+ ($fallback)} (.aidev/README.md)" \
+    library="$checked_so"
+    if [ -z "$candidate_so" ]; then
+        base_version="${base_so#libhfm-}"
+        library="$checked_so (the image's libhfm, version ${base_version%.so})"
+    fi
+    echo "test image mismatch: the candidate's hive_fork_manager SQL (version $version, generated from this tree) declares C symbols $library lacks: $(echo "$missing" | tr '\n' ' ')- that library was not built from these sources${fallback:+ ($fallback)} (.aidev/README.md)" \
         | tee "$log_dir/libhfm-symbols.log"
     exit 3
 fi
@@ -71,3 +79,4 @@ else
 fi
 sudo -n chmod 644 "/usr/share/postgresql/$pg_version/extension/"hive_fork_manager*.sql \
     "/usr/share/postgresql/$pg_version/extension/hive_fork_manager.control" || exit 1
+echo "$version" > "$log_dir/extension-version"
