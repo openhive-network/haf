@@ -306,6 +306,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST(app_api/app_set_finalizing_defers_index_build.sql)
  ADD_SQL_FUNCTIONAL_TEST(app_api/register_custom_json_type_index.sql)
  ADD_SQL_FUNCTIONAL_TEST(app_api/register_custom_json_type_index_concurrency.sql)
+ ADD_SQL_FUNCTIONAL_TEST(app_api/register_op_type_partial_index.sql)
 ADD_SQL_FUNCTIONAL_TEST( app_api/install_lock_healthy_app.sql )
 ADD_SQL_FUNCTIONAL_TEST( app_api/install_lock_broken_app.sql )
 ADD_SQL_FUNCTIONAL_TEST( app_api/install_lock_broken_completed_block_function.sql )
