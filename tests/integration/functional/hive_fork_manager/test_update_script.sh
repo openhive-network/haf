@@ -725,7 +725,7 @@ exec_sql "SELECT hive.save_and_drop_indexes_constraints('hafd', 'account_operati
           SET command = 'ALTER TABLE hafd.account_operations ADD CONSTRAINT hive_account_operations_uq1 UNIQUE (account_id, account_op_seq_no)'
           WHERE index_constraint_name = 'hive_account_operations_uq1';"
 update_database
-exec_sql "SELECT hive.restore_indexes('hafd.account_operations');"
+exec_sql "CALL hive.proc_restore_indexes('hafd.account_operations');"
 check_account_operations_uq1
 
 printf "\nTEST: Upgrade a database with app routines and views that depend on hive types and functions. They should be restored unchanged.\n"

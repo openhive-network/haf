@@ -279,8 +279,9 @@ create the required indexes.
 
 **Register an index on a HAF table at application install or start, before HAF leaves massive sync.**
 When the registration is made in time, `hived` builds the index non-concurrently when it enters LIVE
-sync, as part of the restore of that table's indexes (`hive.restore_indexes`), together with HAF's
-own indexes. An index registered later is built by `hived` while LIVE with `CREATE INDEX CONCURRENTLY`.
+sync, as part of the restore of that table's indexes (`hive.proc_restore_indexes`), together with HAF's
+own indexes. That restore commits after each index it builds, so it holds back vacuum only for the
+build that is running. An index registered later is built by `hived` while LIVE with `CREATE INDEX CONCURRENTLY`.
 Such a build holds back vacuum for the whole database while it scans the table, which for
 `hafd.operations` can take hours, and it waits for every transaction older than itself before it
 finishes.
