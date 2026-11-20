@@ -589,83 +589,137 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
-CREATE OR REPLACE FUNCTION hive.recluster_account_operations_if_index_dropped()
-RETURNS VOID
+-- Builds hive_account_operations_uq1 when it is missing and leaves it 'creating' until
+-- hive.cluster_account_operations marks it 'created': a restore interrupted between the two then
+-- drops the index and builds it again, so the table is not left unclustered.
+-- Returns TRUE when the index was built.
+CREATE OR REPLACE FUNCTION hive.restore_account_operations_cluster_index()
+RETURNS BOOLEAN
 AS
 $function$
 DECLARE
   __command TEXT;
-  __cluster_index_dropped BOOLEAN;
 BEGIN
+  SELECT command INTO __command FROM hafd.indexes_constraints
+  WHERE table_name = 'hafd.account_operations' AND
+        index_constraint_name = 'hive_account_operations_uq1' AND
+        status = 'missing' LIMIT 1;
+  IF __command IS NULL THEN
+    RETURN FALSE;
+  END IF;
 
-  __cluster_index_dropped := EXISTS(
-                SELECT command FROM hafd.indexes_constraints
-                WHERE table_name = 'hafd.account_operations' AND
-                      index_constraint_name = 'hive_account_operations_uq1' AND
-                      status = 'missing' LIMIT 1);
-  IF (__cluster_index_dropped) THEN
-    RAISE NOTICE 'Cluster index dropped, restoring it before other indexes for faster clustering';
-    SELECT command INTO __command FROM hafd.indexes_constraints
-    WHERE table_name = 'hafd.account_operations' AND
-          index_constraint_name = 'hive_account_operations_uq1' LIMIT 1;      
-    EXECUTE __command;
-    RAISE NOTICE 'Clustering hafd.account_operations, this takes a while...';
-    CLUSTER hafd.account_operations using hive_account_operations_uq1;
-    UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
+  RAISE NOTICE 'Cluster index dropped, restoring it before other indexes for faster clustering';
+  UPDATE hafd.indexes_constraints SET status = 'creating' WHERE command = __command;
+  EXECUTE __command;
+  RETURN TRUE;
+END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
+CREATE OR REPLACE FUNCTION hive.cluster_account_operations()
+RETURNS VOID
+AS
+$function$
+BEGIN
+  RAISE NOTICE 'Clustering hafd.account_operations, this takes a while...';
+  CLUSTER hafd.account_operations using hive_account_operations_uq1;
+  UPDATE hafd.indexes_constraints SET status = 'created'
+  WHERE table_name = 'hafd.account_operations' AND index_constraint_name = 'hive_account_operations_uq1';
+END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
+CREATE OR REPLACE FUNCTION hive.recluster_account_operations_if_index_dropped()
+RETURNS VOID
+AS
+$function$
+BEGIN
+  IF hive.restore_account_operations_cluster_index() THEN
+    PERFORM hive.cluster_account_operations();
   END IF;
 END;
 $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
+-- Resets the indexes and PK/UNIQUE constraints of the table stuck in 'creating' from a previous
+-- interrupted run to 'missing', dropping what the interrupted build left behind
+-- (e.g. the invalid index of a failed CREATE INDEX CONCURRENTLY).
+CREATE OR REPLACE FUNCTION hive.reset_interrupted_index_restores( in _table_name TEXT )
+RETURNS VOID
+AS
+$function$
+DECLARE
+  __name TEXT;
+  __is_constraint BOOLEAN;
+BEGIN
+  FOR __name, __is_constraint IN
+    SELECT index_constraint_name, is_constraint FROM hafd.indexes_constraints
+    WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'creating'
+  LOOP
+    RAISE NOTICE 'Resetting stuck index to missing: %', __name;
+    IF __is_constraint THEN
+      EXECUTE format('ALTER TABLE %s DROP CONSTRAINT IF EXISTS %I', _table_name, __name);
+    END IF;
+    EXECUTE format('DROP INDEX IF EXISTS %s.%I', split_part(_table_name, '.', 1), __name);
+    UPDATE hafd.indexes_constraints SET status = 'missing'
+    WHERE table_name = _table_name AND index_constraint_name = __name;
+  END LOOP;
+END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
+-- Builds one saved index or PK/UNIQUE constraint and marks it 'created'.
+CREATE OR REPLACE FUNCTION hive.restore_index( in _command TEXT )
+RETURNS VOID
+AS
+$function$
+DECLARE
+  __constraint TEXT[];
+  __start_time TIMESTAMP;
+BEGIN
+  RAISE NOTICE 'Restoring index: %', _command;
+  UPDATE hafd.indexes_constraints SET status = 'creating' WHERE command = _command;
+  __start_time := clock_timestamp();
+  -- ADD CONSTRAINT would hold an ACCESS EXCLUSIVE lock for the whole index build, stalling apps that
+  -- read the table while the restore runs; CREATE INDEX only takes a SHARE lock, and attaching the
+  -- built index is a catalog change. Constraint definitions beyond columns and INCLUDE take the plain path.
+  __constraint := regexp_match( _command, '^ALTER TABLE (\S+) ADD CONSTRAINT (\S+) (PRIMARY KEY|UNIQUE) (\([^()]*\)(?: INCLUDE \([^()]*\))?)$' );
+  IF __constraint IS NULL THEN
+    EXECUTE _command;
+  ELSE
+    EXECUTE format( 'CREATE UNIQUE INDEX %s ON %s %s', __constraint[2], __constraint[1], __constraint[4] );
+    EXECUTE format( 'ALTER TABLE %s ADD CONSTRAINT %s %s USING INDEX %s', __constraint[1], __constraint[2], __constraint[3], __constraint[2] );
+  END IF;
+  RAISE NOTICE 'Index % created in % seconds', _command, EXTRACT(EPOCH FROM clock_timestamp() - __start_time);
+  UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = _command;
+END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
+-- Restores the table's indexes and PK/UNIQUE constraints in the caller's transaction.
+-- hive.proc_restore_indexes does the same, committing each statement on its own.
 CREATE OR REPLACE FUNCTION hive.restore_indexes( in _table_name TEXT)
 RETURNS VOID
 AS
 $function$
 DECLARE
   __command TEXT;
-  __constraint TEXT[];
-  __start_time TIMESTAMP;
-  __end_time TIMESTAMP;
-  __duration INTERVAL;
 BEGIN
+  PERFORM hive.reset_interrupted_index_restores( _table_name );
+
   IF _table_name = 'hafd.account_operations' THEN
     PERFORM hive.recluster_account_operations_if_index_dropped();
   END IF;
 
-  --reset any indexes stuck in 'creating' from a previous interrupted run,
-  --dropping the invalid index left behind by failed CREATE INDEX CONCURRENTLY
-  FOR __command IN
-    SELECT index_constraint_name FROM hafd.indexes_constraints
-    WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'creating'
-  LOOP
-    RAISE NOTICE 'Resetting stuck index to missing: %', __command;
-    EXECUTE format('DROP INDEX IF EXISTS %s.%I', split_part(_table_name, '.', 1), __command);
-    UPDATE hafd.indexes_constraints SET status = 'missing'
-    WHERE table_name = _table_name AND index_constraint_name = __command;
-  END LOOP;
-
-  --restoring indexes, primary keys, unique constraints
   FOR __command IN
     SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing'
   LOOP
-    RAISE NOTICE 'Restoring index: %', __command;
-    UPDATE hafd.indexes_constraints SET status = 'creating' WHERE command = __command;
-    __start_time := clock_timestamp();
-    -- ADD CONSTRAINT would hold an ACCESS EXCLUSIVE lock for the whole index build, stalling apps that
-    -- read the table while the restore runs; CREATE INDEX only takes a SHARE lock, and attaching the
-    -- built index is a catalog change. Constraint definitions beyond columns and INCLUDE take the plain path.
-    __constraint := regexp_match( __command, '^ALTER TABLE (\S+) ADD CONSTRAINT (\S+) (PRIMARY KEY|UNIQUE) (\([^()]*\)(?: INCLUDE \([^()]*\))?)$' );
-    IF __constraint IS NULL THEN
-      EXECUTE __command;
-    ELSE
-      EXECUTE format( 'CREATE UNIQUE INDEX %s ON %s %s', __constraint[2], __constraint[1], __constraint[4] );
-      EXECUTE format( 'ALTER TABLE %s ADD CONSTRAINT %s %s USING INDEX %s', __constraint[1], __constraint[2], __constraint[3], __constraint[2] );
-    END IF;
-    __end_time := clock_timestamp();
-    __duration := __end_time - __start_time;
-    RAISE NOTICE 'Index % created in % seconds', __command, EXTRACT(EPOCH FROM __duration);
-    UPDATE hafd.indexes_constraints SET status = 'created' WHERE command = __command;
+    PERFORM hive.restore_index( __command );
   END LOOP;
 
   EXECUTE format( 'ANALYZE %s',  _table_name );
@@ -674,6 +728,42 @@ BEGIN
 END;
 $function$
 LANGUAGE plpgsql VOLATILE
+;
+
+-- hive.restore_indexes, committing after each index build, the CLUSTER and the ANALYZE, so a
+-- restore holds back the vacuum horizon only for the statement that is running, not for the
+-- whole table. Must be CALLed outside a transaction block.
+CREATE OR REPLACE PROCEDURE hive.proc_restore_indexes( in _table_name TEXT )
+LANGUAGE plpgsql
+AS
+$procedure$
+DECLARE
+  __command TEXT;
+BEGIN
+  PERFORM hive.reset_interrupted_index_restores( _table_name );
+  COMMIT;
+
+  IF _table_name = 'hafd.account_operations' THEN
+    IF hive.restore_account_operations_cluster_index() THEN
+      COMMIT;
+      PERFORM hive.cluster_account_operations();
+      COMMIT;
+    END IF;
+  END IF;
+
+  FOR __command IN
+    SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing'
+  LOOP
+    PERFORM hive.restore_index( __command );
+    COMMIT;
+  END LOOP;
+
+  EXECUTE format( 'ANALYZE %s',  _table_name );
+  COMMIT;
+
+  RAISE NOTICE 'Finished restoring any dropped indexes on %', _table_name;
+END;
+$procedure$
 ;
 
 CREATE OR REPLACE FUNCTION hive.restore_foreign_keys( in _table_name TEXT )

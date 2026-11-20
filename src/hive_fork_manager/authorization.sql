@@ -186,7 +186,11 @@ GRANT EXECUTE ON FUNCTION
     , hive.default_massive_sync_index_class( _table_name TEXT, _index_constraint_name TEXT )
     , hive.massive_sync_index_status( _massive_sync_class TEXT, _keep_monotonic BOOLEAN )
     , hive.save_and_drop_foreign_keys( in _table_schema TEXT, in _table_name TEXT )
+    , hive.restore_account_operations_cluster_index()
+    , hive.cluster_account_operations()
     , hive.recluster_account_operations_if_index_dropped()
+    , hive.reset_interrupted_index_restores( in _table_name TEXT )
+    , hive.restore_index( in _command TEXT )
     , hive.restore_indexes( in _table_name TEXT )
     , hive.restore_foreign_keys( in _table_name TEXT )
     , hive.copy_blocks_to_irreversible( _head_block_of_irreversible_blocks INT, _new_irreversible_block INT )
@@ -301,6 +305,8 @@ GRANT EXECUTE ON FUNCTION
     , hive.is_contexts_compaction_needed( _threshold_pages BIGINT )
 TO hived_group;
 
+GRANT EXECUTE ON PROCEDURE hive.proc_restore_indexes( in _table_name TEXT ) TO hived_group;
+
 GRANT USAGE ON SCHEMA hive to haf_maintainer;
 GRANT EXECUTE ON PROCEDURE hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL ) TO haf_maintainer;
 GRANT EXECUTE ON FUNCTION hive.is_instance_ready() TO haf_maintainer;
@@ -331,5 +337,6 @@ FROM hive_applications_group;
 
 REVOKE EXECUTE ON PROCEDURE
       hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL )
+    , hive.proc_restore_indexes( in _table_name TEXT )
 FROM hive_applications_group,
      public;

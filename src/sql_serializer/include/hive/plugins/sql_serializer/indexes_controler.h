@@ -13,6 +13,7 @@ namespace appbase
 
 namespace hive::plugins::sql_serializer {
   class queries_commit_data_processor;
+  class data_processor;
 
   // Which indexes of the irreversible tables a massive sync drops (psql-massive-index-policy)
   enum class massive_index_policy
@@ -47,6 +48,8 @@ namespace hive::plugins::sql_serializer {
   private:
     std::unique_ptr<queries_commit_data_processor>
     start_commit_sql( bool mode, const std::string& sql_function_call, std::string objects_name );
+    std::unique_ptr<data_processor>
+    start_restore_indexes( const std::string& table_name, std::string objects_name );
 
     bool are_any_indexes_missing() const;
     void vacuum_account_operations();

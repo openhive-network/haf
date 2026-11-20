@@ -624,14 +624,14 @@ indexes_controler::enable_indexes() {
   ilog( "Restoring HAF indexes..." );
   fc::time_point restore_indexes_start_time = fc::time_point::now();
 
-  auto restore_blocks_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.blocks' )", "blocks indexes" );
-  auto restore_irreversible_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.hive_state' )", "hive_state indexes" );
-  auto restore_transactions_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.transactions' )", "transactions indexes" );
-  auto restore_transactions_sigs_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.transactions_multisig' )", "transactions_multisig indexes" );
-  auto restore_operations_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.operations' )", "operations indexes" );
-  auto restore_accounts_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.accounts' )", "accounts indexes" );
-  auto restore_account_operations_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.account_operations' )", "account_operations indexes" );
-  auto restore_applied_hardforks_idxs = start_commit_sql( true, "hive.restore_indexes( 'hafd.applied_hardforks' )", "applied_hardforks indexes" );
+  auto restore_blocks_idxs = start_restore_indexes( "hafd.blocks", "blocks indexes" );
+  auto restore_irreversible_idxs = start_restore_indexes( "hafd.hive_state", "hive_state indexes" );
+  auto restore_transactions_idxs = start_restore_indexes( "hafd.transactions", "transactions indexes" );
+  auto restore_transactions_sigs_idxs = start_restore_indexes( "hafd.transactions_multisig", "transactions_multisig indexes" );
+  auto restore_operations_idxs = start_restore_indexes( "hafd.operations", "operations indexes" );
+  auto restore_accounts_idxs = start_restore_indexes( "hafd.accounts", "accounts indexes" );
+  auto restore_account_operations_idxs = start_restore_indexes( "hafd.account_operations", "account_operations indexes" );
+  auto restore_applied_hardforks_idxs = start_restore_indexes( "hafd.applied_hardforks", "applied_hardforks indexes" );
 
   join_processors(
     *restore_blocks_idxs,
@@ -729,6 +729,34 @@ indexes_controler::enable_constrains() {
 
   fc::microseconds restore_constraints_time = fc::time_point::now() - restore_constraints_start_time;
   ilog( "PROFILE: Restored HAF constraints: ${t}s", ("t",restore_constraints_time.to_seconds()) );
+}
+
+// hive.proc_restore_indexes commits after each statement, so it is CALLed on an autocommit connection
+// instead of in the transaction of a queries_commit_data_processor.
+std::unique_ptr<data_processor>
+indexes_controler::start_restore_indexes( const std::string& table_name, std::string objects_name ) {
+  ilog("Creating ${objects_name}...", ("objects_name", objects_name ) );
+
+  const std::string query = "CALL hive.proc_restore_indexes( '" + table_name + "' );";
+  std::string description = "Query processor: `" + query + "'";
+  auto processor = std::make_unique< data_processor >( description, "index_ctrl",
+                                                       [db_url=db_url_with_hived_app(_db_url), query, objects_name=std::move(objects_name), description](const data_processor::data_chunk_ptr&) -> data_processor::data_processing_status
+  {
+    ilog("Attempting to execute query: `${query}`...", ("query", query ) );
+    const auto start_time = fc::time_point::now();
+    pqxx::connection conn(db_url);
+    pqxx::nontransaction tx(conn);
+    tx.exec( query );
+    ilog(
+      "${d} Creating of ${mod_type} done in ${time} ms",
+      ("d", description) ("mod_type", objects_name) ("time", (fc::time_point::now() - start_time).count() / 1000.0 )
+      );
+    ilog("The ${objects_name} have been created...", ("objects_name", objects_name ) );
+    return data_processor::data_processing_status();
+  }, nullptr );
+
+  processor->trigger(data_processor::data_chunk_ptr(), 0);
+  return processor;
 }
 
 std::unique_ptr<queries_commit_data_processor>

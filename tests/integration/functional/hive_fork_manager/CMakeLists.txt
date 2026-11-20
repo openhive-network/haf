@@ -137,6 +137,7 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( hived_api/enable_indexes_keep_monotonic_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/enable_indexes_compare_saved_statement_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/enable_indexes_builds_app_registered_index_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/proc_restore_indexes_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/missing_index_builds_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/account_operations_uq1_includes_op_type_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_end_massive_sync_test.sql )
