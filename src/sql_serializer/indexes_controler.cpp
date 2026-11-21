@@ -13,7 +13,9 @@
 #include <fc/thread/thread.hpp>
 
 #include <algorithm>
+#include <cerrno>
 #include <chrono>
+#include <cstring>
 #include <exception>
 #include <memory>
 #include <mutex>
@@ -24,6 +26,8 @@
 #include <map>
 #include <regex>
 #include <stdexcept>
+
+#include <sys/statvfs.h>
 
 namespace hive { namespace plugins { namespace sql_serializer {
 
@@ -66,6 +70,44 @@ std::string db_url_with_hived_app(const std::string& db_url)
 std::string db_url_with_hived_app_as_haf_maintainer(const std::string& db_url)
 {
   return db_url_with_hived_app(db_url_as_user(db_url, "haf_maintainer"));
+}
+
+// The directory of the tablespace that holds hafd.account_operations; data_directory needs haf_maintainer.
+const std::string ACCOUNT_OPERATIONS_TABLESPACE_PATH =
+  "SELECT COALESCE( NULLIF( pg_tablespace_location( COALESCE( NULLIF( c.reltablespace, 0 ), d.dattablespace ) ), '' ),"
+  " current_setting( 'data_directory' ) ) AS path"
+  " FROM pg_class c, pg_database d WHERE c.oid = 'hafd.account_operations'::regclass AND d.datname = current_database()";
+
+// Sets hive.account_operations_reorder_free_space of the session for hive.account_operations_reorder_space_suffices,
+// unless it is already set for the database or role. PostgreSQL may run where hived cannot see its files,
+// then the reorder goes unchecked.
+void set_account_operations_reorder_free_space(pqxx::nontransaction& tx, const std::string& maintainer_db_url)
+{
+  const pqxx::result preset = tx.exec("SELECT NULLIF( current_setting( 'hive.account_operations_reorder_free_space', TRUE ), '' ) AS free");
+  if (!preset[0]["free"].is_null())
+  {
+    ilog("Free space for the reorder of hafd.account_operations is set to ${free}, not measured", ("free", preset[0]["free"].as<std::string>()));
+    return;
+  }
+
+  std::string path;
+  {
+    pqxx::connection conn(maintainer_db_url);
+    pqxx::nontransaction maintainer_tx(conn);
+    path = maintainer_tx.exec(ACCOUNT_OPERATIONS_TABLESPACE_PATH)[0]["path"].as<std::string>();
+  }
+
+  struct statvfs fs;
+  if (statvfs(path.c_str(), &fs) != 0)
+  {
+    wlog("Not checking the free space for the reorder of hafd.account_operations: hived cannot see ${path}: ${e}",
+      (path)("e", std::strerror(errno)));
+    return;
+  }
+
+  const uint64_t free_bytes = static_cast<uint64_t>(fs.f_bavail) * fs.f_frsize;
+  ilog("Free space for the reorder of hafd.account_operations in ${path}: ${free} bytes", (path)("free", free_bytes));
+  tx.exec_params("SELECT set_config( 'hive.account_operations_reorder_free_space', $1, FALSE )", std::to_string(free_bytes));
 }
 
 // Kinds accepted by hive.app_request_table_vacuum, see hafd.vacuum_requests.
@@ -741,12 +783,16 @@ indexes_controler::start_restore_indexes( const std::string& table_name, std::st
   const std::string query = "CALL hive.proc_restore_indexes( '" + table_name + "' );";
   std::string description = "Query processor: `" + query + "'";
   auto processor = std::make_unique< data_processor >( description, "index_ctrl",
-                                                       [db_url=db_url_with_hived_app(_db_url), query, objects_name=std::move(objects_name), description](const data_processor::data_chunk_ptr&) -> data_processor::data_processing_status
+                                                       [db_url=db_url_with_hived_app(_db_url), maintainer_db_url=db_url_with_hived_app_as_haf_maintainer(_db_url),
+                                                        check_reorder_space=( table_name == "hafd.account_operations" ),
+                                                        query, objects_name=std::move(objects_name), description](const data_processor::data_chunk_ptr&) -> data_processor::data_processing_status
   {
     ilog("Attempting to execute query: `${query}`...", ("query", query ) );
     const auto start_time = fc::time_point::now();
     pqxx::connection conn(db_url);
     pqxx::nontransaction tx(conn);
+    if ( check_reorder_space )
+      set_account_operations_reorder_free_space( tx, maintainer_db_url );
     tx.exec( query );
     ilog(
       "${d} Creating of ${mod_type} done in ${time} ms",

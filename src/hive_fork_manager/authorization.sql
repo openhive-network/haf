@@ -191,6 +191,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.cluster_account_operations()
     , hive.recluster_account_operations_if_index_dropped()
     , hive.account_operations_reorder_method()
+    , hive.account_operations_reorder_space_suffices()
     , hive.drop_account_operations_reorder_tables()
     , hive.reset_interrupted_index_restores( in _table_name TEXT )
     , hive.restore_index( in _command TEXT )
