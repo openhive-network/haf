@@ -443,6 +443,24 @@ back vacuum for the whole database for its full length. It also holds an `ACCESS
 the table, so reads of the table wait for it. Before the copy the table can be read as usual. The
 reorder needs free disk space of about twice the table's size.
 
+Before it starts, `hive.account_operations_reorder_space_suffices()` compares that need, twice
+`pg_relation_size('hafd.account_operations')` plus a margin, with the setting
+`hive.account_operations_reorder_free_space`. `hived` sets it for its session from `statvfs` on the
+directory of the tablespace that holds the table (`pg_tablespace_location`, or `data_directory`). When the
+space is short, the function logs a WARNING with both figures, and the restore reorders the table by
+`CLUSTER` for this run, as with `hive.account_operations_reorder = 'cluster'`, without creating any
+`hafd.account_operations_reorder_*` table. `CLUSTER` needs less free space: the new heap and its sort.
+That need is not checked. When `hived` cannot see the directory, e.g. when PostgreSQL runs on another host
+or in another container, it logs that and the space is not checked. A value an operator sets for the
+database, e.g. `ALTER DATABASE haf_block_log SET hive.account_operations_reorder_free_space = '500GB';`,
+is used as it is, and `hived` does not measure.
+
+The margin is a tenth of the table's size by default. It leaves room for the temp files of the other
+tables' index builds, which run at the same time. Those temp files can be much larger than the margin,
+e.g. 1.78 TB on mainnet. Change it with `hive.account_operations_reorder_space_margin`, a size such as
+`'500GB'`. On a compressing filesystem, such as ZFS, the logical size of the table overstates the need.
+There a negative margin, e.g. `'-200GB'`, lowers the requirement.
+
 The setting `hive.account_operations_reorder` selects the method: `rewrite` (the default) or `cluster`,
 which builds the index first and runs `CLUSTER` on it. That is one statement which holds back vacuum
 for its whole length, about 2 hours on mainnet. Set it where `hived`'s connections see it, e.g.

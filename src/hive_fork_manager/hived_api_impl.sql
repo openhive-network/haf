@@ -672,6 +672,44 @@ $function$
 LANGUAGE plpgsql STABLE
 ;
 
+-- Whether the free space of the filesystem that holds hafd.account_operations is enough for
+-- hive.proc_reorder_account_operations: about twice the heap, plus a margin for the temp files of the
+-- index builds running alongside it. The free space comes from hive.account_operations_reorder_free_space,
+-- which hived sets from statvfs before the post-replay restore, or an operator sets for the database;
+-- the space is not checked when it is unset. hive.account_operations_reorder_space_margin overrides
+-- the margin, a tenth of the heap; a negative one lowers the requirement, e.g. on a compressing filesystem.
+CREATE OR REPLACE FUNCTION hive.account_operations_reorder_space_suffices()
+RETURNS BOOLEAN
+AS
+$function$
+DECLARE
+  __free_setting TEXT := NULLIF( current_setting( 'hive.account_operations_reorder_free_space', TRUE ), '' );
+  __margin_setting TEXT := NULLIF( current_setting( 'hive.account_operations_reorder_space_margin', TRUE ), '' );
+  __heap BIGINT := pg_relation_size( 'hafd.account_operations' );
+  __needed BIGINT;
+  __free BIGINT;
+BEGIN
+  IF __free_setting IS NULL THEN
+    RAISE NOTICE 'Not checking the free space for the rewrite of hafd.account_operations: hive.account_operations_reorder_free_space is not set';
+    RETURN TRUE;
+  END IF;
+
+  __free := pg_size_bytes( __free_setting );
+  __needed := 2 * __heap + COALESCE( pg_size_bytes( __margin_setting ), __heap / 10 );
+  IF __needed > __free THEN
+    RAISE WARNING 'The rewrite of hafd.account_operations needs about % bytes (%) but only % bytes (%) are free: reordering it by CLUSTER instead (hive.account_operations_reorder). On a compressing filesystem the table''s logical size overstates the need, lower it with hive.account_operations_reorder_space_margin'
+      , __needed, pg_size_pretty( __needed ), __free, pg_size_pretty( __free );
+    RETURN FALSE;
+  END IF;
+
+  RAISE NOTICE 'The rewrite of hafd.account_operations needs about % bytes (%), % bytes (%) are free: reordering it by rewrite'
+    , __needed, pg_size_pretty( __needed ), __free, pg_size_pretty( __free );
+  RETURN TRUE;
+END;
+$function$
+LANGUAGE plpgsql STABLE
+;
+
 -- Drops what an interrupted hive.proc_reorder_account_operations left behind.
 CREATE OR REPLACE FUNCTION hive.drop_account_operations_reorder_tables()
 RETURNS VOID
@@ -885,33 +923,35 @@ LANGUAGE plpgsql VOLATILE
 -- hive.restore_indexes, committing after each index build, the reorder of hafd.account_operations
 -- and the ANALYZE, so a restore holds back the vacuum horizon only for the statement that is running,
 -- not for the whole table. hafd.account_operations is reordered as hive.account_operations_reorder_method
--- says. Must be CALLed outside a transaction block.
+-- says, by CLUSTER when hive.account_operations_reorder_space_suffices finds too little free space for
+-- the rewrite. Must be CALLed outside a transaction block.
 CREATE OR REPLACE PROCEDURE hive.proc_restore_indexes( in _table_name TEXT )
 LANGUAGE plpgsql
 AS
 $procedure$
 DECLARE
   __command TEXT;
+  __rewrite BOOLEAN := FALSE;
 BEGIN
   PERFORM hive.reset_interrupted_index_restores( _table_name );
   COMMIT;
 
   IF _table_name = 'hafd.account_operations' THEN
-    IF hive.account_operations_reorder_method() = 'cluster' THEN
-      IF hive.restore_account_operations_cluster_index() THEN
-        COMMIT;
-        PERFORM hive.cluster_account_operations();
-        COMMIT;
-      END IF;
-    ELSE
-      __command := hive.missing_account_operations_cluster_index();
-      IF __command IS NOT NULL THEN
-        -- reordered again when interrupted before hive_account_operations_uq1 commits
-        CALL hive.proc_reorder_account_operations();
-        PERFORM hive.restore_index( __command );
-        ALTER TABLE hafd.account_operations CLUSTER ON hive_account_operations_uq1;
-        COMMIT;
-      END IF;
+    __command := hive.missing_account_operations_cluster_index();
+    IF hive.account_operations_reorder_method() = 'rewrite' AND __command IS NOT NULL THEN
+      __rewrite := hive.account_operations_reorder_space_suffices();
+    END IF;
+
+    IF __rewrite THEN
+      -- reordered again when interrupted before hive_account_operations_uq1 commits
+      CALL hive.proc_reorder_account_operations();
+      PERFORM hive.restore_index( __command );
+      ALTER TABLE hafd.account_operations CLUSTER ON hive_account_operations_uq1;
+      COMMIT;
+    ELSIF hive.restore_account_operations_cluster_index() THEN
+      COMMIT;
+      PERFORM hive.cluster_account_operations();
+      COMMIT;
     END IF;
   END IF;
 
