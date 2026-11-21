@@ -23,11 +23,25 @@ from haf_local_tools.system.haf import (
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[4] / "scripts"
 LOCK_WAIT_TIMEOUT_SECONDS = 120
-# hived's flush waits for this lock, held by an "application" whose backend the test kills
-LOCKED_TABLE = "hafd.operations"
+# Above any block count hived estimates for the replay (it counts from the block log's timestamps to now):
+# the constraints stay, so the replay is flushed in a single transaction, blocks first, operations later.
+KEEP_CONSTRAINTS_THRESHOLD = 2_000_000_000
+# An advisory lock rather than a table lock, so that only rows written to hafd.operations wait for the
+# "application" holding it, not the DDL hived runs on the irreversible tables when it starts.
+ADVISORY_LOCK_KEY = 518
+HOLD_OPERATIONS_INSERTS = f"""
+CREATE FUNCTION public.wait_for_advisory_lock() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    PERFORM pg_advisory_xact_lock_shared({ADVISORY_LOCK_KEY});
+    RETURN NULL;
+END
+$$;
+CREATE TRIGGER wait_for_advisory_lock BEFORE INSERT ON hafd.operations
+    FOR EACH STATEMENT EXECUTE FUNCTION public.wait_for_advisory_lock();
+"""
 HIVED_WAITS_FOR_LOCK = (
     "SELECT count(*) FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid "
-    f"WHERE l.relation = '{LOCKED_TABLE}'::regclass AND NOT l.granted AND a.usename = 'hived'"
+    f"WHERE l.locktype = 'advisory' AND l.objid = {ADVISORY_LOCK_KEY} AND NOT l.granted AND a.usename = 'hived'"
 )
 
 
@@ -149,7 +163,7 @@ def kill_backend_when_hived_waits_for_lock(
         with engine.connect() as conn:
             while conn.execute(text(HIVED_WAITS_FOR_LOCK)).scalar_one() == 0:
                 assert time.monotonic() < deadline, (
-                    f"hived never waited for the lock on {LOCKED_TABLE}"
+                    "hived never waited for the advisory lock on its hafd.operations inserts"
                 )
                 time.sleep(0.2)
         engine.dispose()
@@ -163,9 +177,10 @@ def test_replay_survives_postgres_crash_recovery(
 ) -> None:
     """
     A backend of an application is killed with SIGKILL while hived's replay flush, one transaction that
-    already copied the blocks, waits for the application's lock on hafd.operations. PostgreSQL ends every
-    session and runs crash recovery; hived runs the lost transaction again from its start and keeps running,
-    and the database holds every replayed block.
+    already copied the blocks, waits for an advisory lock the application holds before it can insert into
+    hafd.operations. PostgreSQL ends every session and runs crash recovery; hived runs the lost transaction
+    again from its start, so the flush does not fail, hived keeps running and the database holds every
+    replayed block.
     """
     init_node = create_and_run_init_node_with_retry()
     transaction_0, transaction_1 = prepare_and_send_transactions(init_node)
@@ -175,13 +190,15 @@ def test_replay_survives_postgres_crash_recovery(
     haf_node = HafNode(
         database_url=private_postgres.url + "/haf_block_log", keep_database=True
     )
-    # above the number of replayed blocks: the constraints stay, so the replay is flushed in a single transaction
-    haf_node.config.psql_index_threshold = 100
+    haf_node.config.psql_index_threshold = KEEP_CONSTRAINTS_THRESHOLD
 
-    app_engine = sqlalchemy.create_engine(haf_node.database_url, poolclass=NullPool)
+    app_engine = sqlalchemy.create_engine(
+        haf_node.database_url, poolclass=NullPool, isolation_level="AUTOCOMMIT"
+    )
     app = app_engine.connect()
+    app.exec_driver_sql(HOLD_OPERATIONS_INSERTS)
     app_pid = app.execute(text("SELECT pg_backend_pid()")).scalar_one()
-    app.execute(text(f"LOCK TABLE {LOCKED_TABLE} IN SHARE MODE"))
+    app.execute(text(f"SELECT pg_advisory_lock({ADVISORY_LOCK_KEY})"))
 
     errors: list[Exception] = []
     killer = threading.Thread(
@@ -211,6 +228,8 @@ def test_replay_survives_postgres_crash_recovery(
     log = (haf_node.directory / "stderr.log").read_text(errors="replace")
     assert "in the middle of a transaction" in log
     assert "Running again, from its start, a transaction" in log
+    # a flush that fails is only logged here: the plugin notifications swallow its exception
+    assert "Caught unexpected exception in plugin" not in log
     assert "HAF is stopping synchronization" not in log
     haf_node.close()
 
