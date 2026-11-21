@@ -657,7 +657,8 @@ indexes_controler::vacuum_account_operations() {
   if (theApp.is_interrupt_request())
     return;
 
-  // CLUSTER rewrites hafd.account_operations without a visibility map and the table is insert-only,
+  // The reorder (hive.proc_reorder_account_operations or CLUSTER) rewrites hafd.account_operations
+  // without a visibility map and the table is insert-only,
   // so autovacuum would not build one for weeks; until then every index-only scan fetches heap rows.
   // VACUUM cannot run inside a transaction, hence it is issued here instead of in hive.restore_indexes.
   // ANALYZE rides along: it replaces the one hive.recluster_account_operations_if_index_dropped ran after CLUSTER.
