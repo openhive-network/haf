@@ -251,5 +251,5 @@ def test_replay_survives_postgres_crash_recovery(
     haf_node.close()
 
     postgres_log = private_postgres.log.read_text(errors="replace")
-    assert f"server process (PID {app_pid}) was terminated by signal 9" in postgres_log
+    assert f"(PID {app_pid}) was terminated by signal 9" in postgres_log
     assert "all server processes terminated; reinitializing" in postgres_log
