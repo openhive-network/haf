@@ -12,6 +12,7 @@ import pytest
 import sqlalchemy
 from sqlalchemy import text
 from sqlalchemy.pool import NullPool
+from test_tools.__private import paths_to_executables
 
 
 from haf_local_tools.haf_node import HafNode
@@ -43,6 +44,17 @@ HIVED_WAITS_FOR_LOCK = (
     "SELECT count(*) FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid "
     f"WHERE l.locktype = 'advisory' AND l.objid = {ADVISORY_LOCK_KEY} AND NOT l.granted AND a.usename = 'hived'"
 )
+
+
+def hived_waits_out_recovery() -> bool:
+    """Whether the hived under test was built with the crash-recovery wait (its psql-recovery-wait option)."""
+    help_text = subprocess.run(
+        [paths_to_executables.get_path_of("hived"), "--help"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return "--psql-recovery-wait" in help_text
 
 
 class PrivatePostgres(NamedTuple):
@@ -182,6 +194,10 @@ def test_replay_survives_postgres_crash_recovery(
     again from its start, so the flush does not fail, hived keeps running and the database holds every
     replayed block.
     """
+    if not hived_waits_out_recovery():
+        pytest.skip(
+            "the hived under test predates the crash-recovery wait (no --psql-recovery-wait option)"
+        )
     init_node = create_and_run_init_node_with_retry()
     transaction_0, transaction_1 = prepare_and_send_transactions(init_node)
     stop_block = transaction_1["block_num"]
