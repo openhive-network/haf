@@ -27,7 +27,7 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
   : _plugin( plugin )
   , _chain_db( chain_db )
   , app(app)
-  , transactions_controller(transaction_controllers::build_own_transaction_controller(db_url, "Livesync dumper", app, true /*sync_commits*/))
+  , transactions_controller(transaction_controllers::build_own_transaction_controller(db_url, "Livesync dumper", app))
   , _psql_first_block( psql_first_block )
   , _write_ahead_log(write_ahead_log)
   , _processing_thread(transactions_controller, write_ahead_log, app, pruning, wal_queue_depth)
@@ -310,18 +310,19 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
       // execute the commands
       try
       {
-        auto transaction = _transactions_controller->openTx();
-        bool prune = false;
-        for (const auto& command : commands_to_run)
-        {
-          transaction->exec(command.second);
-          prune = prune || command.first % 10 == 0;
-        }
-        transaction->exec("SELECT hive.update_wal_sequence_number(" + std::to_string(last_sequence_number) + ")");
-        if ( _pruning > 0 && prune ) {
-            transaction->exec("SELECT hive.prune_blocks_data(" + std::to_string(_pruning) +");");
-        }
-        transaction->commit();
+        // The commands and the sequence number commit together, so a batch whose connection is lost runs again whole
+        transaction_controllers::run_transaction(*_transactions_controller, [this, &commands_to_run, last_sequence_number](transaction_controllers::transaction& transaction) {
+          bool prune = false;
+          for (const auto& command : commands_to_run)
+          {
+            transaction.exec(command.second);
+            prune = prune || command.first % 10 == 0;
+          }
+          transaction.exec("SELECT hive.update_wal_sequence_number(" + std::to_string(last_sequence_number) + ")");
+          if ( _pruning > 0 && prune ) {
+              transaction.exec("SELECT hive.prune_blocks_data(" + std::to_string(_pruning) +");");
+          }
+        });
       }
       catch (const pqxx::failure& ex)
       {
@@ -371,9 +372,9 @@ namespace hive{ namespace plugins{ namespace sql_serializer {
     else
     {
       // no reason to jump threads, just process the sql command here
-      auto transaction = _transactions_controller->openTx();
-      transaction->exec(sql_command);
-      transaction->commit();
+      transaction_controllers::run_transaction(*_transactions_controller, [&sql_command](transaction_controllers::transaction& transaction) {
+        transaction.exec(sql_command);
+      });
     }
   }
 

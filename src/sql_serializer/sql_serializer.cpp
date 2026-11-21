@@ -44,6 +44,7 @@
 #include <boost/filesystem.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <map>
 #include <sstream>
@@ -1006,6 +1007,7 @@ void sql_serializer_plugin::set_program_options(appbase::options_description &cl
                     ("psql-massive-index-policy", appbase::bpo::value<std::string>()->default_value( "drop-all" ), "indexes of the irreversible tables dropped during a massive sync (replay or P2P sync above psql-index-threshold): `drop-all` drops all of them; `keep-monotonic` keeps the ones whose key grows with the chain, so applications that opted in with hive.app_context_set_early_block_processing can process blocks while hived replays, and defers the others to the end of the sync")
                     ("psql-index-build-finalizing-distance", appbase::bpo::value<uint32_t>()->default_value( index_build_deferral{}.finalizing_head_distance ), "while live, hived starts no CREATE INDEX CONCURRENTLY of an index registered with hive.register_index_dependency while an attached context is finalizing its sync: flagged with hive.app_set_finalizing, or in a massive-sync stage at most this many blocks behind the irreversible head")
                     ("psql-index-build-max-deferral", appbase::bpo::value<uint32_t>()->default_value( static_cast<uint32_t>( index_build_deferral{}.max_deferral.count() ) ), "seconds after its registration an index build stops waiting for finalizing contexts (see psql-index-build-finalizing-distance) and starts anyway")
+                    ("psql-recovery-wait", appbase::bpo::value<uint32_t>()->default_value( 3600 ), "seconds hived's database writers keep reconnecting, after losing their connections, while PostgreSQL refuses connections because it is starting up or in crash recovery; when it still refuses them after that, hived shuts down. 0 gives such failures no more retries than any other connection failure")
                     ("psql-index-monitor-retry-budget", appbase::bpo::value<uint32_t>()->default_value( indexation_state::DEFAULT_INDEX_MONITOR_RETRY_BUDGET ), "seconds the live-sync index monitor keeps reconnecting after losing its database connection before hived shuts down")
                     ("psql-operations-threads-number", appbase::bpo::value<uint32_t>()->default_value( 5 ), "number of threads which dump operations to database during reindexing")
                     ("psql-transactions-threads-number", appbase::bpo::value<uint32_t>()->default_value( 2 ), "number of threads which dump transactions to database during reindexing")
@@ -1041,6 +1043,8 @@ void sql_serializer_plugin::plugin_initialize(const boost::program_options::vari
     , "psql-first-block option value ${v} is less than 1"
     , ("v", options["psql-first-block"].as<uint32_t>() )
   );
+
+  transaction_controllers::set_recovery_wait( std::chrono::seconds( options["psql-recovery-wait"].as<uint32_t>() ) );
 
   FC_ASSERT( is_database_correct( options["psql-url"].as<fc::string>(), options["psql-force-open-inconsistent"].as<bool>(), get_app() )
               , "SQL database is in invalid state"
