@@ -19,7 +19,7 @@
 # import, which the suite's uid could not write. Build with
 # `.aidev/runtime/build.sh --system`; the context is haf-local-tools'
 # pyproject.toml and poetry.lock.
-FROM registry.gitlab.syncad.com/hive/haf/testnet@sha256:f00c557121e1483282e3d6b29c23b18a93d476dd745e5c9fe1e42c8569a2cfef
+FROM registry.gitlab.syncad.com/hive/haf/testnet@sha256:d6714e7af5f1890b843f89848339feba8f80e23cbdd33b72942346ecaabc6c36
 
 USER root
 COPY pyproject.toml poetry.lock /tmp/haf-local-tools/
