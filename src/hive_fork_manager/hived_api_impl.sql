@@ -589,6 +589,19 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
+-- The saved command of hive_account_operations_uq1 when it is 'missing', NULL otherwise.
+CREATE OR REPLACE FUNCTION hive.missing_account_operations_cluster_index()
+RETURNS TEXT
+AS
+$function$
+  SELECT command FROM hafd.indexes_constraints
+  WHERE table_name = 'hafd.account_operations' AND
+        index_constraint_name = 'hive_account_operations_uq1' AND
+        status = 'missing' LIMIT 1;
+$function$
+LANGUAGE sql STABLE
+;
+
 -- Builds hive_account_operations_uq1 when it is missing and leaves it 'creating' until
 -- hive.cluster_account_operations marks it 'created': a restore interrupted between the two then
 -- drops the index and builds it again, so the table is not left unclustered.
@@ -598,12 +611,8 @@ RETURNS BOOLEAN
 AS
 $function$
 DECLARE
-  __command TEXT;
+  __command TEXT := hive.missing_account_operations_cluster_index();
 BEGIN
-  SELECT command INTO __command FROM hafd.indexes_constraints
-  WHERE table_name = 'hafd.account_operations' AND
-        index_constraint_name = 'hive_account_operations_uq1' AND
-        status = 'missing' LIMIT 1;
   IF __command IS NULL THEN
     RETURN FALSE;
   END IF;
@@ -642,6 +651,149 @@ BEGIN
 END;
 $function$
 LANGUAGE plpgsql VOLATILE
+;
+
+-- How hive.proc_restore_indexes puts hafd.account_operations in (account_id, account_op_seq_no) order,
+-- from the custom setting hive.account_operations_reorder: 'rewrite' (the default, when unset) for
+-- hive.proc_reorder_account_operations, 'cluster' for CLUSTER on a prebuilt hive_account_operations_uq1.
+CREATE OR REPLACE FUNCTION hive.account_operations_reorder_method()
+RETURNS TEXT
+AS
+$function$
+DECLARE
+  __method TEXT := COALESCE( NULLIF( current_setting( 'hive.account_operations_reorder', TRUE ), '' ), 'rewrite' );
+BEGIN
+  IF __method NOT IN ( 'rewrite', 'cluster' ) THEN
+    RAISE EXCEPTION 'hive.account_operations_reorder must be ''rewrite'' or ''cluster'', not ''%''', __method;
+  END IF;
+  RETURN __method;
+END;
+$function$
+LANGUAGE plpgsql STABLE
+;
+
+-- Drops what an interrupted hive.proc_reorder_account_operations left behind.
+CREATE OR REPLACE FUNCTION hive.drop_account_operations_reorder_tables()
+RETURNS VOID
+AS
+$function$
+DECLARE
+  __table TEXT;
+BEGIN
+  FOR __table IN
+    SELECT relname FROM pg_class
+    WHERE relnamespace = 'hafd'::regnamespace AND relkind IN ( 'r', 'p' ) AND NOT relispartition
+      AND relname LIKE 'account\_operations\_reorder\_%'
+  LOOP
+    EXECUTE format( 'DROP TABLE hafd.%I', __table );
+  END LOOP;
+END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
+-- Rewrites hafd.account_operations in (account_id, account_op_seq_no) order, keeping the table
+-- itself (its OID, row type, grants, views, triggers and extension membership), and commits after
+-- every step but the last, so that only the last one holds back the vacuum horizon for long:
+-- 1. the heap is copied, _pages_per_step pages per transaction, into unlogged staging partitions,
+--    each a range of account_id holding about _pages_per_step pages of rows, the bounds taken from
+--    a sample of the table;
+-- 2. each partition is sorted into an unlogged table of its own, one transaction each;
+-- 3. one transaction truncates hafd.account_operations and appends the sorted tables to it in
+--    account_id order: a sequential copy, without the sort CLUSTER does in its single statement.
+-- Rows written to hafd.account_operations during the run would be lost, so it must run only while
+-- nothing writes the table (hived's post-replay index restore); the last step fails, rolling back,
+-- when the heap grew or the copied row count differs. Whatever indexes the table has are maintained
+-- by the copy. Must be CALLed outside a transaction block.
+CREATE OR REPLACE PROCEDURE hive.proc_reorder_account_operations( in _pages_per_step INTEGER DEFAULT 1048576 )
+LANGUAGE plpgsql
+AS
+$procedure$
+DECLARE
+  __pages BIGINT;
+  __buckets INTEGER;
+  __bounds INTEGER[];
+  __page BIGINT := 0;
+  __staged BIGINT := 0;
+  __copied BIGINT := 0;
+  __rows BIGINT;
+  __bucket INTEGER;
+  __start_time TIMESTAMP := clock_timestamp();
+  __step_time TIMESTAMP;
+BEGIN
+  IF _pages_per_step < 1 THEN
+    RAISE EXCEPTION '_pages_per_step must be positive, not %', _pages_per_step;
+  END IF;
+
+  RAISE NOTICE 'Reordering hafd.account_operations by (account_id, account_op_seq_no)...';
+  PERFORM hive.drop_account_operations_reorder_tables();
+  __pages := pg_relation_size( 'hafd.account_operations' ) / current_setting( 'block_size' )::BIGINT;
+  __buckets := GREATEST( 1, ceil( __pages::NUMERIC / _pages_per_step ) );
+
+  -- SYSTEM sampling reads whole pages: about 10000 of them, or all of a small table
+  EXECUTE format(
+      'SELECT array_agg( DISTINCT bound ORDER BY bound ) FROM unnest(
+         ( SELECT percentile_disc( ARRAY( SELECT generate_series( 1, %s - 1 )::FLOAT8 / %s ) ) WITHIN GROUP ( ORDER BY account_id )
+           FROM hafd.account_operations TABLESAMPLE SYSTEM ( %s ) ) ) AS bound
+       WHERE bound IS NOT NULL'
+    , __buckets, __buckets, LEAST( 100, 100.0 * 10000 / GREATEST( __pages, 1 ) ) )
+  INTO __bounds;
+  __bounds := COALESCE( __bounds, '{}' );
+
+  CREATE TABLE hafd.account_operations_reorder_staging ( LIKE hafd.account_operations ) PARTITION BY RANGE ( account_id );
+  FOR __bucket IN 0 .. cardinality( __bounds ) LOOP
+    EXECUTE format( 'CREATE UNLOGGED TABLE hafd.%I PARTITION OF hafd.account_operations_reorder_staging FOR VALUES FROM ( %s ) TO ( %s )'
+      , 'account_operations_reorder_part_' || __bucket
+      , COALESCE( __bounds[ __bucket ]::TEXT, 'MINVALUE' )
+      , COALESCE( __bounds[ __bucket + 1 ]::TEXT, 'MAXVALUE' ) );
+  END LOOP;
+  COMMIT;
+
+  __step_time := clock_timestamp();
+  WHILE __page < __pages LOOP
+    INSERT INTO hafd.account_operations_reorder_staging
+    SELECT * FROM hafd.account_operations
+    WHERE ctid >= format( '(%s,0)', __page )::TID AND ctid < format( '(%s,0)', __page + _pages_per_step )::TID;
+    GET DIAGNOSTICS __rows = ROW_COUNT;
+    __staged := __staged + __rows;
+    COMMIT;
+    __page := __page + _pages_per_step;
+  END LOOP;
+  RAISE NOTICE 'Staged % rows of hafd.account_operations into % account ranges in % seconds'
+    , __staged, cardinality( __bounds ) + 1, EXTRACT( EPOCH FROM clock_timestamp() - __step_time );
+
+  __step_time := clock_timestamp();
+  FOR __bucket IN 0 .. cardinality( __bounds ) LOOP
+    EXECUTE format( 'CREATE UNLOGGED TABLE hafd.%I AS SELECT * FROM hafd.%I ORDER BY account_id, account_op_seq_no'
+      , 'account_operations_reorder_sorted_' || __bucket, 'account_operations_reorder_part_' || __bucket );
+    EXECUTE format( 'DROP TABLE hafd.%I', 'account_operations_reorder_part_' || __bucket );
+    COMMIT;
+  END LOOP;
+  RAISE NOTICE 'Sorted the account ranges of hafd.account_operations in % seconds', EXTRACT( EPOCH FROM clock_timestamp() - __step_time );
+
+  __step_time := clock_timestamp();
+  LOCK TABLE hafd.account_operations IN ACCESS EXCLUSIVE MODE;
+  IF pg_relation_size( 'hafd.account_operations' ) / current_setting( 'block_size' )::BIGINT <> __pages THEN
+    RAISE EXCEPTION 'hafd.account_operations changed while it was being reordered';
+  END IF;
+  -- a synchronized scan could start in the middle of a sorted table
+  PERFORM set_config( 'synchronize_seqscans', 'off', TRUE );
+  TRUNCATE hafd.account_operations;
+  FOR __bucket IN 0 .. cardinality( __bounds ) LOOP
+    EXECUTE format( 'INSERT INTO hafd.account_operations SELECT * FROM hafd.%I', 'account_operations_reorder_sorted_' || __bucket );
+    GET DIAGNOSTICS __rows = ROW_COUNT;
+    __copied := __copied + __rows;
+  END LOOP;
+  IF __copied <> __staged THEN
+    RAISE EXCEPTION 'Reordering hafd.account_operations staged % rows but copied %', __staged, __copied;
+  END IF;
+  PERFORM hive.drop_account_operations_reorder_tables();
+  COMMIT;
+  RAISE NOTICE 'Copied the sorted hafd.account_operations back in % seconds', EXTRACT( EPOCH FROM clock_timestamp() - __step_time );
+
+  RAISE NOTICE 'Reordered hafd.account_operations in % seconds', EXTRACT( EPOCH FROM clock_timestamp() - __start_time );
+END;
+$procedure$
 ;
 
 -- Resets the indexes and PK/UNIQUE constraints of the table stuck in 'creating' from a previous
@@ -730,9 +882,10 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
--- hive.restore_indexes, committing after each index build, the CLUSTER and the ANALYZE, so a
--- restore holds back the vacuum horizon only for the statement that is running, not for the
--- whole table. Must be CALLed outside a transaction block.
+-- hive.restore_indexes, committing after each index build, the reorder of hafd.account_operations
+-- and the ANALYZE, so a restore holds back the vacuum horizon only for the statement that is running,
+-- not for the whole table. hafd.account_operations is reordered as hive.account_operations_reorder_method
+-- says. Must be CALLed outside a transaction block.
 CREATE OR REPLACE PROCEDURE hive.proc_restore_indexes( in _table_name TEXT )
 LANGUAGE plpgsql
 AS
@@ -744,10 +897,21 @@ BEGIN
   COMMIT;
 
   IF _table_name = 'hafd.account_operations' THEN
-    IF hive.restore_account_operations_cluster_index() THEN
-      COMMIT;
-      PERFORM hive.cluster_account_operations();
-      COMMIT;
+    IF hive.account_operations_reorder_method() = 'cluster' THEN
+      IF hive.restore_account_operations_cluster_index() THEN
+        COMMIT;
+        PERFORM hive.cluster_account_operations();
+        COMMIT;
+      END IF;
+    ELSE
+      __command := hive.missing_account_operations_cluster_index();
+      IF __command IS NOT NULL THEN
+        -- reordered again when interrupted before hive_account_operations_uq1 commits
+        CALL hive.proc_reorder_account_operations();
+        PERFORM hive.restore_index( __command );
+        ALTER TABLE hafd.account_operations CLUSTER ON hive_account_operations_uq1;
+        COMMIT;
+      END IF;
     END IF;
   END IF;
 

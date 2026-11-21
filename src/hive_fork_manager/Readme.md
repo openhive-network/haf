@@ -431,6 +431,23 @@ the views can start processing irreversible blocks while hived is still replayin
 Without the option on the node the opt-in has almost no effect: during a `drop-all` massive sync the `keep` indexes
 are dropped too, so opted-in contexts start only during the final index rebuild, once those are back.
 
+##### - Ordering of `hafd.account_operations` after a massive sync
+
+When `hived` rebuilds `hive_account_operations_uq1` after a massive sync, it first puts the rows of
+`hafd.account_operations` in `(account_id, account_op_seq_no)` order, so an account's history is read
+from few pages. `hive.proc_reorder_account_operations` does it in steps that commit on their own: it
+copies the heap a slice at a time into unlogged tables, one per range of accounts, sorts each range,
+and then, in one transaction, truncates `hafd.account_operations` and appends the sorted ranges to it.
+The table keeps its OID, so its views, grants and row type are untouched. Only that last copy holds
+back vacuum for the whole database for its full length. It also holds an `ACCESS EXCLUSIVE` lock on
+the table, so reads of the table wait for it. Before the copy the table can be read as usual. The
+reorder needs free disk space of about twice the table's size.
+
+The setting `hive.account_operations_reorder` selects the method: `rewrite` (the default) or `cluster`,
+which builds the index first and runs `CLUSTER` on it. That is one statement which holds back vacuum
+for its whole length, about 2 hours on mainnet. Set it where `hived`'s connections see it, e.g.
+`ALTER DATABASE haf_block_log SET hive.account_operations_reorder = 'cluster';`.
+
 #### Managing Table Vacuuming
 
 `hived` is responsible for maintaining the integrity and performance of the database by executing

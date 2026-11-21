@@ -14,6 +14,9 @@ BEGIN
     PERFORM hive.disable_fk_of_irreversible();
     PERFORM hive.disable_indexes_of_irreversible();
 
+    INSERT INTO hafd.account_operations( account_id, transacting_account_id, account_op_seq_no, operation_id, op_type_id )
+    SELECT ( i * 7919 ) % 97, ( i * 7919 ) % 97, i, i, i % 50 FROM generate_series( 1, 10000 ) i;
+
     -- a restore interrupted after it built hive_account_operations_uq1, before the CLUSTER committed
     ASSERT hive.restore_account_operations_cluster_index(), 'hive_account_operations_uq1 was not built';
 END;
@@ -53,6 +56,16 @@ BEGIN
 
     ASSERT ( SELECT indisclustered FROM pg_index WHERE indexrelid = 'hafd.hive_account_operations_uq1'::regclass ),
         'hafd.account_operations is not clustered on hive_account_operations_uq1';
+
+    ASSERT NOT EXISTS(
+        SELECT 1 FROM (
+            SELECT account_id, account_op_seq_no
+                 , lag( account_id ) OVER w AS prev_account_id, lag( account_op_seq_no ) OVER w AS prev_account_op_seq_no
+            FROM hafd.account_operations WINDOW w AS ( ORDER BY ctid )
+        ) r
+        WHERE ( prev_account_id, prev_account_op_seq_no ) > ( account_id, account_op_seq_no )
+    ), 'hafd.account_operations is not physically ordered by (account_id, account_op_seq_no)';
+    ASSERT ( SELECT count(*) FROM hafd.account_operations ) = 10000, 'Rows of hafd.account_operations were lost';
 
     ASSERT NOT EXISTS(
         SELECT table_name, conname, contype, definition FROM public.constraints_before
