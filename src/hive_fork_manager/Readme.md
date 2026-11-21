@@ -443,6 +443,25 @@ back vacuum for the whole database for its full length. It also holds an `ACCESS
 the table, so reads of the table wait for it. Before the copy the table can be read as usual. The
 reorder needs free disk space of about twice the table's size.
 
+The copying of the slices and the sorting of the ranges are independent steps, listed in the unlogged
+table `hafd.account_operations_reorder_steps`. `hived` runs helper connections alongside the restore
+(`hive.proc_help_restore_indexes`), which claim those steps (`FOR UPDATE SKIP LOCKED`) and do them at the
+same time as the restore's own connection; the ranges are sorted once every slice is copied. After the
+final copy and `hive_account_operations_uq1`, the helpers build the table's other indexes, each on its own
+connection. A table's PK/UNIQUE constraints are built one at a time, before its plain indexes, because
+attaching a constraint's index takes an `ACCESS EXCLUSIVE` lock that would otherwise wait for the other
+builds. A helper that fails loses nothing: the restore does what the helper did not commit. The parallel
+sorts can leave a few ranges' sort files on disk at once, which stays well under the final copy's need.
+
+The number of helpers per table comes from `hive.index_restore_helpers(table, cores)`, where cores is
+the number of hardware threads `hived` sees. By default `hafd.account_operations`, whose restore is the
+longest, gets one helper for every 8 threads beyond the first 8, at most 3 (3 on 32 threads, 1 on 16, none
+on 8). The other tables get none, because their index builds already run alongside each other. The setting
+`hive.index_restore_helpers`, e.g. `ALTER DATABASE haf_block_log SET hive.index_restore_helpers = '2';`,
+sets the number for every table, and `'0'` turns helpers off. Each index build can also use PostgreSQL's
+parallel maintenance workers (`max_parallel_maintenance_workers`), set for the database or role in the
+same way.
+
 Before it starts, `hive.account_operations_reorder_space_suffices()` compares that need, twice
 `pg_relation_size('hafd.account_operations')` plus a margin, with the setting
 `hive.account_operations_reorder_free_space`. `hived` sets it for its session from `statvfs` on the

@@ -193,6 +193,13 @@ GRANT EXECUTE ON FUNCTION
     , hive.account_operations_reorder_method()
     , hive.account_operations_reorder_space_suffices()
     , hive.drop_account_operations_reorder_tables()
+    , hive.prepare_account_operations_reorder( in _pages_per_step INTEGER )
+    , hive.do_account_operations_reorder_step()
+    , hive.finish_account_operations_reorder( in _pages BIGINT )
+    , hive.index_restore_lock_key( in _table_name TEXT )
+    , hive.index_restore_helpers( in _table_name TEXT, in _cores INTEGER )
+    , hive.is_index_restore_ready( in _table_name TEXT, in _index_constraint_name TEXT )
+    , hive.restore_next_index( in _table_name TEXT )
     , hive.reset_interrupted_index_restores( in _table_name TEXT )
     , hive.restore_index( in _command TEXT )
     , hive.restore_indexes( in _table_name TEXT )
@@ -311,6 +318,7 @@ TO hived_group;
 
 GRANT EXECUTE ON PROCEDURE
       hive.proc_restore_indexes( in _table_name TEXT )
+    , hive.proc_help_restore_indexes( in _table_name TEXT )
     , hive.proc_reorder_account_operations( in _pages_per_step INTEGER )
 TO hived_group;
 
@@ -345,6 +353,7 @@ FROM hive_applications_group;
 REVOKE EXECUTE ON PROCEDURE
       hive.proc_perform_dead_app_contexts_auto_detach( IN _app_timeout INTERVAL )
     , hive.proc_restore_indexes( in _table_name TEXT )
+    , hive.proc_help_restore_indexes( in _table_name TEXT )
     , hive.proc_reorder_account_operations( in _pages_per_step INTEGER )
 FROM hive_applications_group,
      public;

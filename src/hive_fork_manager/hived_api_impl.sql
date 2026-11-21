@@ -730,40 +730,25 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
--- Rewrites hafd.account_operations in (account_id, account_op_seq_no) order, keeping the table
--- itself (its OID, row type, grants, views, triggers and extension membership), and commits after
--- every step but the last, so that only the last one holds back the vacuum horizon for long:
--- 1. the heap is copied, _pages_per_step pages per transaction, into unlogged staging partitions,
---    each a range of account_id holding about _pages_per_step pages of rows, the bounds taken from
---    a sample of the table;
--- 2. each partition is sorted into an unlogged table of its own, one transaction each;
--- 3. one transaction truncates hafd.account_operations and appends the sorted tables to it in
---    account_id order: a sequential copy, without the sort CLUSTER does in its single statement.
--- Rows written to hafd.account_operations during the run would be lost, so it must run only while
--- nothing writes the table (hived's post-replay index restore); the last step fails, rolling back,
--- when the heap grew or the copied row count differs. Whatever indexes the table has are maintained
--- by the copy. Must be CALLed outside a transaction block.
-CREATE OR REPLACE PROCEDURE hive.proc_reorder_account_operations( in _pages_per_step INTEGER DEFAULT 1048576 )
-LANGUAGE plpgsql
+-- Prepares hive.proc_reorder_account_operations: unlogged staging partitions of hafd.account_operations,
+-- each a range of account_id holding about _pages_per_step pages of rows, the bounds taken from a sample
+-- of the table, and the steps of the reorder in hafd.account_operations_reorder_steps: a 'stage' step for
+-- every _pages_per_step pages of the heap and a 'sort' step for every partition. Returns the size of the
+-- heap in pages, for hive.finish_account_operations_reorder. The caller commits, so other sessions see the steps.
+CREATE OR REPLACE FUNCTION hive.prepare_account_operations_reorder( in _pages_per_step INTEGER )
+RETURNS BIGINT
 AS
-$procedure$
+$function$
 DECLARE
   __pages BIGINT;
   __buckets INTEGER;
   __bounds INTEGER[];
-  __page BIGINT := 0;
-  __staged BIGINT := 0;
-  __copied BIGINT := 0;
-  __rows BIGINT;
   __bucket INTEGER;
-  __start_time TIMESTAMP := clock_timestamp();
-  __step_time TIMESTAMP;
 BEGIN
   IF _pages_per_step < 1 THEN
     RAISE EXCEPTION '_pages_per_step must be positive, not %', _pages_per_step;
   END IF;
 
-  RAISE NOTICE 'Reordering hafd.account_operations by (account_id, account_op_seq_no)...';
   PERFORM hive.drop_account_operations_reorder_tables();
   __pages := pg_relation_size( 'hafd.account_operations' ) / current_setting( 'block_size' )::BIGINT;
   __buckets := GREATEST( 1, ceil( __pages::NUMERIC / _pages_per_step ) );
@@ -785,47 +770,161 @@ BEGIN
       , COALESCE( __bounds[ __bucket ]::TEXT, 'MINVALUE' )
       , COALESCE( __bounds[ __bucket + 1 ]::TEXT, 'MAXVALUE' ) );
   END LOOP;
-  COMMIT;
 
-  __step_time := clock_timestamp();
-  WHILE __page < __pages LOOP
-    INSERT INTO hafd.account_operations_reorder_staging
-    SELECT * FROM hafd.account_operations
-    WHERE ctid >= format( '(%s,0)', __page )::TID AND ctid < format( '(%s,0)', __page + _pages_per_step )::TID;
+  -- arg is the first page of a 'stage' step and the partition of a 'sort' step
+  CREATE UNLOGGED TABLE hafd.account_operations_reorder_steps (
+      kind TEXT NOT NULL
+    , arg BIGINT NOT NULL
+    , pages BIGINT
+    , rows BIGINT
+    , done BOOLEAN NOT NULL DEFAULT FALSE
+    , PRIMARY KEY ( kind, arg )
+  );
+  INSERT INTO hafd.account_operations_reorder_steps( kind, arg, pages )
+  SELECT 'stage', page, _pages_per_step FROM generate_series( 0, __pages - 1, _pages_per_step ) page
+  UNION ALL
+  SELECT 'sort', bucket, NULL FROM generate_series( 0, cardinality( __bounds ) ) bucket;
+
+  RETURN __pages;
+END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
+-- Claims a step of the running hive.proc_reorder_account_operations that no session has done or is doing,
+-- does it and marks it done, in the caller's transaction, which commits next. A 'stage' step copies its
+-- pages of the heap into the staging partitions, a 'sort' step sorts its partition into an unlogged table
+-- of its own; 'sort' steps are claimed only once every 'stage' step is done. Returns FALSE when there is
+-- no step to claim: no reorder runs, or each of its steps is done or being done.
+CREATE OR REPLACE FUNCTION hive.do_account_operations_reorder_step()
+RETURNS BOOLEAN
+AS
+$function$
+DECLARE
+  __kind TEXT;
+  __arg BIGINT;
+  __pages BIGINT;
+  __rows BIGINT;
+BEGIN
+  BEGIN
+    EXECUTE
+      'SELECT kind, arg, pages FROM hafd.account_operations_reorder_steps s
+       WHERE NOT done AND ( kind = ''stage'' OR NOT EXISTS(
+         SELECT 1 FROM hafd.account_operations_reorder_steps WHERE kind = ''stage'' AND NOT done ) )
+       ORDER BY kind = ''sort'', arg LIMIT 1 FOR UPDATE OF s SKIP LOCKED'
+    INTO __kind, __arg, __pages;
+  EXCEPTION WHEN undefined_table THEN
+    -- no reorder runs, or the one that ran has just dropped its tables
+    RETURN FALSE;
+  END;
+  IF __kind IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  IF __kind = 'stage' THEN
+    EXECUTE 'INSERT INTO hafd.account_operations_reorder_staging SELECT * FROM hafd.account_operations WHERE ctid >= $1 AND ctid < $2'
+      USING format( '(%s,0)', __arg )::TID, format( '(%s,0)', __arg + __pages )::TID;
     GET DIAGNOSTICS __rows = ROW_COUNT;
-    __staged := __staged + __rows;
-    COMMIT;
-    __page := __page + _pages_per_step;
-  END LOOP;
-  RAISE NOTICE 'Staged % rows of hafd.account_operations into % account ranges in % seconds'
-    , __staged, cardinality( __bounds ) + 1, EXTRACT( EPOCH FROM clock_timestamp() - __step_time );
-
-  __step_time := clock_timestamp();
-  FOR __bucket IN 0 .. cardinality( __bounds ) LOOP
+  ELSE
     EXECUTE format( 'CREATE UNLOGGED TABLE hafd.%I AS SELECT * FROM hafd.%I ORDER BY account_id, account_op_seq_no'
-      , 'account_operations_reorder_sorted_' || __bucket, 'account_operations_reorder_part_' || __bucket );
-    EXECUTE format( 'DROP TABLE hafd.%I', 'account_operations_reorder_part_' || __bucket );
-    COMMIT;
-  END LOOP;
-  RAISE NOTICE 'Sorted the account ranges of hafd.account_operations in % seconds', EXTRACT( EPOCH FROM clock_timestamp() - __step_time );
+      , 'account_operations_reorder_sorted_' || __arg, 'account_operations_reorder_part_' || __arg );
+    GET DIAGNOSTICS __rows = ROW_COUNT;
+    EXECUTE format( 'DROP TABLE hafd.%I', 'account_operations_reorder_part_' || __arg );
+  END IF;
 
-  __step_time := clock_timestamp();
+  EXECUTE 'UPDATE hafd.account_operations_reorder_steps SET done = TRUE, rows = $3 WHERE kind = $1 AND arg = $2'
+    USING __kind, __arg, __rows;
+  RETURN TRUE;
+END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
+-- Ends hive.proc_reorder_account_operations once each of its steps is done: truncates hafd.account_operations
+-- and appends the sorted tables to it in account_id order, a sequential copy without the sort CLUSTER does in
+-- its single statement, then drops the reorder's tables. Fails when the heap is no longer _pages pages long,
+-- i.e. it was written during the reorder, or when the copied row count differs from the staged one.
+CREATE OR REPLACE FUNCTION hive.finish_account_operations_reorder( in _pages BIGINT )
+RETURNS VOID
+AS
+$function$
+DECLARE
+  __staged BIGINT;
+  __copied BIGINT := 0;
+  __rows BIGINT;
+  __bucket BIGINT;
+BEGIN
+  IF EXISTS( SELECT 1 FROM hafd.account_operations_reorder_steps WHERE NOT done ) THEN
+    RAISE EXCEPTION 'The reorder of hafd.account_operations has steps that are not done';
+  END IF;
+
   LOCK TABLE hafd.account_operations IN ACCESS EXCLUSIVE MODE;
-  IF pg_relation_size( 'hafd.account_operations' ) / current_setting( 'block_size' )::BIGINT <> __pages THEN
+  IF pg_relation_size( 'hafd.account_operations' ) / current_setting( 'block_size' )::BIGINT <> _pages THEN
     RAISE EXCEPTION 'hafd.account_operations changed while it was being reordered';
   END IF;
   -- a synchronized scan could start in the middle of a sorted table
   PERFORM set_config( 'synchronize_seqscans', 'off', TRUE );
   TRUNCATE hafd.account_operations;
-  FOR __bucket IN 0 .. cardinality( __bounds ) LOOP
+  FOR __bucket IN SELECT arg FROM hafd.account_operations_reorder_steps WHERE kind = 'sort' ORDER BY arg LOOP
     EXECUTE format( 'INSERT INTO hafd.account_operations SELECT * FROM hafd.%I', 'account_operations_reorder_sorted_' || __bucket );
     GET DIAGNOSTICS __rows = ROW_COUNT;
     __copied := __copied + __rows;
   END LOOP;
+  __staged := ( SELECT COALESCE( sum( rows ), 0 ) FROM hafd.account_operations_reorder_steps WHERE kind = 'stage' );
   IF __copied <> __staged THEN
     RAISE EXCEPTION 'Reordering hafd.account_operations staged % rows but copied %', __staged, __copied;
   END IF;
   PERFORM hive.drop_account_operations_reorder_tables();
+END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
+-- Rewrites hafd.account_operations in (account_id, account_op_seq_no) order, keeping the table
+-- itself (its OID, row type, grants, views, triggers and extension membership), and commits after
+-- every step but the last, so that only the last one holds back the vacuum horizon for long:
+-- 1. the heap is copied, _pages_per_step pages per transaction, into unlogged staging partitions,
+--    each a range of account_id (hive.prepare_account_operations_reorder);
+-- 2. each partition is sorted into an unlogged table of its own, one transaction each;
+-- 3. one transaction truncates hafd.account_operations and appends the sorted tables to it in
+--    account_id order (hive.finish_account_operations_reorder).
+-- The steps of 1. and 2. are independent of each other, so sessions running hive.proc_help_restore_indexes
+-- do them alongside this one (hive.do_account_operations_reorder_step); without them, this session does all.
+-- Rows written to hafd.account_operations during the run would be lost, so it must run only while
+-- nothing writes the table (hived's post-replay index restore); the last step fails, rolling back,
+-- when the heap grew or the copied row count differs. Whatever indexes the table has are maintained
+-- by the copy. Must be CALLed outside a transaction block.
+CREATE OR REPLACE PROCEDURE hive.proc_reorder_account_operations( in _pages_per_step INTEGER DEFAULT 1048576 )
+LANGUAGE plpgsql
+AS
+$procedure$
+DECLARE
+  __pages BIGINT;
+  __start_time TIMESTAMP := clock_timestamp();
+  __step_time TIMESTAMP;
+BEGIN
+  RAISE NOTICE 'Reordering hafd.account_operations by (account_id, account_op_seq_no)...';
+  __pages := hive.prepare_account_operations_reorder( _pages_per_step );
+  COMMIT;
+
+  __step_time := clock_timestamp();
+  LOOP
+    IF hive.do_account_operations_reorder_step() THEN
+      COMMIT;
+      CONTINUE;
+    END IF;
+    EXIT WHEN NOT EXISTS( SELECT 1 FROM hafd.account_operations_reorder_steps WHERE NOT done );
+    -- helpers are doing the last steps
+    PERFORM pg_sleep( 1 );
+    COMMIT;
+  END LOOP;
+  RAISE NOTICE 'Staged and sorted % rows of hafd.account_operations in % account ranges in % seconds'
+    , ( SELECT sum( rows ) FROM hafd.account_operations_reorder_steps WHERE kind = 'stage' )
+    , ( SELECT count(*) FROM hafd.account_operations_reorder_steps WHERE kind = 'sort' )
+    , EXTRACT( EPOCH FROM clock_timestamp() - __step_time );
+
+  __step_time := clock_timestamp();
+  PERFORM hive.finish_account_operations_reorder( __pages );
   COMMIT;
   RAISE NOTICE 'Copied the sorted hafd.account_operations back in % seconds', EXTRACT( EPOCH FROM clock_timestamp() - __step_time );
 
@@ -920,11 +1019,145 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
+-- The session-level advisory lock that hive.proc_restore_indexes of the table holds while it runs.
+CREATE OR REPLACE FUNCTION hive.index_restore_lock_key( in _table_name TEXT )
+RETURNS BIGINT
+AS
+$function$
+  SELECT hashtextextended( 'hive.proc_restore_indexes ' || _table_name, 0 );
+$function$
+LANGUAGE sql IMMUTABLE
+;
+
+-- How many sessions hived runs hive.proc_help_restore_indexes in alongside its post-replay
+-- hive.proc_restore_indexes of the table, on a host with _cores hardware threads: the custom setting
+-- hive.index_restore_helpers, for every table, when it is set; otherwise, for hafd.account_operations,
+-- whose reorder is the longest restore, one for every 8 threads beyond the first 8, at most 3, and
+-- none for the other tables, whose index builds run alongside it.
+CREATE OR REPLACE FUNCTION hive.index_restore_helpers( in _table_name TEXT, in _cores INTEGER )
+RETURNS INTEGER
+AS
+$function$
+DECLARE
+  __setting TEXT := NULLIF( current_setting( 'hive.index_restore_helpers', TRUE ), '' );
+BEGIN
+  IF __setting IS NOT NULL THEN
+    IF __setting !~ '^[0-9]{1,4}$' THEN
+      RAISE EXCEPTION 'hive.index_restore_helpers must be a number of sessions, not ''%''', __setting;
+    END IF;
+    RETURN __setting::INTEGER;
+  END IF;
+
+  IF _table_name = 'hafd.account_operations' THEN
+    RETURN LEAST( 3, GREATEST( 0, _cores / 8 - 1 ) );
+  END IF;
+  RETURN 0;
+END;
+$function$
+LANGUAGE plpgsql STABLE
+;
+
+-- Whether hive.restore_next_index may build the index or constraint: any but those of hafd.account_operations,
+-- whose hive_account_operations_uq1 hive.proc_restore_indexes builds with the table's reorder, and whose
+-- other indexes wait for that, i.e. until hive_account_operations_uq1 is past 'missing' and 'creating'.
+CREATE OR REPLACE FUNCTION hive.is_index_restore_ready( in _table_name TEXT, in _index_constraint_name TEXT )
+RETURNS BOOLEAN
+AS
+$function$
+  SELECT _table_name <> 'hafd.account_operations' OR (
+    _index_constraint_name <> 'hive_account_operations_uq1'
+    AND NOT EXISTS( SELECT 1 FROM hafd.indexes_constraints
+                    WHERE table_name = 'hafd.account_operations' AND index_constraint_name = 'hive_account_operations_uq1'
+                      AND status IN ( 'missing', 'creating' ) ) );
+$function$
+LANGUAGE sql STABLE
+;
+
+-- Claims a 'missing' index or PK/UNIQUE constraint of the table that no session is building and builds
+-- it with hive.restore_index, in the caller's transaction, which commits next, if
+-- hive.is_index_restore_ready. Returns FALSE when there is no index to claim.
+-- Attaching a constraint's index needs an ACCESS EXCLUSIVE lock, which would wait, stalling the readers
+-- of the table queued behind it, for every index build of another session, or deadlock with another
+-- attach: so a table's constraints are built one at a time, and its plain indexes only after them.
+CREATE OR REPLACE FUNCTION hive.restore_next_index( in _table_name TEXT )
+RETURNS BOOLEAN
+AS
+$function$
+DECLARE
+  __command TEXT;
+BEGIN
+  IF pg_try_advisory_xact_lock( hashtextextended( 'hive.restore_next_index ' || _table_name, 0 ) ) THEN
+    SELECT ic.command INTO __command
+    FROM hafd.indexes_constraints ic
+    WHERE ic.table_name = _table_name AND ic.is_foreign_key = FALSE AND ic.status = 'missing' AND ic.is_constraint
+      AND hive.is_index_restore_ready( ic.table_name, ic.index_constraint_name )
+    LIMIT 1
+    FOR UPDATE OF ic SKIP LOCKED;
+  END IF;
+
+  IF __command IS NULL THEN
+    SELECT ic.command INTO __command
+    FROM hafd.indexes_constraints ic
+    WHERE ic.table_name = _table_name AND ic.is_foreign_key = FALSE AND ic.status = 'missing' AND NOT ic.is_constraint
+      AND hive.is_index_restore_ready( ic.table_name, ic.index_constraint_name )
+      AND NOT EXISTS( SELECT 1 FROM hafd.indexes_constraints
+                      WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing' AND is_constraint )
+    LIMIT 1
+    FOR UPDATE OF ic SKIP LOCKED;
+  END IF;
+
+  IF __command IS NULL THEN
+    RETURN FALSE;
+  END IF;
+  PERFORM hive.restore_index( __command );
+  RETURN TRUE;
+END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
+-- Helps a hive.proc_restore_indexes of the table that runs in another session: does steps of the
+-- reorder of hafd.account_operations (hive.do_account_operations_reorder_step) and builds the table's
+-- indexes that are ready (hive.restore_next_index), committing after each. Returns once the table has
+-- no index left to restore, or when no session holds hive.index_restore_lock_key of the table, which
+-- hived takes before it starts helpers. A helper that fails loses nothing: what it did not commit
+-- is done by the restore. Must be CALLed outside a transaction block.
+CREATE OR REPLACE PROCEDURE hive.proc_help_restore_indexes( in _table_name TEXT )
+LANGUAGE plpgsql
+AS
+$procedure$
+DECLARE
+  __lock_key BIGINT := hive.index_restore_lock_key( _table_name );
+BEGIN
+  LOOP
+    IF _table_name = 'hafd.account_operations' AND hive.do_account_operations_reorder_step() THEN
+      COMMIT;
+      CONTINUE;
+    END IF;
+    IF hive.restore_next_index( _table_name ) THEN
+      COMMIT;
+      CONTINUE;
+    END IF;
+
+    EXIT WHEN NOT EXISTS( SELECT 1 FROM hafd.indexes_constraints
+                          WHERE table_name = _table_name AND is_foreign_key = FALSE AND status IN ( 'missing', 'creating' ) );
+    IF pg_try_advisory_lock_shared( __lock_key ) THEN
+      PERFORM pg_advisory_unlock_shared( __lock_key );
+      EXIT;
+    END IF;
+    PERFORM pg_sleep( 1 );
+    COMMIT;
+  END LOOP;
+END;
+$procedure$
+;
+
 -- hive.restore_indexes, committing after each index build, the reorder of hafd.account_operations
 -- and the ANALYZE, so a restore holds back the vacuum horizon only for the statement that is running,
 -- not for the whole table. hafd.account_operations is reordered as hive.account_operations_reorder_method
 -- says, by CLUSTER when hive.account_operations_reorder_space_suffices finds too little free space for
--- the rewrite. Must be CALLed outside a transaction block.
+-- the rewrite. Sessions running hive.proc_help_restore_indexes share the reorder's steps and the index
+-- builds with it; it holds hive.index_restore_lock_key while it runs. Must be CALLed outside a transaction block.
 CREATE OR REPLACE PROCEDURE hive.proc_restore_indexes( in _table_name TEXT )
 LANGUAGE plpgsql
 AS
@@ -932,7 +1165,9 @@ $procedure$
 DECLARE
   __command TEXT;
   __rewrite BOOLEAN := FALSE;
+  __lock_key BIGINT := hive.index_restore_lock_key( _table_name );
 BEGIN
+  PERFORM pg_advisory_lock( __lock_key );
   PERFORM hive.reset_interrupted_index_restores( _table_name );
   COMMIT;
 
@@ -955,16 +1190,21 @@ BEGIN
     END IF;
   END IF;
 
-  FOR __command IN
-    SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing'
   LOOP
-    PERFORM hive.restore_index( __command );
+    IF hive.restore_next_index( _table_name ) THEN
+      COMMIT;
+      CONTINUE;
+    END IF;
+    EXIT WHEN NOT EXISTS( SELECT 1 FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing' );
+    -- helpers are building the last indexes
+    PERFORM pg_sleep( 1 );
     COMMIT;
   END LOOP;
 
   EXECUTE format( 'ANALYZE %s',  _table_name );
   COMMIT;
 
+  PERFORM pg_advisory_unlock( __lock_key );
   RAISE NOTICE 'Finished restoring any dropped indexes on %', _table_name;
 END;
 $procedure$

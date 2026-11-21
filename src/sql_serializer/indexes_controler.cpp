@@ -110,6 +110,44 @@ void set_account_operations_reorder_free_space(pqxx::nontransaction& tx, const s
   tx.exec_params("SELECT set_config( 'hive.account_operations_reorder_free_space', $1, FALSE )", std::to_string(free_bytes));
 }
 
+// Runs hive.proc_help_restore_indexes on connections of its own and joins them when destroyed.
+// A helper that fails loses no work: the restore it helps does what the helper left uncommitted.
+class index_restore_helpers
+{
+public:
+  index_restore_helpers() = default;
+  index_restore_helpers(const index_restore_helpers&) = delete;
+  index_restore_helpers& operator=(const index_restore_helpers&) = delete;
+
+  ~index_restore_helpers()
+  {
+    for (auto& thread : _threads)
+      thread.join();
+  }
+
+  void start(const std::string& db_url, const std::string& table_name, int count)
+  {
+    for (int i = 0; i < count; ++i)
+      _threads.emplace_back([db_url, table_name]()
+      {
+        try
+        {
+          pqxx::connection conn(db_url);
+          pqxx::nontransaction tx(conn);
+          tx.exec("CALL hive.proc_help_restore_indexes( " + tx.quote(table_name) + " );");
+        }
+        catch (const std::exception& e)
+        {
+          wlog("A helper of the index restore of ${table_name} failed, the restore does its work instead: ${e}",
+            (table_name)("e", e.what()));
+        }
+      });
+  }
+
+private:
+  std::vector<std::thread> _threads;
+};
+
 // Kinds accepted by hive.app_request_table_vacuum, see hafd.vacuum_requests.
 std::string vacuum_command_prefix(const std::string& kind)
 {
@@ -784,15 +822,24 @@ indexes_controler::start_restore_indexes( const std::string& table_name, std::st
   std::string description = "Query processor: `" + query + "'";
   auto processor = std::make_unique< data_processor >( description, "index_ctrl",
                                                        [db_url=db_url_with_hived_app(_db_url), maintainer_db_url=db_url_with_hived_app_as_haf_maintainer(_db_url),
-                                                        check_reorder_space=( table_name == "hafd.account_operations" ),
+                                                        check_reorder_space=( table_name == "hafd.account_operations" ), table_name,
                                                         query, objects_name=std::move(objects_name), description](const data_processor::data_chunk_ptr&) -> data_processor::data_processing_status
   {
     ilog("Attempting to execute query: `${query}`...", ("query", query ) );
     const auto start_time = fc::time_point::now();
+    // declared before the connection, so that its close releases the lock that ends the helpers before they are joined
+    index_restore_helpers helpers;
     pqxx::connection conn(db_url);
     pqxx::nontransaction tx(conn);
     if ( check_reorder_space )
       set_account_operations_reorder_free_space( tx, maintainer_db_url );
+    // taken before the helpers start: a helper returns when no session holds it
+    tx.exec_params( "SELECT pg_advisory_lock( hive.index_restore_lock_key( $1 ) )", table_name );
+    const int helper_count = tx.exec_params( "SELECT hive.index_restore_helpers( $1, $2 ) AS helpers",
+      table_name, static_cast<int>( std::thread::hardware_concurrency() ) )[0]["helpers"].as<int>();
+    if ( helper_count > 0 )
+      ilog( "Restoring the indexes of ${table_name} with ${helper_count} helper connections", (table_name)(helper_count) );
+    helpers.start( db_url, table_name, helper_count );
     tx.exec( query );
     ilog(
       "${d} Creating of ${mod_type} done in ${time} ms",

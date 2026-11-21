@@ -142,6 +142,8 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( hived_api/proc_restore_indexes_low_free_space_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/proc_restore_indexes_enough_free_space_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/proc_reorder_account_operations_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/proc_help_restore_indexes_test.sql )
+ ADD_SQL_FUNCTIONAL_TEST( hived_api/proc_restore_indexes_with_helper_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/missing_index_builds_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/account_operations_uq1_includes_op_type_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/remove_obsolete_end_massive_sync_test.sql )
