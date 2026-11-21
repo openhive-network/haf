@@ -1,3 +1,4 @@
+# private-test-exempt: paths_to_executables from test_tools.__private locates the hived binary under test, as test_dump_load_instance_scripts.py does; test_tools exposes no public equivalent.
 import glob
 import os
 import signal
