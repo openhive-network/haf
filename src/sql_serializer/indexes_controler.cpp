@@ -26,6 +26,7 @@
 #include <map>
 #include <regex>
 #include <stdexcept>
+#include <string_view>
 
 #include <sys/statvfs.h>
 
@@ -110,6 +111,23 @@ void set_account_operations_reorder_free_space(pqxx::nontransaction& tx, const s
   tx.exec_params("SELECT set_config( 'hive.account_operations_reorder_free_space', $1, FALSE )", std::to_string(free_bytes));
 }
 
+// Writes the NOTICEs and WARNINGs of an index restore session to hived's log, one line each, tagged with the table.
+// Terse verbosity leaves out the CONTEXT lines that PL/pgSQL adds to every RAISE.
+void log_index_restore_notices(pqxx::connection& conn, const std::string& table_name)
+{
+  conn.set_verbosity(pqxx::error_verbosity::terse);
+  conn.set_notice_handler([table_name](pqxx::zview notice) noexcept
+  {
+    std::string_view message(notice);
+    while (!message.empty() && (message.back() == '\n' || message.back() == '\r'))
+      message.remove_suffix(1);
+    if (message.rfind("WARNING", 0) == 0)
+      wlog("Index restore of ${table_name}: ${message}", (table_name)("message", std::string(message)));
+    else
+      ilog("Index restore of ${table_name}: ${message}", (table_name)("message", std::string(message)));
+  });
+}
+
 // Runs hive.proc_help_restore_indexes on connections of its own and joins them when destroyed.
 // A helper that fails loses no work: the restore it helps does what the helper left uncommitted.
 class index_restore_helpers
@@ -133,6 +151,7 @@ public:
         try
         {
           pqxx::connection conn(db_url);
+          log_index_restore_notices(conn, table_name);
           pqxx::nontransaction tx(conn);
           tx.exec("CALL hive.proc_help_restore_indexes( " + tx.quote(table_name) + " );");
         }
@@ -830,6 +849,7 @@ indexes_controler::start_restore_indexes( const std::string& table_name, std::st
     // declared before the connection, so that its close releases the lock that ends the helpers before they are joined
     index_restore_helpers helpers;
     pqxx::connection conn(db_url);
+    log_index_restore_notices( conn, table_name );
     pqxx::nontransaction tx(conn);
     if ( check_reorder_space )
       set_account_operations_reorder_free_space( tx, maintainer_db_url );
