@@ -672,6 +672,29 @@ $function$
 LANGUAGE plpgsql STABLE
 ;
 
+-- How hive.proc_restore_indexes copies the sorted hafd.account_operations back into the truncated table,
+-- from the custom setting hive.account_operations_copyback: 'insert' (the default, when unset) by
+-- INSERT ... SELECT (hive.finish_account_operations_reorder), 'copy' by COPY ... FROM STDIN (FORMAT binary,
+-- FREEZE), which writes the rows frozen and sets the visibility map of the pages it fills. COPY FREEZE must
+-- be a top-level statement, so with 'copy' the procedure returns once the table is sorted and leaves the
+-- copy-back to its caller (hive.start_account_operations_copyback); hived does it, and sets 'copy' for its
+-- session unless the setting is set for the database or role.
+CREATE OR REPLACE FUNCTION hive.account_operations_copyback_method()
+RETURNS TEXT
+AS
+$function$
+DECLARE
+  __method TEXT := COALESCE( NULLIF( current_setting( 'hive.account_operations_copyback', TRUE ), '' ), 'insert' );
+BEGIN
+  IF __method NOT IN ( 'insert', 'copy' ) THEN
+    RAISE EXCEPTION 'hive.account_operations_copyback must be ''insert'' or ''copy'', not ''%''', __method;
+  END IF;
+  RETURN __method;
+END;
+$function$
+LANGUAGE plpgsql STABLE
+;
+
 -- Whether the free space of the filesystem that holds hafd.account_operations is enough for
 -- hive.proc_reorder_account_operations: about twice the heap, plus a margin for the temp files of the
 -- index builds running alongside it. The free space comes from hive.account_operations_reorder_free_space,
@@ -771,7 +794,8 @@ BEGIN
       , COALESCE( __bounds[ __bucket + 1 ]::TEXT, 'MAXVALUE' ) );
   END LOOP;
 
-  -- arg is the first page of a 'stage' step and the partition of a 'sort' step
+  -- arg is the first page of a 'stage' step and the partition of a 'sort' step; the 'heap' row, done from
+  -- the start, holds the size of the heap in pages, and hive.end_account_operations_copyback adds a 'copied' row
   CREATE UNLOGGED TABLE hafd.account_operations_reorder_steps (
       kind TEXT NOT NULL
     , arg BIGINT NOT NULL
@@ -784,6 +808,7 @@ BEGIN
   SELECT 'stage', page, _pages_per_step FROM generate_series( 0, __pages - 1, _pages_per_step ) page
   UNION ALL
   SELECT 'sort', bucket, NULL FROM generate_series( 0, cardinality( __bounds ) ) bucket;
+  INSERT INTO hafd.account_operations_reorder_steps( kind, arg, pages, done ) VALUES ( 'heap', 0, __pages, TRUE );
 
   RETURN __pages;
 END;
@@ -840,6 +865,44 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
+-- Truncates hafd.account_operations for the copy-back of hive.proc_reorder_account_operations once each
+-- of its steps is done, locking it until the caller's transaction ends. Fails when the heap is no longer
+-- _pages pages long, i.e. it was written during the reorder.
+CREATE OR REPLACE FUNCTION hive.truncate_account_operations_for_copyback( in _pages BIGINT )
+RETURNS VOID
+AS
+$function$
+BEGIN
+  IF EXISTS( SELECT 1 FROM hafd.account_operations_reorder_steps WHERE NOT done ) THEN
+    RAISE EXCEPTION 'The reorder of hafd.account_operations has steps that are not done';
+  END IF;
+
+  LOCK TABLE hafd.account_operations IN ACCESS EXCLUSIVE MODE;
+  IF pg_relation_size( 'hafd.account_operations' ) / current_setting( 'block_size' )::BIGINT IS DISTINCT FROM _pages THEN
+    RAISE EXCEPTION 'hafd.account_operations changed while it was being reordered';
+  END IF;
+  TRUNCATE hafd.account_operations;
+END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
+-- Fails when the _copied rows of the copy-back of hive.proc_reorder_account_operations differ from the staged ones.
+CREATE OR REPLACE FUNCTION hive.check_account_operations_copyback( in _copied BIGINT )
+RETURNS VOID
+AS
+$function$
+DECLARE
+  __staged BIGINT := ( SELECT COALESCE( sum( rows ), 0 ) FROM hafd.account_operations_reorder_steps WHERE kind = 'stage' );
+BEGIN
+  IF _copied IS DISTINCT FROM __staged THEN
+    RAISE EXCEPTION 'Reordering hafd.account_operations staged % rows but copied %', __staged, _copied;
+  END IF;
+END;
+$function$
+LANGUAGE plpgsql STABLE
+;
+
 -- Ends hive.proc_reorder_account_operations once each of its steps is done: truncates hafd.account_operations
 -- and appends the sorted tables to it in account_id order, a sequential copy without the sort CLUSTER does in
 -- its single statement, then drops the reorder's tables. Fails when the heap is no longer _pages pages long,
@@ -849,35 +912,142 @@ RETURNS VOID
 AS
 $function$
 DECLARE
-  __staged BIGINT;
   __copied BIGINT := 0;
   __rows BIGINT;
   __bucket BIGINT;
 BEGIN
-  IF EXISTS( SELECT 1 FROM hafd.account_operations_reorder_steps WHERE NOT done ) THEN
-    RAISE EXCEPTION 'The reorder of hafd.account_operations has steps that are not done';
-  END IF;
-
-  LOCK TABLE hafd.account_operations IN ACCESS EXCLUSIVE MODE;
-  IF pg_relation_size( 'hafd.account_operations' ) / current_setting( 'block_size' )::BIGINT <> _pages THEN
-    RAISE EXCEPTION 'hafd.account_operations changed while it was being reordered';
-  END IF;
+  PERFORM hive.truncate_account_operations_for_copyback( _pages );
   -- a synchronized scan could start in the middle of a sorted table
   PERFORM set_config( 'synchronize_seqscans', 'off', TRUE );
-  TRUNCATE hafd.account_operations;
   FOR __bucket IN SELECT arg FROM hafd.account_operations_reorder_steps WHERE kind = 'sort' ORDER BY arg LOOP
     EXECUTE format( 'INSERT INTO hafd.account_operations SELECT * FROM hafd.%I', 'account_operations_reorder_sorted_' || __bucket );
     GET DIAGNOSTICS __rows = ROW_COUNT;
     __copied := __copied + __rows;
   END LOOP;
-  __staged := ( SELECT COALESCE( sum( rows ), 0 ) FROM hafd.account_operations_reorder_steps WHERE kind = 'stage' );
-  IF __copied <> __staged THEN
-    RAISE EXCEPTION 'Reordering hafd.account_operations staged % rows but copied %', __staged, __copied;
-  END IF;
+  PERFORM hive.check_account_operations_copyback( __copied );
   PERFORM hive.drop_account_operations_reorder_tables();
 END;
 $function$
 LANGUAGE plpgsql VOLATILE
+;
+
+-- The state of the reorder of hafd.account_operations whose copy-back hive.proc_restore_indexes leaves to
+-- its caller (hive.account_operations_copyback_method): 'pending' once each step is done while the heap is
+-- unchanged and the table has no index, 'copied' once the caller has copied the sorted table back
+-- (hive.end_account_operations_copyback) while the heap is unchanged since, NULL otherwise.
+CREATE OR REPLACE FUNCTION hive.account_operations_copyback_state()
+RETURNS TEXT
+AS
+$function$
+DECLARE
+  __pages BIGINT := pg_relation_size( 'hafd.account_operations' ) / current_setting( 'block_size' )::BIGINT;
+  __heap BIGINT;
+  __copied BIGINT;
+  __steps_left BOOLEAN;
+BEGIN
+  BEGIN
+    EXECUTE
+      'SELECT max( pages ) FILTER ( WHERE kind = ''heap'' ), max( pages ) FILTER ( WHERE kind = ''copied'' ), bool_or( NOT done )
+       FROM hafd.account_operations_reorder_steps'
+    INTO __heap, __copied, __steps_left;
+  EXCEPTION WHEN undefined_table THEN
+    RETURN NULL;
+  END;
+
+  IF __copied IS NOT NULL THEN
+    RETURN CASE WHEN __copied = __pages THEN 'copied' END;
+  END IF;
+  IF __heap = __pages AND NOT __steps_left
+     AND NOT EXISTS( SELECT 1 FROM pg_index WHERE indrelid = 'hafd.account_operations'::regclass ) THEN
+    RETURN 'pending';
+  END IF;
+  RETURN NULL;
+END;
+$function$
+LANGUAGE plpgsql STABLE
+;
+
+-- Starts the copy-back of the reorder of hafd.account_operations that hive.proc_restore_indexes left to its
+-- caller: truncates the table and returns the sorted tables, in order, which the caller then streams into it,
+-- in the same transaction, each by COPY hafd.account_operations FROM STDIN (FORMAT binary, FREEZE) fed from
+-- COPY <sorted table> TO STDOUT (FORMAT binary) on another connection with synchronize_seqscans off, and ends
+-- with hive.end_account_operations_copyback. For COPY FREEZE, it must be called by a top-level SELECT, with no
+-- cursor open. Fails when the table has an index, which COPY would maintain row by row and which is to be
+-- built after the copy-back, or when no reorder awaits its copy-back (hive.account_operations_copyback_state).
+CREATE OR REPLACE FUNCTION hive.start_account_operations_copyback()
+RETURNS SETOF TEXT
+AS
+$function$
+BEGIN
+  IF EXISTS( SELECT 1 FROM pg_index WHERE indrelid = 'hafd.account_operations'::regclass ) THEN
+    RAISE EXCEPTION 'hafd.account_operations has indexes, its copy-back must run before they are built';
+  END IF;
+  IF hive.account_operations_copyback_state() IS DISTINCT FROM 'pending' THEN
+    RAISE EXCEPTION 'No reorder of hafd.account_operations awaits its copy-back';
+  END IF;
+
+  PERFORM hive.truncate_account_operations_for_copyback(
+    ( SELECT pages FROM hafd.account_operations_reorder_steps WHERE kind = 'heap' ) );
+  RETURN QUERY
+    SELECT format( 'hafd.%I', 'account_operations_reorder_sorted_' || arg )
+    FROM hafd.account_operations_reorder_steps WHERE kind = 'sort' ORDER BY arg;
+END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
+-- Ends the copy-back that hive.start_account_operations_copyback started in the caller's transaction, in
+-- which the caller copied _copied rows: fails when they differ from the staged ones, drops the sorted tables
+-- and records the copy-back, so that hive.proc_restore_indexes, CALLed again, goes on without reordering.
+CREATE OR REPLACE FUNCTION hive.end_account_operations_copyback( in _copied BIGINT )
+RETURNS VOID
+AS
+$function$
+DECLARE
+  __bucket BIGINT;
+BEGIN
+  PERFORM hive.check_account_operations_copyback( _copied );
+  FOR __bucket IN SELECT arg FROM hafd.account_operations_reorder_steps WHERE kind = 'sort' LOOP
+    EXECUTE format( 'DROP TABLE hafd.%I', 'account_operations_reorder_sorted_' || __bucket );
+  END LOOP;
+  DROP TABLE hafd.account_operations_reorder_staging;
+  INSERT INTO hafd.account_operations_reorder_steps( kind, arg, pages, rows, done )
+  VALUES ( 'copied', 0, pg_relation_size( 'hafd.account_operations' ) / current_setting( 'block_size' )::BIGINT, _copied, TRUE );
+END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
+-- Steps 1. and 2. of hive.proc_reorder_account_operations, committing after each step: prepares the reorder
+-- (hive.prepare_account_operations_reorder), does its steps and waits for those that helpers are doing.
+-- Must be CALLed outside a transaction block.
+CREATE OR REPLACE PROCEDURE hive.proc_stage_and_sort_account_operations( in _pages_per_step INTEGER DEFAULT 1048576 )
+LANGUAGE plpgsql
+AS
+$procedure$
+DECLARE
+  __step_time TIMESTAMP;
+BEGIN
+  PERFORM hive.prepare_account_operations_reorder( _pages_per_step );
+  COMMIT;
+
+  __step_time := clock_timestamp();
+  LOOP
+    IF hive.do_account_operations_reorder_step() THEN
+      COMMIT;
+      CONTINUE;
+    END IF;
+    EXIT WHEN NOT EXISTS( SELECT 1 FROM hafd.account_operations_reorder_steps WHERE NOT done );
+    -- helpers are doing the last steps
+    PERFORM pg_sleep( 1 );
+    COMMIT;
+  END LOOP;
+  RAISE NOTICE 'Staged and sorted % rows of hafd.account_operations in % account ranges in % seconds'
+    , ( SELECT sum( rows ) FROM hafd.account_operations_reorder_steps WHERE kind = 'stage' )
+    , ( SELECT count(*) FROM hafd.account_operations_reorder_steps WHERE kind = 'sort' )
+    , EXTRACT( EPOCH FROM clock_timestamp() - __step_time );
+END;
+$procedure$
 ;
 
 -- Rewrites hafd.account_operations in (account_id, account_op_seq_no) order, keeping the table
@@ -904,26 +1074,10 @@ DECLARE
   __step_time TIMESTAMP;
 BEGIN
   RAISE NOTICE 'Reordering hafd.account_operations by (account_id, account_op_seq_no)...';
-  __pages := hive.prepare_account_operations_reorder( _pages_per_step );
-  COMMIT;
+  CALL hive.proc_stage_and_sort_account_operations( _pages_per_step );
 
   __step_time := clock_timestamp();
-  LOOP
-    IF hive.do_account_operations_reorder_step() THEN
-      COMMIT;
-      CONTINUE;
-    END IF;
-    EXIT WHEN NOT EXISTS( SELECT 1 FROM hafd.account_operations_reorder_steps WHERE NOT done );
-    -- helpers are doing the last steps
-    PERFORM pg_sleep( 1 );
-    COMMIT;
-  END LOOP;
-  RAISE NOTICE 'Staged and sorted % rows of hafd.account_operations in % account ranges in % seconds'
-    , ( SELECT sum( rows ) FROM hafd.account_operations_reorder_steps WHERE kind = 'stage' )
-    , ( SELECT count(*) FROM hafd.account_operations_reorder_steps WHERE kind = 'sort' )
-    , EXTRACT( EPOCH FROM clock_timestamp() - __step_time );
-
-  __step_time := clock_timestamp();
+  __pages := ( SELECT pages FROM hafd.account_operations_reorder_steps WHERE kind = 'heap' );
   PERFORM hive.finish_account_operations_reorder( __pages );
   COMMIT;
   RAISE NOTICE 'Copied the sorted hafd.account_operations back in % seconds', EXTRACT( EPOCH FROM clock_timestamp() - __step_time );
@@ -1227,7 +1381,10 @@ $procedure$
 -- not for the whole table. hafd.account_operations is reordered as hive.account_operations_reorder_method
 -- says, by CLUSTER when hive.account_operations_reorder_space_suffices finds too little free space for
 -- the rewrite. Sessions running hive.proc_help_restore_indexes share the reorder's steps and the index
--- builds with it; it holds hive.index_restore_lock_key while it runs. Must be CALLed outside a transaction block.
+-- builds with it; it holds hive.index_restore_lock_key while it runs. When the rewrite's copy-back is
+-- left to the caller (hive.account_operations_copyback_method() = 'copy'), it returns once the table is
+-- sorted, with hive.account_operations_copyback_state() 'pending'; CALLed again after the caller's
+-- copy-back, it goes on with the table's indexes. Must be CALLed outside a transaction block.
 CREATE OR REPLACE PROCEDURE hive.proc_restore_indexes( in _table_name TEXT )
 LANGUAGE plpgsql
 AS
@@ -1235,6 +1392,7 @@ $procedure$
 DECLARE
   __command TEXT;
   __rewrite BOOLEAN := FALSE;
+  __copied BOOLEAN := FALSE;
   __lock_key BIGINT := hive.index_restore_lock_key( _table_name );
 BEGIN
   PERFORM pg_advisory_lock( __lock_key );
@@ -1243,13 +1401,26 @@ BEGIN
 
   IF _table_name = 'hafd.account_operations' THEN
     __command := hive.missing_account_operations_cluster_index();
-    IF hive.account_operations_reorder_method() = 'rewrite' AND __command IS NOT NULL THEN
+    IF __command IS NOT NULL AND hive.account_operations_copyback_state() IS NOT DISTINCT FROM 'copied' THEN
+      __copied := TRUE;
+    ELSIF hive.account_operations_reorder_method() = 'rewrite' AND __command IS NOT NULL THEN
       __rewrite := hive.account_operations_reorder_space_suffices();
     END IF;
 
-    IF __rewrite THEN
+    IF __rewrite AND hive.account_operations_copyback_method() = 'copy' THEN
+      RAISE NOTICE 'Reordering hafd.account_operations by (account_id, account_op_seq_no), to be copied back by the caller...';
+      CALL hive.proc_stage_and_sort_account_operations();
+      RAISE NOTICE 'Leaving the copy-back of the sorted hafd.account_operations to the caller (hive.account_operations_copyback = ''copy'')';
+      PERFORM pg_advisory_unlock( __lock_key );
+      RETURN;
+    END IF;
+
+    IF __rewrite OR __copied THEN
       -- reordered again when interrupted before hive_account_operations_uq1 commits
-      CALL hive.proc_reorder_account_operations();
+      IF __rewrite THEN
+        CALL hive.proc_reorder_account_operations();
+      END IF;
+      PERFORM hive.drop_account_operations_reorder_tables();
       PERFORM hive.restore_index( __command );
       ALTER TABLE hafd.account_operations CLUSTER ON hive_account_operations_uq1;
       COMMIT;

@@ -443,6 +443,20 @@ back vacuum for the whole database for its full length. It also holds an `ACCESS
 the table, so reads of the table wait for it. Before the copy the table can be read as usual. The
 reorder needs free disk space of about twice the table's size.
 
+The setting `hive.account_operations_copyback` selects how that last copy writes the rows: `insert`
+(`INSERT ... SELECT`, the default when it is unset) or `copy`, which `hived` sets for its session unless it
+is set for the database or role. With `copy`, `hive.proc_restore_indexes` returns once the ranges are sorted,
+and `hived` copies them back itself, in one transaction: `hive.start_account_operations_copyback()` checks
+that the table has no index and truncates it, `hived` streams each sorted range from a second connection into
+`COPY hafd.account_operations FROM STDIN (FORMAT binary, FREEZE)`, and
+`hive.end_account_operations_copyback(rows)` checks the row count and drops the ranges. `hived` then calls
+`hive.proc_restore_indexes` again, which builds the indexes without reordering the table again. `COPY` inserts
+the rows in batches and writes them frozen, with the visibility map set, so the `VACUUM (FREEZE, ANALYZE)`
+that follows the restore skips them. `COPY ... FREEZE` has to be a statement of its own in the transaction that
+truncated the table, which a PL/pgSQL procedure cannot run, hence the copy-back in `hived`. Set `insert` to go
+back to the copy-back inside the procedure, e.g.
+`ALTER DATABASE haf_block_log SET hive.account_operations_copyback = 'insert';`.
+
 The copying of the slices and the sorting of the ranges are independent steps, listed in the unlogged
 table `hafd.account_operations_reorder_steps`. `hived` runs helper connections alongside the restore
 (`hive.proc_help_restore_indexes`), which claim those steps (`FOR UPDATE SKIP LOCKED`) and do them at the
