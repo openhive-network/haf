@@ -990,7 +990,68 @@ $function$
 LANGUAGE plpgsql VOLATILE
 ;
 
--- Restores the table's indexes and PK/UNIQUE constraints in the caller's transaction.
+-- Claims the table's 'missing' NOT NULL constraints that no session is restoring and that
+-- hive.is_index_restore_ready, and restores them together in the caller's transaction: those the table
+-- still has (the massive sync saves them but does not drop them) are only marked 'created', since
+-- ADD CONSTRAINT would take an ACCESS EXCLUSIVE lock, queuing the table's readers behind it, to change
+-- nothing; the others are added by one ALTER TABLE, which checks all of them in one scan of the table.
+-- Returns FALSE when there is no constraint to claim.
+CREATE OR REPLACE FUNCTION hive.restore_not_null_constraints( in _table_name TEXT )
+RETURNS BOOLEAN
+AS
+$function$
+DECLARE
+  __names TEXT[];
+  __present TEXT[];
+  __subcommands TEXT[];
+  __statement TEXT;
+  __start_time TIMESTAMP;
+BEGIN
+  SELECT array_agg( c.index_constraint_name )
+       , array_agg( c.index_constraint_name ) FILTER ( WHERE c.present )
+       , array_agg( c.parts[1] ) FILTER ( WHERE NOT c.present )
+  INTO __names, __present, __subcommands
+  FROM (
+    SELECT ic.index_constraint_name, m.parts
+         , EXISTS( SELECT 1 FROM pg_constraint pgc
+                   WHERE pgc.conrelid = _table_name::regclass AND pgc.contype = 'n' AND pgc.convalidated
+                     AND pgc.conname = ic.index_constraint_name AND pg_get_constraintdef( pgc.oid ) = m.parts[2] ) AS present
+    FROM (
+      SELECT ic.index_constraint_name, ic.command
+      FROM hafd.indexes_constraints ic
+      WHERE ic.table_name = _table_name AND ic.is_foreign_key = FALSE AND ic.status = 'missing' AND NOT ic.is_constraint
+        AND ic.command ~ '^ALTER TABLE \S+ ADD CONSTRAINT \S+ NOT NULL \S+$'
+        AND hive.is_index_restore_ready( ic.table_name, ic.index_constraint_name )
+      FOR UPDATE OF ic SKIP LOCKED
+    ) ic
+    CROSS JOIN LATERAL regexp_match( ic.command, '^ALTER TABLE \S+ (ADD CONSTRAINT \S+ (NOT NULL \S+))$' ) AS m( parts )
+  ) c;
+
+  IF __names IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  UPDATE hafd.indexes_constraints SET status = 'creating'
+  WHERE table_name = _table_name AND index_constraint_name = ANY( __names );
+  IF __present IS NOT NULL THEN
+    RAISE NOTICE 'NOT NULL constraints of % already in place: %', _table_name, array_to_string( __present, ', ' );
+  END IF;
+  IF __subcommands IS NOT NULL THEN
+    __statement := format( 'ALTER TABLE %s %s', _table_name, array_to_string( __subcommands, ', ' ) );
+    RAISE NOTICE 'Restoring NOT NULL constraints: %', __statement;
+    __start_time := clock_timestamp();
+    EXECUTE __statement;
+    RAISE NOTICE 'NOT NULL constraints of % created in % seconds', _table_name, EXTRACT(EPOCH FROM clock_timestamp() - __start_time);
+  END IF;
+  UPDATE hafd.indexes_constraints SET status = 'created'
+  WHERE table_name = _table_name AND index_constraint_name = ANY( __names );
+  RETURN TRUE;
+END;
+$function$
+LANGUAGE plpgsql VOLATILE
+;
+
+-- Restores the table's indexes and PK/UNIQUE and NOT NULL constraints in the caller's transaction.
 -- hive.proc_restore_indexes does the same, committing each statement on its own.
 CREATE OR REPLACE FUNCTION hive.restore_indexes( in _table_name TEXT)
 RETURNS VOID
@@ -1005,6 +1066,7 @@ BEGIN
     PERFORM hive.recluster_account_operations_if_index_dropped();
   END IF;
 
+  PERFORM hive.restore_not_null_constraints( _table_name );
   FOR __command IN
     SELECT command FROM hafd.indexes_constraints WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing'
   LOOP
@@ -1074,11 +1136,13 @@ LANGUAGE sql STABLE
 ;
 
 -- Claims a 'missing' index or PK/UNIQUE constraint of the table that no session is building and builds
--- it with hive.restore_index, in the caller's transaction, which commits next, if
--- hive.is_index_restore_ready. Returns FALSE when there is no index to claim.
+-- it with hive.restore_index, or the table's NOT NULL constraints with hive.restore_not_null_constraints,
+-- in the caller's transaction, which commits next, if hive.is_index_restore_ready. Returns FALSE when
+-- there is nothing to claim.
 -- Attaching a constraint's index needs an ACCESS EXCLUSIVE lock, which would wait, stalling the readers
 -- of the table queued behind it, for every index build of another session, or deadlock with another
--- attach: so a table's constraints are built one at a time, and its plain indexes only after them.
+-- attach: so a table's PK/UNIQUE constraints are built one at a time, and its NOT NULL constraints and
+-- plain indexes only after them.
 CREATE OR REPLACE FUNCTION hive.restore_next_index( in _table_name TEXT )
 RETURNS BOOLEAN
 AS
@@ -1093,6 +1157,12 @@ BEGIN
       AND hive.is_index_restore_ready( ic.table_name, ic.index_constraint_name )
     LIMIT 1
     FOR UPDATE OF ic SKIP LOCKED;
+  END IF;
+
+  IF __command IS NULL AND NOT EXISTS( SELECT 1 FROM hafd.indexes_constraints
+                                       WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing' AND is_constraint )
+     AND hive.restore_not_null_constraints( _table_name ) THEN
+    RETURN TRUE;
   END IF;
 
   IF __command IS NULL THEN

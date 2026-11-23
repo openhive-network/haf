@@ -200,6 +200,7 @@ GRANT EXECUTE ON FUNCTION
     , hive.index_restore_helpers( in _table_name TEXT, in _cores INTEGER )
     , hive.is_index_restore_ready( in _table_name TEXT, in _index_constraint_name TEXT )
     , hive.restore_next_index( in _table_name TEXT )
+    , hive.restore_not_null_constraints( in _table_name TEXT )
     , hive.reset_interrupted_index_restores( in _table_name TEXT )
     , hive.restore_index( in _command TEXT )
     , hive.restore_indexes( in _table_name TEXT )
