@@ -30,6 +30,8 @@
 
 #include <sys/statvfs.h>
 
+#include <libpq-fe.h>
+
 namespace hive { namespace plugins { namespace sql_serializer {
 
 namespace {
@@ -111,6 +113,16 @@ void set_account_operations_reorder_free_space(pqxx::nontransaction& tx, const s
   tx.exec_params("SELECT set_config( 'hive.account_operations_reorder_free_space', $1, FALSE )", std::to_string(free_bytes));
 }
 
+void log_index_restore_notice(const std::string& table_name, std::string_view message)
+{
+  while (!message.empty() && (message.back() == '\n' || message.back() == '\r'))
+    message.remove_suffix(1);
+  if (message.rfind("WARNING", 0) == 0)
+    wlog("Index restore of ${table_name}: ${message}", (table_name)("message", std::string(message)));
+  else
+    ilog("Index restore of ${table_name}: ${message}", (table_name)("message", std::string(message)));
+}
+
 // Writes the NOTICEs and WARNINGs of an index restore session to hived's log, one line each, tagged with the table.
 // Terse verbosity leaves out the CONTEXT lines that PL/pgSQL adds to every RAISE.
 void log_index_restore_notices(pqxx::connection& conn, const std::string& table_name)
@@ -118,14 +130,102 @@ void log_index_restore_notices(pqxx::connection& conn, const std::string& table_
   conn.set_verbosity(pqxx::error_verbosity::terse);
   conn.set_notice_handler([table_name](pqxx::zview notice) noexcept
   {
-    std::string_view message(notice);
-    while (!message.empty() && (message.back() == '\n' || message.back() == '\r'))
-      message.remove_suffix(1);
-    if (message.rfind("WARNING", 0) == 0)
-      wlog("Index restore of ${table_name}: ${message}", (table_name)("message", std::string(message)));
-    else
-      ilog("Index restore of ${table_name}: ${message}", (table_name)("message", std::string(message)));
+    log_index_restore_notice(table_name, notice);
   });
+}
+
+// Copies the reordered hafd.account_operations back by COPY ... FREEZE (copy_back_account_operations),
+// unless hive.account_operations_copyback is already set for the database or role, e.g. to 'insert'.
+void set_account_operations_copyback(pqxx::nontransaction& tx)
+{
+  const pqxx::result preset = tx.exec("SELECT NULLIF( current_setting( 'hive.account_operations_copyback', TRUE ), '' ) AS method");
+  if (!preset[0]["method"].is_null())
+  {
+    ilog("The copy-back of the reordered hafd.account_operations is set to ${method}", ("method", preset[0]["method"].as<std::string>()));
+    return;
+  }
+  tx.exec("SELECT set_config( 'hive.account_operations_copyback', 'copy', FALSE )");
+}
+
+using pg_connection_ptr = std::unique_ptr<PGconn, decltype(&PQfinish)>;
+using pg_result_ptr = std::unique_ptr<PGresult, decltype(&PQclear)>;
+
+pg_connection_ptr connect_for_copyback(const std::string& db_url)
+{
+  pg_connection_ptr conn(PQconnectdb(db_url.c_str()), &PQfinish);
+  if (PQstatus(conn.get()) != CONNECTION_OK)
+    throw std::runtime_error("Cannot connect for the copy-back of hafd.account_operations: " + std::string(PQerrorMessage(conn.get())));
+  PQsetErrorVerbosity(conn.get(), PQERRORS_TERSE);
+  PQsetNoticeProcessor(conn.get(), [](void*, const char* message)
+  {
+    log_index_restore_notice("hafd.account_operations", message);
+  }, nullptr);
+  return conn;
+}
+
+pg_result_ptr exec_for_copyback(PGconn* conn, const std::string& sql, ExecStatusType expected)
+{
+  pg_result_ptr result(PQexec(conn, sql.c_str()), &PQclear);
+  if (PQresultStatus(result.get()) != expected)
+    throw std::runtime_error("The copy-back of hafd.account_operations failed in `" + sql + "': " + PQerrorMessage(conn));
+  return result;
+}
+
+// Streams one sorted table of the reorder from source into the truncated hafd.account_operations on target,
+// in binary, row by row as PostgreSQL sends them. Returns the number of rows copied.
+int64_t stream_sorted_account_operations(PGconn* source, PGconn* target, const std::string& sorted_table)
+{
+  exec_for_copyback(source, "COPY " + sorted_table + " TO STDOUT (FORMAT binary)", PGRES_COPY_OUT);
+  exec_for_copyback(target, "COPY hafd.account_operations FROM STDIN (FORMAT binary, FREEZE)", PGRES_COPY_IN);
+  for (;;)
+  {
+    char* data = nullptr;
+    const int length = PQgetCopyData(source, &data, 0);
+    if (length == -1)
+      break;
+    if (length < 0)
+      throw std::runtime_error("Reading " + sorted_table + " for the copy-back of hafd.account_operations failed: " + PQerrorMessage(source));
+    const bool sent = PQputCopyData(target, data, length) == 1;
+    PQfreemem(data);
+    if (!sent)
+      throw std::runtime_error("Writing " + sorted_table + " back into hafd.account_operations failed: " + PQerrorMessage(target));
+  }
+
+  const pg_result_ptr read(PQgetResult(source), &PQclear);
+  if (PQresultStatus(read.get()) != PGRES_COMMAND_OK)
+    throw std::runtime_error("Reading " + sorted_table + " for the copy-back of hafd.account_operations failed: " + PQerrorMessage(source));
+  if (PQputCopyEnd(target, nullptr) != 1)
+    throw std::runtime_error("Writing " + sorted_table + " back into hafd.account_operations failed: " + PQerrorMessage(target));
+  const pg_result_ptr written(PQgetResult(target), &PQclear);
+  if (PQresultStatus(written.get()) != PGRES_COMMAND_OK)
+    throw std::runtime_error("Writing " + sorted_table + " back into hafd.account_operations failed: " + PQerrorMessage(target));
+  return std::stoll(PQcmdTuples(written.get()));
+}
+
+// Copies the sorted hafd.account_operations back, which hive.proc_restore_indexes left to its caller, in one
+// transaction (hive.start_account_operations_copyback): COPY FREEZE needs to be a top-level statement in the
+// transaction that truncated the table, which a PL/pgSQL procedure cannot run. The rows are read on a second
+// connection. A failure rolls the copy-back back, leaving the table as it was before.
+void copy_back_account_operations(const std::string& db_url)
+{
+  const auto start_time = fc::time_point::now();
+  const pg_connection_ptr target = connect_for_copyback(db_url);
+  const pg_connection_ptr source = connect_for_copyback(db_url);
+  // a synchronized scan could start in the middle of a sorted table
+  exec_for_copyback(source.get(), "SET synchronize_seqscans = off", PGRES_COMMAND_OK);
+
+  exec_for_copyback(target.get(), "BEGIN", PGRES_COMMAND_OK);
+  const pg_result_ptr sorted_tables = exec_for_copyback(target.get(), "SELECT hive.start_account_operations_copyback()", PGRES_TUPLES_OK);
+  int64_t copied = 0;
+  for (int i = 0; i < PQntuples(sorted_tables.get()); ++i)
+    copied += stream_sorted_account_operations(source.get(), target.get(), PQgetvalue(sorted_tables.get(), i, 0));
+  exec_for_copyback(target.get(), "SELECT hive.end_account_operations_copyback( " + std::to_string(copied) + " )", PGRES_TUPLES_OK);
+  const pg_result_ptr commit = exec_for_copyback(target.get(), "COMMIT", PGRES_COMMAND_OK);
+  if (std::string_view(PQcmdStatus(commit.get())) != "COMMIT")
+    throw std::runtime_error("The copy-back of hafd.account_operations was rolled back: " + std::string(PQcmdStatus(commit.get())));
+
+  ilog("PROFILE: Copied ${rows} sorted rows of ${tables} tables back into hafd.account_operations by COPY FREEZE: ${t}s",
+    ("rows", copied)("tables", PQntuples(sorted_tables.get()))("t", (fc::time_point::now() - start_time).to_seconds()));
 }
 
 // Runs hive.proc_help_restore_indexes on connections of its own and joins them when destroyed.
@@ -759,6 +859,7 @@ indexes_controler::vacuum_account_operations() {
   // The reorder (hive.proc_reorder_account_operations or CLUSTER) rewrites hafd.account_operations
   // without a visibility map and the table is insert-only,
   // so autovacuum would not build one for weeks; until then every index-only scan fetches heap rows.
+  // Its COPY FREEZE copy-back (copy_back_account_operations) writes the rows frozen with the map set, so the vacuum skips them.
   // VACUUM cannot run inside a transaction, hence it is issued here instead of in hive.restore_indexes.
   // ANALYZE rides along: it replaces the one hive.recluster_account_operations_if_index_dropped ran after CLUSTER.
   const std::string vacuum_command = "VACUUM (FREEZE, ANALYZE) hafd.account_operations";
@@ -841,7 +942,7 @@ indexes_controler::start_restore_indexes( const std::string& table_name, std::st
   std::string description = "Query processor: `" + query + "'";
   auto processor = std::make_unique< data_processor >( description, "index_ctrl",
                                                        [db_url=db_url_with_hived_app(_db_url), maintainer_db_url=db_url_with_hived_app_as_haf_maintainer(_db_url),
-                                                        check_reorder_space=( table_name == "hafd.account_operations" ), table_name,
+                                                        is_account_operations=( table_name == "hafd.account_operations" ), table_name,
                                                         query, objects_name=std::move(objects_name), description](const data_processor::data_chunk_ptr&) -> data_processor::data_processing_status
   {
     ilog("Attempting to execute query: `${query}`...", ("query", query ) );
@@ -851,8 +952,11 @@ indexes_controler::start_restore_indexes( const std::string& table_name, std::st
     pqxx::connection conn(db_url);
     log_index_restore_notices( conn, table_name );
     pqxx::nontransaction tx(conn);
-    if ( check_reorder_space )
+    if ( is_account_operations )
+    {
       set_account_operations_reorder_free_space( tx, maintainer_db_url );
+      set_account_operations_copyback( tx );
+    }
     // taken before the helpers start: a helper returns when no session holds it
     tx.exec_params( "SELECT pg_advisory_lock( hive.index_restore_lock_key( $1 ) )", table_name );
     const int helper_count = tx.exec_params( "SELECT hive.index_restore_helpers( $1, $2 ) AS helpers",
@@ -861,6 +965,13 @@ indexes_controler::start_restore_indexes( const std::string& table_name, std::st
       ilog( "Restoring the indexes of ${table_name} with ${helper_count} helper connections", (table_name)(helper_count) );
     helpers.start( db_url, table_name, helper_count );
     tx.exec( query );
+    if ( is_account_operations
+         && tx.exec( "SELECT hive.account_operations_copyback_state() IS NOT DISTINCT FROM 'pending' AS pending" )[0]["pending"].as<bool>() )
+    {
+      // the helpers wait meanwhile: this session still holds the lock
+      copy_back_account_operations( db_url );
+      tx.exec( query );
+    }
     ilog(
       "${d} Creating of ${mod_type} done in ${time} ms",
       ("d", description) ("mod_type", objects_name) ("time", (fc::time_point::now() - start_time).count() / 1000.0 )
