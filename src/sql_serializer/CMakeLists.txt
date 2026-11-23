@@ -9,6 +9,10 @@ SET (CMAKE_FIND_LIBRARY_SUFFIXES ${ORIGINAL_LIB_SUFFIXES})
 
 FIND_LIBRARY(PQ_LIB pq REQUIRED)
 
+# hived builds this plugin in its own tree, where PostgreSQL_INCLUDE_DIRS is not set; indexes_controler.cpp
+# uses libpq directly for COPY FREEZE
+FIND_PATH(PQ_INCLUDE_DIR libpq-fe.h PATH_SUFFIXES postgresql REQUIRED)
+
 ADD_LIBRARY(
     sql_serializer_plugin
     sql_serializer.cpp
@@ -39,7 +43,7 @@ target_link_libraries( sql_serializer_plugin chain_plugin hive_chain hive_protoc
 target_include_directories(
     sql_serializer_plugin
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include"
-    PRIVATE "${PostgreSQL_INCLUDE_DIRS}" "${HAF_DIRECTORY}/common_includes/include" "${HAF_DIRECTORY}/src/transaction_controllers/include"
+    PRIVATE "${PostgreSQL_INCLUDE_DIRS}" "${PQ_INCLUDE_DIR}" "${HAF_DIRECTORY}/common_includes/include" "${HAF_DIRECTORY}/src/transaction_controllers/include"
 )
 
 if( CLANG_TIDY_EXE )
