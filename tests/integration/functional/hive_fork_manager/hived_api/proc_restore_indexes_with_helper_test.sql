@@ -64,7 +64,9 @@ BEGIN
         'hafd.account_operations was not reordered by the rewrite';
     ASSERT NOT EXISTS( SELECT 1 FROM pg_class WHERE relnamespace = 'hafd'::regnamespace AND relname LIKE 'account\_operations\_reorder\_%' ),
         'The reorder left its tables behind';
-    ASSERT NOT EXISTS( SELECT 1 FROM pg_locks WHERE locktype = 'advisory' ),
+    -- pg_locks lists every database's locks, and tests running alongside this one hold advisory locks of their own
+    ASSERT NOT EXISTS( SELECT 1 FROM pg_locks
+                       WHERE locktype = 'advisory' AND database = ( SELECT oid FROM pg_database WHERE datname = current_database() ) ),
         'An advisory lock of the restore is still held';
 END;
 $BODY$
