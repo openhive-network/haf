@@ -1273,18 +1273,51 @@ $function$
 LANGUAGE plpgsql STABLE
 ;
 
+-- The transaction-level advisory lock that hive.proc_restore_indexes holds while it builds
+-- hive_account_operations_uq1 on the reordered hafd.account_operations.
+CREATE OR REPLACE FUNCTION hive.account_operations_cluster_index_lock_key()
+RETURNS BIGINT
+AS
+$function$
+  SELECT hashtextextended( 'hive.proc_restore_indexes hive_account_operations_uq1', 0 );
+$function$
+LANGUAGE sql IMMUTABLE
+;
+
+-- Whether a session holds hive.account_operations_cluster_index_lock_key, i.e. builds hive_account_operations_uq1
+-- on the reordered hafd.account_operations, which no CLUSTER rewrites afterwards. pg_locks splits a bigint key
+-- into classid (high half) and objid (low half), objsubid 1.
+CREATE OR REPLACE FUNCTION hive.is_account_operations_cluster_index_building()
+RETURNS BOOLEAN
+AS
+$function$
+  SELECT EXISTS( SELECT 1 FROM pg_locks
+                 WHERE locktype = 'advisory' AND granted AND objsubid = 1
+                   AND database = ( SELECT oid FROM pg_database WHERE datname = current_database() )
+                   AND classid::BIGINT = ( hive.account_operations_cluster_index_lock_key() >> 32 ) & 4294967295
+                   AND objid::BIGINT = hive.account_operations_cluster_index_lock_key() & 4294967295 );
+$function$
+LANGUAGE sql STABLE
+;
+
 -- Whether hive.restore_next_index may build the index or constraint: any but those of hafd.account_operations,
 -- whose hive_account_operations_uq1 hive.proc_restore_indexes builds with the table's reorder, and whose
 -- other indexes wait for that, i.e. until hive_account_operations_uq1 is past 'missing' and 'creating'.
+-- Only its plain indexes go ahead while hive_account_operations_uq1 is built on the reordered table
+-- (hive.is_account_operations_cluster_index_building): CREATE INDEX takes the SHARE lock the build holds,
+-- while the constraints would queue an ACCESS EXCLUSIVE lock behind it, stalling the other index builds.
 CREATE OR REPLACE FUNCTION hive.is_index_restore_ready( in _table_name TEXT, in _index_constraint_name TEXT )
 RETURNS BOOLEAN
 AS
 $function$
   SELECT _table_name <> 'hafd.account_operations' OR (
     _index_constraint_name <> 'hive_account_operations_uq1'
-    AND NOT EXISTS( SELECT 1 FROM hafd.indexes_constraints
-                    WHERE table_name = 'hafd.account_operations' AND index_constraint_name = 'hive_account_operations_uq1'
-                      AND status IN ( 'missing', 'creating' ) ) );
+    AND ( NOT EXISTS( SELECT 1 FROM hafd.indexes_constraints
+                      WHERE table_name = 'hafd.account_operations' AND index_constraint_name = 'hive_account_operations_uq1'
+                        AND status IN ( 'missing', 'creating' ) )
+          OR ( EXISTS( SELECT 1 FROM hafd.indexes_constraints
+                       WHERE table_name = 'hafd.account_operations' AND index_constraint_name = _index_constraint_name AND is_index )
+               AND hive.is_account_operations_cluster_index_building() ) ) );
 $function$
 LANGUAGE sql STABLE
 ;
@@ -1296,7 +1329,8 @@ LANGUAGE sql STABLE
 -- Attaching a constraint's index needs an ACCESS EXCLUSIVE lock, which would wait, stalling the readers
 -- of the table queued behind it, for every index build of another session, or deadlock with another
 -- attach: so a table's PK/UNIQUE constraints are built one at a time, and its NOT NULL constraints and
--- plain indexes only after them.
+-- plain indexes only after them, but for hive_account_operations_uq1, which hive.proc_restore_indexes builds
+-- and attaches in its own transaction (hive.is_index_restore_ready).
 CREATE OR REPLACE FUNCTION hive.restore_next_index( in _table_name TEXT )
 RETURNS BOOLEAN
 AS
@@ -1325,7 +1359,9 @@ BEGIN
     WHERE ic.table_name = _table_name AND ic.is_foreign_key = FALSE AND ic.status = 'missing' AND NOT ic.is_constraint
       AND hive.is_index_restore_ready( ic.table_name, ic.index_constraint_name )
       AND NOT EXISTS( SELECT 1 FROM hafd.indexes_constraints
-                      WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing' AND is_constraint )
+                      WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing' AND is_constraint
+                        AND NOT ( table_name = 'hafd.account_operations' AND index_constraint_name = 'hive_account_operations_uq1'
+                                  AND hive.is_account_operations_cluster_index_building() ) )
     LIMIT 1
     FOR UPDATE OF ic SKIP LOCKED;
   END IF;
@@ -1354,9 +1390,13 @@ DECLARE
   __lock_key BIGINT := hive.index_restore_lock_key( _table_name );
 BEGIN
   LOOP
-    IF _table_name = 'hafd.account_operations' AND hive.do_account_operations_reorder_step() THEN
+    IF _table_name = 'hafd.account_operations' THEN
+      IF hive.do_account_operations_reorder_step() THEN
+        COMMIT;
+        CONTINUE;
+      END IF;
+      -- releases the reorder's steps, which hive.proc_restore_indexes drops while this session may build an index
       COMMIT;
-      CONTINUE;
     END IF;
     IF hive.restore_next_index( _table_name ) THEN
       COMMIT;
@@ -1416,17 +1456,26 @@ BEGIN
     END IF;
 
     IF __rewrite OR __copied THEN
-      -- reordered again when interrupted before hive_account_operations_uq1 commits
+      -- reordered again when interrupted before hive_account_operations_uq1 commits, but for a copied table,
+      -- whose steps, recording the copy-back, are dropped after it
       IF __rewrite THEN
         CALL hive.proc_reorder_account_operations();
       END IF;
-      PERFORM hive.drop_account_operations_reorder_tables();
+      -- lets the helpers build the table's plain indexes alongside (hive.is_index_restore_ready)
+      PERFORM pg_advisory_xact_lock( hive.account_operations_cluster_index_lock_key() );
       PERFORM hive.restore_index( __command );
       ALTER TABLE hafd.account_operations CLUSTER ON hive_account_operations_uq1;
       COMMIT;
     ELSIF hive.restore_account_operations_cluster_index() THEN
       COMMIT;
       PERFORM hive.cluster_account_operations();
+      COMMIT;
+    END IF;
+
+    -- only now, in a transaction of its own: dropping the steps locks them, which the helpers read; also
+    -- what a restore interrupted after hive_account_operations_uq1 committed left behind
+    IF __rewrite OR __copied OR __command IS NULL THEN
+      PERFORM hive.drop_account_operations_reorder_tables();
       COMMIT;
     END IF;
   END IF;
