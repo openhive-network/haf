@@ -203,6 +203,8 @@ GRANT EXECUTE ON FUNCTION
     , hive.start_account_operations_copyback()
     , hive.end_account_operations_copyback( in _copied BIGINT )
     , hive.index_restore_lock_key( in _table_name TEXT )
+    , hive.account_operations_cluster_index_lock_key()
+    , hive.is_account_operations_cluster_index_building()
     , hive.index_restore_helpers( in _table_name TEXT, in _cores INTEGER )
     , hive.is_index_restore_ready( in _table_name TEXT, in _index_constraint_name TEXT )
     , hive.restore_next_index( in _table_name TEXT )
