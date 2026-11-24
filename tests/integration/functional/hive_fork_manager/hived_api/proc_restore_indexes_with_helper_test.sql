@@ -36,8 +36,17 @@ BEGIN
     -- raises the helper's error, if it failed
     PERFORM * FROM dblink_get_result( 'helper' ) AS t( status TEXT );
     PERFORM * FROM dblink_get_result( 'helper' ) AS t( status TEXT );
-    PERFORM dblink_disconnect( 'helper' );
     PERFORM pg_advisory_unlock( hive.index_restore_lock_key( 'hafd.account_operations' ) );
+
+    -- checked while the restore's and the helper's sessions are still open, as their session-level locks
+    -- end with them; pg_locks splits a bigint key into classid (high half) and objid (low half), objsubid 1
+    ASSERT NOT EXISTS( SELECT 1 FROM pg_locks
+                       WHERE locktype = 'advisory' AND objsubid = 1
+                         AND database = ( SELECT oid FROM pg_database WHERE datname = current_database() )
+                         AND classid::BIGINT = ( hive.index_restore_lock_key( 'hafd.account_operations' ) >> 32 ) & 4294967295
+                         AND objid::BIGINT = hive.index_restore_lock_key( 'hafd.account_operations' ) & 4294967295 ),
+        'The restore''s advisory lock is still held';
+    PERFORM dblink_disconnect( 'helper' );
 END;
 $BODY$
 ;
@@ -64,10 +73,6 @@ BEGIN
         'hafd.account_operations was not reordered by the rewrite';
     ASSERT NOT EXISTS( SELECT 1 FROM pg_class WHERE relnamespace = 'hafd'::regnamespace AND relname LIKE 'account\_operations\_reorder\_%' ),
         'The reorder left its tables behind';
-    -- pg_locks lists every database's locks, and tests running alongside this one hold advisory locks of their own
-    ASSERT NOT EXISTS( SELECT 1 FROM pg_locks
-                       WHERE locktype = 'advisory' AND database = ( SELECT oid FROM pg_database WHERE datname = current_database() ) ),
-        'An advisory lock of the restore is still held';
 END;
 $BODY$
 ;
