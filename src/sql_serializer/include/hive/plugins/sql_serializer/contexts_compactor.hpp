@@ -24,8 +24,11 @@ namespace hive { namespace plugins { namespace sql_serializer {
  * a moment no iteration is running. Holding the key, it runs VACUUM FULL with lock_timeout, which bounds
  * only how long VACUUM FULL waits for its own lock on the table; once granted, hived's statements and
  * new iterations wait for the whole rewrite.
- * A run that gets neither within its bounds is skipped. Whatever its outcome, the next run starts at
- * a block applied after it ended.
+ * A run that gets neither within its bounds is skipped. So is a rewrite that leaves the table over the
+ * threshold only because it had to keep dead rows deleted after the oldest open snapshot or transaction:
+ * a table a rewrite cannot bring under the threshold is not rewritten again until it outgrows its size
+ * after that rewrite, and the kept rows would set that size. Whatever its outcome, the next run starts
+ * at a block applied after it ended.
  */
 class contexts_compactor
 {

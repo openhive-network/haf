@@ -2,8 +2,9 @@ import threading
 import time
 from typing import Any, Callable, Tuple
 
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
+from sqlalchemy.pool import NullPool
 
 import test_tools as tt
 
@@ -34,6 +35,44 @@ def heap_pages(session: Session) -> int:
     pages = int(session.execute(text("SELECT hive.contexts_heap_pages()")).scalar_one())
     session.commit()
     return pages
+
+
+# Sessions VACUUM FULL may keep the filler rows for: one with a transaction not newer than their DELETE in any
+# database (VACUUM FULL's own snapshot does not see past it), or one of the test database with an older snapshot.
+OLDER_SNAPSHOTS = """
+SELECT pid, datname, backend_type, application_name, state, backend_xid::TEXT AS xid, backend_xmin::TEXT AS xmin,
+       xact_start, wait_event_type, wait_event, left( query, 200 ) AS query
+FROM pg_stat_activity
+WHERE pid <> pg_backend_pid()
+  AND ( age( backend_xid ) >= age( CAST( :deleted_by AS xid ) )
+        OR ( datname = current_database() AND age( backend_xmin ) >= age( CAST( :deleted_by AS xid ) ) ) )
+ORDER BY pid
+"""
+
+
+def older_snapshots(session: Session, deleted_by: str) -> list[str]:
+    rows = (
+        session.execute(text(OLDER_SNAPSHOTS), {"deleted_by": deleted_by})
+        .mappings()
+        .all()
+    )
+    session.commit()
+    return [", ".join(f"{key}={value}" for key, value in row.items()) for row in rows]
+
+
+def wait_for_no_older_snapshots(session: Session, deleted_by: str) -> None:
+    deadline = time.monotonic() + TIMEOUT_SECONDS
+    logged: list[str] = []
+    while holders := older_snapshots(session, deleted_by):
+        if holders != logged:
+            tt.logger.info(
+                f"waiting for snapshots older than the DELETE (xid {deleted_by}): {holders}"
+            )
+            logged = holders
+        assert time.monotonic() < deadline, (
+            f"snapshots older than the DELETE (xid {deleted_by}) remained: {holders}"
+        )
+        time.sleep(0.2)
 
 
 def wait_for_log_line(node: Any, matches: Callable[[str], bool], what: str) -> str:
@@ -80,6 +119,22 @@ def test_contexts_compaction(
     app_thread = threading.Thread(target=run_app)
     app_thread.start()
 
+    # Taken before the DELETE below, as applications' sessions or other databases' work may hold them: an older
+    # snapshot of the test database and a transaction of another database keep VACUUM FULL from dropping the
+    # filler rows. Neither locks hafd.contexts, so neither keeps hived from rewriting it.
+    older_snapshot = session.bind.connect().execution_options(
+        isolation_level="REPEATABLE READ"
+    )
+    older_snapshot_pid = older_snapshot.execute(
+        text("SELECT pg_backend_pid()")
+    ).scalar_one()
+    other_database = create_engine(
+        session.bind.url.set(database="postgres"), poolclass=NullPool
+    ).connect()
+    other_database_pid = other_database.execute(
+        text("SELECT pg_backend_pid() FROM pg_current_xact_id()")
+    ).scalar_one()
+
     # dead rows that only a rewrite gives back
     session.execute(
         text(
@@ -89,6 +144,9 @@ def test_contexts_compaction(
         )
     )
     session.execute(text("DELETE FROM hafd.contexts WHERE owner = 'compaction_filler'"))
+    deleted_by = session.execute(
+        text("SELECT pg_current_xact_id()::xid::TEXT")
+    ).scalar_one()
     session.commit()
     pages_before = heap_pages(session)
     assert pages_before > THRESHOLD_PAGES, (
@@ -115,6 +173,15 @@ def test_contexts_compaction(
             assert heap_pages(session) >= pages_before, (
                 "hafd.contexts was compacted while another session held a lock on it"
             )
+            holders = older_snapshots(session, deleted_by)
+            for pid in (older_snapshot_pid, other_database_pid):
+                assert any(line.startswith(f"pid={pid},") for line in holders), (
+                    f"session {pid}, older than the DELETE, is not reported: {holders}"
+                )
+            older_snapshot.close()
+            other_database.close()
+            # so the compaction that starts once the lock is gone can give the filler rows back
+            wait_for_no_older_snapshots(session, deleted_by)
             holder.rollback()
 
         # WHEN the lock is gone THEN a later block compacts the table, with the application iterating
@@ -129,6 +196,8 @@ def test_contexts_compaction(
             f"hafd.contexts still has {pages_after} pages after: {compacted}"
         )
     finally:
+        older_snapshot.close()
+        other_database.close()
         session.execute(text("INSERT INTO compaction_app.stop VALUES ( TRUE )"))
         session.commit()
         app_thread.join(timeout=TIMEOUT_SECONDS)
