@@ -22,6 +22,24 @@ int64_t heap_pages( pqxx::nontransaction& tx )
   return tx.exec( "SELECT hive.contexts_heap_pages() AS pages" )[ 0 ][ "pages" ].as< int64_t >();
 }
 
+struct row_counts
+{
+  int64_t live;
+  // dead rows VACUUM FULL had to copy: a snapshot or transaction older than their deletion was still open,
+  // in any database for a transaction, as VACUUM FULL's own snapshot does not see past it
+  int64_t kept_dead;
+};
+
+// VACUUM FULL sets reltuples to the rows it copied, the kept dead ones included.
+row_counts rows_after_rewrite( pqxx::nontransaction& tx )
+{
+  pqxx::row r = tx.exec(
+    "SELECT ( SELECT count(*) FROM hafd.contexts ) AS live, c.reltuples::BIGINT AS copied "
+    "FROM pg_class c WHERE c.oid = 'hafd.contexts'::REGCLASS" )[ 0 ];
+  const int64_t live = r[ "live" ].as< int64_t >();
+  return { live, std::max< int64_t >( r[ "copied" ].as< int64_t >() - live, 0 ) };
+}
+
 const contexts_compactor::settings& validated( const contexts_compactor::settings& s )
 {
   // PostgreSQL reads a lock_timeout of 0 as "no timeout", which would let a compaction hold every application back.
@@ -196,6 +214,18 @@ void contexts_compactor::compact_if_needed( pqxx::connection& conn )
   }
 
   const int64_t pages_after = heap_pages( tx );
+  const row_counts rows = rows_after_rewrite( tx );
+  // The kept dead rows are what keeps the table over the threshold: its size is no floor, the dead rows go
+  // with a rewrite that starts once the transactions that kept them have ended.
+  if ( pages_after > _settings.threshold_pages && rows.kept_dead > 0
+       && pages_after * rows.live <= int64_t( _settings.threshold_pages ) * ( rows.live + rows.kept_dead ) )
+  {
+    const std::string reason = "the rewrite kept " + std::to_string( rows.kept_dead ) + " dead rows deleted after the oldest open transaction, leaving "
+                               + std::to_string( pages_after ) + " pages";
+    skipped( reason.c_str(), pages_before, gate_wait );
+    return;
+  }
+
   ilog( "Compacted hafd.contexts from ${before} to ${after} pages: gate wait ${gate} ms, rewrite ${rewrite} ms, after ${skips} consecutive skips",
         ( "before", pages_before )( "after", pages_after )( "gate", gate_wait )( "rewrite", rewrite_duration )( "skips", _consecutive_skips ) );
   if ( pages_after > _settings.threshold_pages )
