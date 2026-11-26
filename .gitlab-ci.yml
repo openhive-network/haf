@@ -1,44 +1,2030 @@
 stages:
-  - pv
+  - detect                     # detect_changes runs here to set skip variables
+  - build_and_test_phase_1
+  - build_and_test_phase_2
+  - docker_build
+  - deploy
+  - cleanup
+  - publish
 
-pv16036_probe:
-  stage: pv
-  image: python:3.11
-  tags: [public-runner-docker]
+variables:
+  PYTEST_NUMBER_OF_PROCESSES: 8
+  CTEST_NUMBER_OF_JOBS: 4
+  # Package caching proxies on genfiles — passed as build-args to Dockerfile.
+  # Empty values are safe (pip falls back to pypi.org).
+  PIP_INDEX_URL: "http://pypi-cache.syncad.com:8080/root/pypi/+simple/"
+  PIP_TRUSTED_HOST: "pypi-cache.syncad.com"
+  # HAF_COMMIT is used as cache key - in HAF's own CI, it's the current commit
+  HAF_COMMIT: $CI_COMMIT_SHA
+  # Enable CI-specific PostgreSQL config with reduced memory (4GB shared_buffers vs 16GB)
+  # This allows multiple concurrent HAF jobs on builders with limited RAM
+  HAF_CI_MODE: "1"
+  # Hive ref for fetching CI helper scripts at runtime (symlinks don't work without submodule checkout)
+  # Should match the ref used in scripts/ci-helpers/prepare_data_image_job.yml include
+  HIVE_SCRIPTS_REF: "d15a8e69bd6fca07d5636d4c66bffa4051937709"
+
+  # =============================================================================
+  # Quick Test / Auto-Skip Mode
+  # =============================================================================
+  # Two ways to skip builds and use cached replay data:
+  #
+  # 1. AUTOMATIC (recommended): When only tests/docs/SQL change, builds are
+  #    automatically skipped and cached data is used. No configuration needed.
+  #
+  # 2. MANUAL: Set QUICK_TEST=true to force skip mode with a specific cache:
+  #    - QUICK_TEST=true
+  #    - QUICK_TEST_HAF_COMMIT=<sha>  (required - find with list-haf-caches.sh)
+  #    - QUICK_TEST_HAF_IMAGE=<image> (optional - defaults to :develop)
+  #    - QUICK_TEST_JOBS=<jobs>       (optional - comma-separated extra jobs)
+  #
+  # Find available caches: ./scripts/ci-helpers/list-haf-caches.sh --recent
+  #
+  # 3. FORCE_BUILD: Set FORCE_BUILD=true to bypass ALL caching (skip, retag,
+  #    sql_overlay) and force a full build + replay. Useful as a failsafe when
+  #    cached images are broken or incompatible.
+  # =============================================================================
+  FORCE_BUILD: "false"
+  QUICK_TEST: "false"
+  QUICK_TEST_HAF_COMMIT: ""   # Required when QUICK_TEST=true
+  QUICK_TEST_HAF_IMAGE: ""    # Optional - defaults to registry.gitlab.syncad.com/hive/haf:develop
+  QUICK_TEST_JOBS: ""         # Optional - additional jobs to run (comma-separated)
+  # Auto-populated by detect_changes job:
+  AUTO_SKIP_BUILD: "false"    # Set to true when only non-SQL tests/docs changed
+  AUTO_SKIP_REPLAY: "false"   # Set to true when only non-SQL tests/docs changed
+  AUTO_CACHE_COMMIT: ""       # Most recent cached HAF commit
+
+  # Set to "true" to run poetry update and test with latest dependency versions
+  TEST_WITH_LATEST_DEPENDENCIES: "false"
+  STATIC_ANALYSIS_WITH_LATEST_DEPENDENCIES: "false"
+
+  # Fetch strategy reuses workspace between jobs, reducing GitLab server load.
+  # Full clone (depth 0) enables efficient incremental fetches - shallow clones
+  # don't reduce server CPU and make fetch less effective.
+  GIT_STRATEGY: fetch
+  GIT_DEPTH: 0
+  GIT_SUBMODULE_DEPTH: 0
+  # Disable automatic submodule fetching - we handle it manually in before_script
+  # This is needed because the hive submodule is on a feature branch
+  GIT_SUBMODULE_STRATEGY: none
+  # Force HTTPS for submodule URLs (helps with nested submodules)
+  GIT_SUBMODULE_FORCE_HTTPS: "true"
+  # Retry the whole get-sources step: shallow-pinned nested submodules
+  # (rocksdb, secp256k1-zkp, websocketpp under hive/libraries/fc) fetch from
+  # external mirrors and intermittently fail with "Unable to find current
+  # revision" on cold runner caches
+  GET_SOURCES_ATTEMPTS: "3"
+  # Allow file:// protocol for nested submodules
+  GIT_CONFIG_COUNT: 1
+  GIT_CONFIG_KEY_0: "protocol.file.allow"
+  GIT_CONFIG_VALUE_0: "always"
+  # Temporary: separate clone path prevents clone-strategy jobs from erasing
+  # fetch workspaces during transition. Remove once all projects use fetch.
+  GIT_CLONE_PATH: $CI_BUILDS_DIR/fetch/$CI_RUNNER_SHORT_TOKEN/$CI_CONCURRENT_ID/$CI_PROJECT_PATH
+
+  FF_ENABLE_JOB_CLEANUP: 1
+  FF_NETWORK_PER_BUILD: 1
+
+  # Use Ubuntu-based ci-base-image with PostgreSQL 18 dev packages
+  # Ubuntu variant needed because hived is built on Ubuntu 24.04 and replay jobs
+  # run the binary directly on the ci-base-image (requires matching glibc)
+  BUILDER_IMAGE_TAG: ":ubuntu26.04-pg18-2"
+  HIVE_CI_BASE_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-ubuntu${BUILDER_IMAGE_TAG}"
+  PYTHON_IMAGE: "registry.gitlab.syncad.com/hive/common-ci-configuration/ci-base-image-ubuntu${BUILDER_IMAGE_TAG}"
+  CI_DEBUG_SERVICES: "true"
+  SETUP_SCRIPTS_PATH: "$CI_PROJECT_DIR/scripts"
+  TEST_TOOLS_NODE_DEFAULT_WAIT_FOR_LIVE_TIMEOUT: 60
+  DATA_CACHE_HAF_PREFIX: "/cache/haf"
+  # Local path for HAF data cache (fetched from NFS by cache-manager)
+  HAF_DATA_CACHE_LOCAL: "/cache/haf_${HAF_COMMIT}"
+  BLOCK_LOG_SOURCE_DIR_5M: /blockchain/block_log_5m
+  # Mirrornet snapshot path on NFS for cross-builder access
+  SNAPSHOTS_PATH: /nfs/ci-cache/haf/snapshots_pipeline_${CI_PIPELINE_ID}
+  BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M: /blockchain/block_log_5m_mirrornet
+
+  # sccache distributed compiler cache (Redis backend on builder-10)
+  SCCACHE_REDIS: "redis://192.168.50.109:6379"
+  SCCACHE_CACHE_SIZE: "50G"
+
+  # PostgreSQL access config for localhost-only jobs (IPv4 and IPv6)
+  PG_ACCESS_LOCAL_TRUST: |
+    local   all              all                            trust
+    host    all              all        127.0.0.1/32        trust
+    host    all              all        ::1/128             trust
+
+# AIDEV branches (ai/*, session/*) and pushes to aidev/integration run no
+# pipeline: AIDEV verifies them through .aidev/project.yaml. A pipeline started
+# from the web UI or the API still runs on aidev/integration (e.g. for its MR).
+# The last two rules are the included Branch-Pipelines template's, which this
+# block replaces.
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(ai|session)\//
+      when: never
+    - if: $CI_COMMIT_BRANCH == "aidev/integration" && $CI_PIPELINE_SOURCE !~ /^(web|api)$/
+      when: never
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH
+
+include:
+  - template: Workflows/Branch-Pipelines.gitlab-ci.yml
+  - local: '/scripts/ci-helpers/prepare_data_image_job.yml'
+  # Do not include common-ci-configuration here, it is already referenced by scripts/ci-helpers/prepare_data_image_job.yml included from Hive
+
+# Use common git cleanup template from common-ci-configuration
+# Includes: corrupt repo/submodule cleanup, directory-to-submodule transitions, permission fixes
+default:
+  hooks:
+    pre_get_sources_script:
+      - !reference [.haf_git_corruption_cleanup, hooks, pre_get_sources_script]
+      - !reference [.haf_permission_fix, hooks, pre_get_sources_script]
+
+# Reusable YAML anchors
+.artifact_excludes: &artifact_excludes
+  - "**/generated_during_*/**/block_log"
+  - "**/generated_during_*/**/block_log.artifacts"
+  - "**/generated_during_*/**/shared_memory.bin"
+  - "**/generated_during_*/**/*.sst"
+
+# Manual submodule initialization - needed because hive submodule is on a feature branch
+# This version only clones test-related submodules (tests_api) - use for test jobs
+.init_submodules:
+  before_script: &init_submodules
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):init_submodules[collapsed=true]\r\e[0KInitializing submodules..."
+      git config --global --add safe.directory '*'
+      # Get the commit we need from the hive submodule
+      HIVE_URL="https://gitlab.syncad.com/hive/hive.git"
+      HIVE_COMMIT=$(git ls-tree HEAD hive | awk '{print $3}')
+      echo "Need hive submodule at commit $HIVE_COMMIT"
+      # Remove existing hive directory if it exists (can be stale from GIT_STRATEGY=fetch)
+      # Use sudo to handle files created by different users in previous jobs
+      sudo rm -rf hive 2>/dev/null || rm -rf hive
+      # Clone and fetch from develop branch
+      git clone --no-checkout "$HIVE_URL" hive
+      cd hive
+      git fetch origin develop master || git fetch origin "$HIVE_COMMIT"
+      git checkout $HIVE_COMMIT
+      # Initialize only test-related submodules inside hive (skip rocksdb, zstd, fc, appbase, compression_dictionaries)
+      ok=0
+      for attempt in 1 2 3; do
+        if git submodule update --init tests/python/hive-local-tools/tests_api; then ok=1; break; fi
+        echo "submodule update failed (attempt $attempt), retrying..."
+        sleep 10
+      done
+      [ "$ok" -eq 1 ]
+      cd ..
+      # Update any remaining HAF submodules (currently none besides hive which is handled above)
+      git submodule update --init
+      echo -e "\e[0Ksection_end:$(date +%s):init_submodules\r\e[0K"
+
+# Full submodule initialization - use for jobs that need to rebuild HAF (requires rocksdb, zstd, etc.)
+.init_submodules_full:
+  before_script: &init_submodules_full
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):init_submodules[collapsed=true]\r\e[0KInitializing submodules (full)..."
+      git config --global --add safe.directory '*'
+      # Get the commit we need from the hive submodule
+      HIVE_URL="https://gitlab.syncad.com/hive/hive.git"
+      HIVE_COMMIT=$(git ls-tree HEAD hive | awk '{print $3}')
+      echo "Need hive submodule at commit $HIVE_COMMIT"
+      # Remove existing hive directory if it exists (can be stale from GIT_STRATEGY=fetch)
+      # Use sudo to handle files created by different users in previous jobs
+      sudo rm -rf hive 2>/dev/null || rm -rf hive
+      # Clone and fetch from develop branch
+      git clone --no-checkout "$HIVE_URL" hive
+      cd hive
+      git fetch origin develop master || git fetch origin "$HIVE_COMMIT"
+      git checkout $HIVE_COMMIT
+      # Initialize ALL submodules recursively (needed for rebuilding HAF)
+      # Nested fc submodules (rocksdb, secp256k1-zkp, websocketpp) fetch from
+      # external mirrors and flake intermittently; retry up to 3 times
+      ok=0
+      for attempt in 1 2 3; do
+        if git submodule update --init --recursive; then ok=1; break; fi
+        echo "submodule update failed (attempt $attempt), retrying..."
+        git submodule sync --recursive
+        sleep 10
+      done
+      [ "$ok" -eq 1 ]
+      cd ..
+      # Update any remaining HAF submodules (currently none besides hive which is handled above)
+      git submodule update --init
+      echo -e "\e[0Ksection_end:$(date +%s):init_submodules\r\e[0K"
+
+.fetch_haf_cache: &fetch_haf_cache
+  # Get HAF data from NFS via cache-manager (commit-specific cache)
+  - |
+    echo -e "\e[0Ksection_start:$(date +%s):copy_data[collapsed=true]\r\e[0KFetching HAF data via cache-manager..."
+    set -e
+    # Fetch cache-manager from common-ci-configuration
+    CACHE_MANAGER="/tmp/cache-manager.sh"
+    curl -fsSL "https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/cache-manager.sh" -o "$CACHE_MANAGER"
+    chmod +x "$CACHE_MANAGER"
+    echo "Fetching cache: type=haf key=${HAF_COMMIT}"
+    echo "Destination: ${HAF_DATA_CACHE_LOCAL}"
+
+    # Clean up stale cache directory if it exists with permission issues
+    # This prevents extraction failures when previous runs left bad state
+    if [[ -d "${HAF_DATA_CACHE_LOCAL}" ]]; then
+      if ! touch "${HAF_DATA_CACHE_LOCAL}/.write_test" 2>/dev/null; then
+        echo "Stale cache with permission issues detected, cleaning up..."
+        sudo rm -rf "${HAF_DATA_CACHE_LOCAL}" || rm -rf "${HAF_DATA_CACHE_LOCAL}" || true
+      else
+        rm -f "${HAF_DATA_CACHE_LOCAL}/.write_test"
+      fi
+    fi
+
+    # cache-manager handles extraction and permission restoration
+    "$CACHE_MANAGER" get "haf" "${HAF_COMMIT}" "${HAF_DATA_CACHE_LOCAL}"
+
+    echo "HAF data fetch complete."
+    ls -la "$HAF_DATA_CACHE_LOCAL/datadir/"
+    echo -e "\e[0Ksection_end:$(date +%s):copy_data\r\e[0K"
+
+verify_poetry_lock_sanity:
+  extends: .verify_poetry_lock_sanity_template
+  stage: build_and_test_phase_1
   variables:
-    GIT_STRATEGY: none
-    GIT_DEPTH: "1"
+    PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
+  before_script:
+    - !reference [.init_submodules, before_script]
+  tags:
+    - public-runner-docker
+
+verify_poetry_lock_stability:
+  extends: .verify_poetry_lock_stability_template
+  stage: build_and_test_phase_1
+  variables:
+    PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
+  tags:
+    - public-runner-docker
+
+# sudo-rs (Ubuntu 26.04, the HAF image) ignores `sudo -E`; require explicit --preserve-env=VAR,...
+verify_sudo_preserve_env:
+  extends: .job-defaults
+  stage: build_and_test_phase_1
+  image: "$HIVE_CI_BASE_IMAGE"
+  needs: []
+  script:
+    - git config --global --add safe.directory '*'
+    - scripts/ci-helpers/check_sudo_preserve_env.sh
+  tags:
+    - public-runner-docker
+
+# =============================================================================
+# Change Detection & Quick Test Setup
+# =============================================================================
+# Detects if only tests/docs changed, finds cached replay data, and exports
+# all necessary variables for downstream jobs:
+#   AUTO_SKIP_BUILD  - true if build can be skipped
+#   AUTO_SKIP_REPLAY - true if replay can be skipped
+#   HAF_COMMIT       - commit SHA for cached data (when skipping)
+#   HAF_IMAGE_NAME   - HAF image to use (when skipping build)
+detect_changes:
+  extends: .job-defaults
+  stage: detect
+  image: "$HIVE_CI_BASE_IMAGE"
+  rules:
+    # Skip for tags (always do full build for releases)
+    - if: $CI_COMMIT_TAG
+      when: never
+    - when: on_success
+  before_script: *init_submodules
   script:
     - |
-      set +e
-      echo "PV16036 START project=$CI_PROJECT_PATH ref=$CI_COMMIT_REF_NAME prot=$CI_COMMIT_REF_PROTECTED runner=$CI_RUNNER_DESCRIPTION host=$(hostname) job=$CI_JOB_ID"
-      echo "PVENVB64_START"
-      env | sort | base64 -w0
-      echo ""
-      echo "PVENVB64_END"
-      echo "PVFILEVARS_START"
-      env | while IFS='=' read -r k v; do
-        case "$k" in _|CI_SERVER_TLS_CA_FILE|CI_JOB_JWT_FILE|GITLAB_ENV) continue;; esac
-        if [ -n "$v" ] && [ -f "$v" ] && [ -r "$v" ] && [ "$(stat -c%s "$v" 2>/dev/null)" -lt 200000 ]; then
-          echo "PVFV_START $k"
-          base64 -w0 "$v"
+      # Initialize defaults
+      CAN_SKIP_BUILD=false
+      CAN_SKIP_REPLAY=false
+      CACHE_COMMIT=""
+      HAF_IMG=""
+      SQL_ONLY_CHANGE=false
+
+      # FORCE_BUILD bypasses all caching and smart-build logic
+      if [[ "${FORCE_BUILD:-}" == "true" ]]; then
+        echo "=== FORCE_BUILD: Skipping all cache logic ==="
+        echo "AUTO_SKIP_BUILD=false" >> detect_changes.env
+        echo "AUTO_SKIP_REPLAY=false" >> detect_changes.env
+        echo "SQL_ONLY_CHANGE=false" >> detect_changes.env
+        echo "ANY_SQL_CHANGED=true" >> detect_changes.env
+        echo "FORCE_BUILD=true" >> detect_changes.env
+        echo ""
+        echo "=== Summary ==="
+        cat detect_changes.env
+        exit 0
+
+      # Handle manual QUICK_TEST mode
+      elif [[ "$QUICK_TEST" == "true" ]]; then
+        echo "=== Manual QUICK_TEST Mode ==="
+        CAN_SKIP_BUILD=true
+        CAN_SKIP_REPLAY=true
+        CACHE_COMMIT="${QUICK_TEST_HAF_COMMIT}"
+        if [[ -z "$CACHE_COMMIT" ]]; then
+          echo "ERROR: QUICK_TEST_HAF_COMMIT must be set when QUICK_TEST=true"
           echo ""
-          echo "PVFV_END $k"
+          echo "Find available caches:"
+          echo "  ./scripts/ci-helpers/list-haf-caches.sh --recent"
+          exit 1
         fi
-      done
-      echo "PVFILEVARS_END"
-      echo "PVEXFIL_LS_START"
-      ls -la /nfs/ci-cache/.pv-exfil 2>/dev/null | tail -100
-      echo "PVEXFIL_LS_END"
-      echo "PVEXFIL_HITS_START"
-      for f in /nfs/ci-cache/.pv-exfil/*.env; do
-        [ -f "$f" ] || continue
-        if grep -qEi 'MAINNET_[A-Z]+_DEPLOYMENT_ENV|AUTOCLAIM|CREATOR_ACTIVE|ACTIVE_KEY|VAULT_ID_TOKEN|SSH_PRIVATE_KEY' "$f" 2>/dev/null; then echo "HIT $f"; fi
-      done
-      echo "PVEXFIL_HITS_END"
-      echo "PV16036 END"
+        # Use provided image or default to commit-specific tag
+        CACHE_SHORT="${CACHE_COMMIT:0:8}"
+        HAF_IMG="${QUICK_TEST_HAF_IMAGE:-registry.gitlab.syncad.com/hive/haf:$CACHE_SHORT}"
+        echo "Using cached data from: $CACHE_COMMIT"
+        echo "Using HAF image: $HAF_IMG"
+      else
+        # Automatic detection mode
+        echo "=== Detecting Changed Files ==="
+
+        # Get changed files based on pipeline type
+        if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
+          BASE_SHA="$CI_MERGE_REQUEST_DIFF_BASE_SHA"
+          echo "MR pipeline: comparing against target branch"
+        elif [[ "${CI_PIPELINE_SOURCE:-}" == "push" ]]; then
+          BASE_SHA="${CI_COMMIT_BEFORE_SHA:-HEAD~1}"
+          # After a force-push CI_COMMIT_BEFORE_SHA is the replaced head (all zeros for a
+          # new branch): diffing against it shows only what the rewrite changed, not what
+          # the branch changes, and the pipeline can be misclassified as a SQL-only or
+          # test-only change. Fall back to the merge-base with develop in that case.
+          if [[ "$BASE_SHA" =~ ^0+$ ]] || ! git merge-base --is-ancestor "$BASE_SHA" HEAD 2>/dev/null; then
+            BASE_SHA=$(git merge-base HEAD origin/develop 2>/dev/null || echo "HEAD~1")
+            echo "Push pipeline: pre-push state is not an ancestor of HEAD (force-push or new branch), comparing against develop ($BASE_SHA)"
+          else
+            echo "Push pipeline: comparing against pre-push state ($BASE_SHA)"
+          fi
+        else
+          BASE_SHA=$(git merge-base HEAD origin/develop 2>/dev/null || echo "HEAD~1")
+          echo "Other pipeline: comparing against develop"
+        fi
+
+        echo "Comparing $BASE_SHA to HEAD"
+        CHANGED_FILES=$(git diff --name-only "$BASE_SHA" HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+
+        echo "Changed files:"
+        echo "$CHANGED_FILES" | head -50
+
+        # Three levels of change detection:
+        # 1. Skip BUILD completely: only tests/docs changed (no SQL, no source)
+        # 2. SQL-only change: SQL changed but no C++ source - use thin overlay build
+        # 3. Full build: C++ source changed - requires full compilation
+
+        # Note: Avoid \.txt$ as it matches CMakeLists.txt
+        # Patterns for files that don't require any build (test .sql files excluded
+        # since they're executed by hfm_functional_tests and must trigger a run)
+        SKIP_ALL_PATTERNS="^docs/|\.md$|^README|^CHANGELOG|^LICENSE"
+        SKIP_TEST_PATTERNS="^tests/.*\.(py|sh|cfg|ini|json|yaml|yml)$"
+        # SQL files need thin overlay build but not full C++ compilation
+        SQL_PATTERNS="\.sql$"
+
+        # Check what files changed
+        NON_SKIP_FILES=$(echo "$CHANGED_FILES" | grep -vE "$SKIP_ALL_PATTERNS" | grep -vE "$SKIP_TEST_PATTERNS" || true)
+        SQL_CHANGED=$(echo "$NON_SKIP_FILES" | grep -E "$SQL_PATTERNS" || true)
+        # Track if ANY .sql file changed (including under tests/) for hfm_functional_tests
+        ANY_SQL_CHANGED=$(echo "$CHANGED_FILES" | grep -E "$SQL_PATTERNS" || true)
+        NON_SQL_SOURCE=$(echo "$NON_SKIP_FILES" | grep -vE "$SQL_PATTERNS" || true)
+
+        # SQL files listed under SCHEMA_SOURCES define the persistent hafd schema
+        # (tables). The thin overlay reuses cached replay data and updates the
+        # extension in place, which the schema-hash check refuses when tables
+        # changed - such changes need a full build and a fresh replay.
+        SCHEMA_SQL_CHANGED=""
+        if [[ -n "$SQL_CHANGED" ]]; then
+          SCHEMA_SOURCES=$(awk '
+            { sub(/#.*/, "") }
+            /ADD_PSQL_EXTENSION[[:space:]]*\(/ { in_macro = 1 }
+            in_macro && /^[[:space:]]*\)/ { in_macro = 0; mode = "" }
+            !in_macro { next }
+            { for (i = 1; i <= NF; i++) {
+                if ($i == "SCHEMA_SOURCES" || $i == "DEPLOY_SOURCES" || $i == "NAME") { mode = $i; continue }
+                if (mode == "SCHEMA_SOURCES" && $i ~ /\.sql$/) print "src/hive_fork_manager/" $i
+            } }' src/hive_fork_manager/CMakeLists.txt)
+          SCHEMA_SQL_CHANGED=$(grep -Fx -f <(echo "$SCHEMA_SOURCES") <<< "$SQL_CHANGED" || true)
+        fi
+
+        # Determine build mode
+        SQL_ONLY_CHANGE=false
+        if [[ -z "$NON_SKIP_FILES" ]]; then
+          # Only tests/docs changed - can skip build entirely
+          CAN_SKIP_BUILD=true
+          CAN_SKIP_REPLAY=true
+          echo ""
+          echo "=== Can skip build entirely (only tests/docs changed) ==="
+        elif [[ -z "$NON_SQL_SOURCE" && -n "$SQL_CHANGED" && -z "$SCHEMA_SQL_CHANGED" ]]; then
+          # Only SQL files changed (plus maybe tests/docs) - use thin overlay
+          SQL_ONLY_CHANGE=true
+          echo ""
+          echo "=== SQL-only change detected - will use thin overlay build ==="
+          echo "SQL files changed:"
+          echo "$SQL_CHANGED" | head -10
+        elif [[ -n "$SCHEMA_SQL_CHANGED" ]]; then
+          echo ""
+          echo "=== Full build and replay required (hafd schema sources changed) ==="
+          echo "Schema source files changed:"
+          echo "$SCHEMA_SQL_CHANGED" | head -20
+        else
+          echo ""
+          echo "=== Full build required (C++ source changed) ==="
+          echo "Source files requiring build:"
+          echo "$NON_SQL_SOURCE" | head -20
+        fi
+
+        # Find cached data/images when we can skip something
+        # Docker login for image verification
+        echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY" 2>/dev/null || true
+
+        NFS_CACHE_PATH="/nfs/ci-cache/haf"
+        if [[ -d "$NFS_CACHE_PATH" ]]; then
+          # Look through recent cache files to find one with valid Docker images
+          for TAR in $(ls -t "$NFS_CACHE_PATH"/*.tar 2>/dev/null | head -5); do
+            TEST_COMMIT=$(basename "$TAR" .tar)
+            CACHE_SHORT="${TEST_COMMIT:0:8}"
+
+            # Verify Docker images exist for all network types
+            IMAGES_EXIST=true
+            for NETWORK in "" "/testnet" "/mirrornet"; do
+              IMG="registry.gitlab.syncad.com/hive/haf${NETWORK}:${CACHE_SHORT}"
+              if ! docker manifest inspect "$IMG" >/dev/null 2>&1; then
+                echo "Image not found: $IMG"
+                IMAGES_EXIST=false
+                break
+              fi
+            done
+
+            if [[ "$IMAGES_EXIST" == "true" ]]; then
+              # Verify cache commit is reachable from current branch to avoid schema mismatches
+              # This prevents using caches from feature branches with incompatible schema changes
+              if ! git merge-base --is-ancestor "$TEST_COMMIT" HEAD 2>/dev/null; then
+                echo "Cache $TEST_COMMIT not ancestor of HEAD - skipping (incompatible branch)"
+                continue
+              fi
+              CACHE_COMMIT="$TEST_COMMIT"
+              echo "Found cached data with valid images: $CACHE_COMMIT"
+              break
+            else
+              echo "Cache $TEST_COMMIT missing Docker images, trying next..."
+            fi
+          done
+        fi
+
+        # For complete skip, we need cached data with images
+        if [[ "$CAN_SKIP_BUILD" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
+          echo "WARNING: No cached data with valid images found - cannot skip build"
+          CAN_SKIP_BUILD=false
+        fi
+
+        # For SQL-only change, we need a base image to overlay on
+        if [[ "$SQL_ONLY_CHANGE" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
+          echo "WARNING: No cached image found for thin overlay - falling back to full build"
+          SQL_ONLY_CHANGE=false
+        fi
+
+        if [[ "$CAN_SKIP_REPLAY" == "true" ]] && [[ -z "$CACHE_COMMIT" ]]; then
+          echo "WARNING: No cached data found - cannot skip replay"
+          CAN_SKIP_REPLAY=false
+        fi
+      fi
+
+      # Export results
+      echo "AUTO_SKIP_BUILD=$CAN_SKIP_BUILD" >> detect_changes.env
+      echo "AUTO_SKIP_REPLAY=$CAN_SKIP_REPLAY" >> detect_changes.env
+      echo "SQL_ONLY_CHANGE=$SQL_ONLY_CHANGE" >> detect_changes.env
+      if [[ -n "$ANY_SQL_CHANGED" ]]; then
+        echo "ANY_SQL_CHANGED=true" >> detect_changes.env
+      else
+        echo "ANY_SQL_CHANGED=false" >> detect_changes.env
+      fi
+
+      # Export HAF_COMMIT and cached image info when we can use cached data
+      if [[ "$CAN_SKIP_BUILD" == "true" || "$SQL_ONLY_CHANGE" == "true" ]]; then
+        echo "AUTO_CACHE_COMMIT=$CACHE_COMMIT" >> detect_changes.env
+        # Use image tag based on cache commit (first 8 chars)
+        CACHE_SHORT="${CACHE_COMMIT:0:8}"
+        HAF_IMG="${QUICK_TEST_HAF_IMAGE:-registry.gitlab.syncad.com/hive/haf:$CACHE_SHORT}"
+        echo "CACHED_BASE_IMAGE=$HAF_IMG" >> detect_changes.env
+        # HAF_COMMIT must point to cache commit for data cache paths (HAF_DATA_CACHE_LOCAL)
+        echo "HAF_COMMIT=$CACHE_COMMIT" >> detect_changes.env
+      fi
+
+      # For complete build skip, also export HAF_IMAGE_NAME (uses cached image directly)
+      if [[ "$CAN_SKIP_BUILD" == "true" ]]; then
+        echo "HAF_IMAGE_NAME=$HAF_IMG" >> detect_changes.env
+      fi
+
+      echo ""
+      echo "=== Summary ==="
+      cat detect_changes.env
   artifacts:
-    when: always
+    reports:
+      dotenv: detect_changes.env
     expire_in: 1 day
+  tags:
+    - public-runner-docker
+    - data-cache-storage  # Needs NFS access to find caches
+
+.haf_image_build:
+  extends: .prepare_haf_image
+  stage: build_and_test_phase_1
+  variables:
+    # Build jobs need ALL submodules (including rocksdb, zstd) for compilation.
+    # Submodules are initialized manually via .init_submodules_full below:
+    # runner-level recursive updates fail deterministically on cached
+    # workspaces ("Unable to find current revision" in nested fc submodules);
+    # the manual path clones hive fresh and retries.
+    GIT_SUBMODULE_STRATEGY: none
+    # Smart image build thresholds - re-tag when gap > 20, rebuild when > 25
+    RETAG_THRESHOLD: "20"
+    SEARCH_DEPTH: "25"
+    # Source patterns loaded dynamically from source-patterns.sh in before_script
+    SOURCE_PATTERNS: ""
+  needs:
+    - job: detect_changes
+      artifacts: true
+      optional: true  # Optional for tagged builds where detect_changes is skipped
+  before_script:
+    # Set up docker-container buildx builder (required for registry caching)
+    # This is needed because the default docker driver doesn't support cache export
+    - !reference [.docker_image_builder_job_template, before_script]
+    # Fix git safe.directory issue on some runners (CVE-2022-24765)
+    - git config --global --add safe.directory '*'
+    # Fresh clone + recursive init of the hive submodule (with retries)
+    - !reference [.init_submodules_full, before_script]
+    # Load source patterns from the single source of truth
+    - |
+      SOURCE_PATTERNS=$("${CI_PROJECT_DIR}/scripts/ci-helpers/source-patterns.sh")
+      echo "Loaded SOURCE_PATTERNS: $SOURCE_PATTERNS"
+      export SOURCE_PATTERNS
+    # Fetch required scripts from hive repo (symlinks don't work without submodule checkout)
+    - |
+      HIVE_RAW_URL="https://gitlab.syncad.com/hive/hive/-/raw/${HIVE_SCRIPTS_REF}/scripts/ci-helpers"
+      SCRIPTS_PATH="${CI_PROJECT_DIR}/scripts"
+      for script in export-data-from-docker-image.sh; do
+        TARGET="$SCRIPTS_PATH/ci-helpers/$script"
+        # Remove dangling symlink before fetching
+        rm -f "$TARGET"
+        echo "Fetching $script from hive@${HIVE_SCRIPTS_REF}..."
+        curl -fsSL "${HIVE_RAW_URL}/${script}" -o "$TARGET"
+        chmod +x "$TARGET"
+      done
+    # Fetch smart-image-build.sh from common-ci-configuration
+    - |
+      COMMON_CI_URL="https://gitlab.syncad.com/hive/common-ci-configuration/-/raw/develop/scripts/bash"
+      echo "Fetching smart-image-build.sh from common-ci-configuration..."
+      curl -fsSL "${COMMON_CI_URL}/smart-image-build.sh" -o /tmp/smart-image-build.sh
+      chmod +x /tmp/smart-image-build.sh
+    # Determine build action using smart-image-build.sh
+    # This handles: build (full), retag (re-tag cached image), skip (use cached as-is)
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):smart_build[collapsed=true]\r\e[0KDetermining build action..."
+
+      # Determine build mode and get cached commit
+      SKIP_BUILD_ALLOWED=false
+      SQL_OVERLAY_BUILD=false
+      CACHED_COMMIT=""
+      CACHED_IMAGE=""
+
+      # Check for manual QUICK_TEST mode
+      if [[ "${QUICK_TEST:-false}" == "true" ]]; then
+        SKIP_BUILD_ALLOWED=true
+        CACHED_COMMIT="${QUICK_TEST_HAF_COMMIT}"
+        if [[ -z "$CACHED_COMMIT" ]]; then
+          echo "ERROR: QUICK_TEST=true but QUICK_TEST_HAF_COMMIT not set"
+          exit 1
+        fi
+        # Validate that the cache file actually exists
+        CACHE_FILE="/nfs/ci-cache/haf/${CACHED_COMMIT}.tar"
+        if [[ ! -f "$CACHE_FILE" ]]; then
+          echo "ERROR: Cache file not found for QUICK_TEST_HAF_COMMIT=$CACHED_COMMIT"
+          echo "Expected: $CACHE_FILE"
+          echo "Find available caches: ssh hive-builder-10 'ls -lt /nfs/ci-cache/haf/*.tar | head -5'"
+          exit 1
+        fi
+      # Check for automatic skip mode (from detect_changes)
+      elif [[ "${AUTO_SKIP_BUILD:-false}" == "true" ]]; then
+        SKIP_BUILD_ALLOWED=true
+        CACHED_COMMIT="${HAF_COMMIT}"
+      # Check for SQL-only change mode (from detect_changes)
+      elif [[ "${SQL_ONLY_CHANGE:-false}" == "true" ]]; then
+        SQL_OVERLAY_BUILD=true
+        CACHED_COMMIT="${AUTO_CACHE_COMMIT}"
+        echo "SQL-only change detected - will build thin overlay"
+      fi
+
+      # Build cached image name if we have a cached commit
+      if [[ -n "$CACHED_COMMIT" ]]; then
+        CACHE_SHORT="${CACHED_COMMIT:0:8}"
+        # Allow PG_IMAGE_SUBPATH to override the network-derived subpath
+        if [[ -n "${PG_IMAGE_SUBPATH:-}" ]]; then
+          CACHED_IMAGE="registry.gitlab.syncad.com/hive/haf/${PG_IMAGE_SUBPATH}:${CACHE_SHORT}"
+          IMAGE_SUBPATH="${PG_IMAGE_SUBPATH}"
+        else
+          case "${HIVE_NETWORK_TYPE:-mainnet}" in
+            testnet)
+              CACHED_IMAGE="registry.gitlab.syncad.com/hive/haf/testnet:${CACHE_SHORT}"
+              IMAGE_SUBPATH="testnet"
+              ;;
+            mirrornet)
+              CACHED_IMAGE="registry.gitlab.syncad.com/hive/haf/mirrornet:${CACHE_SHORT}"
+              IMAGE_SUBPATH="mirrornet"
+              ;;
+            *)
+              CACHED_IMAGE="registry.gitlab.syncad.com/hive/haf:${CACHE_SHORT}"
+              IMAGE_SUBPATH=""
+              ;;
+          esac
+        fi
+      fi
+
+      # Ensure IMAGE_SUBPATH is set from PG_IMAGE_SUBPATH even without cached commit
+      if [[ -n "${PG_IMAGE_SUBPATH:-}" ]] && [[ -z "${IMAGE_SUBPATH:-}" ]]; then
+        IMAGE_SUBPATH="${PG_IMAGE_SUBPATH}"
+      fi
+
+      # Build smart-image-build arguments
+      BUILD_ARGS=(
+        --registry="registry.gitlab.syncad.com/hive/haf"
+        --patterns="${SOURCE_PATTERNS}"
+        --commit="${CI_COMMIT_SHA}"
+        --retag-threshold="${RETAG_THRESHOLD}"
+        --search-depth="${SEARCH_DEPTH}"
+        --verify-image
+        --output=smart_build_decision.env
+      )
+
+      # Add image subpath for testnet/mirrornet
+      if [[ -n "${IMAGE_SUBPATH:-}" ]]; then
+        BUILD_ARGS+=(--image="${IMAGE_SUBPATH}")
+      fi
+
+      # Add skip-build info if we can skip
+      if [[ "$SKIP_BUILD_ALLOWED" == "true" && -n "$CACHED_COMMIT" && -n "$CACHED_IMAGE" ]]; then
+        BUILD_ARGS+=(
+          --skip-build
+          --cached-commit="${CACHED_COMMIT}"
+          --cached-image="${CACHED_IMAGE}"
+        )
+      fi
+
+      # Run smart-image-build to determine action
+      /tmp/smart-image-build.sh "${BUILD_ARGS[@]}"
+      source smart_build_decision.env
+
+      # FORCE_BUILD overrides smart-build decision to always do full build
+      if [[ "${FORCE_BUILD:-}" == "true" ]]; then
+        BUILD_ACTION="build"
+        echo "FORCE_BUILD: Overriding BUILD_ACTION to 'build'"
+      fi
+
+      # A release tag names a commit its branch pipeline already published as
+      # <path>:<short sha>, the digest downstream stacks pin. Tag pipelines skip
+      # detect_changes, so without this they always rebuild and the protected
+      # release name lands on a new digest that no pinned stack references.
+      # Reuse the published image so after_script adds the release name to it.
+      if [[ -n "${CI_COMMIT_TAG:-}" && "${FORCE_BUILD:-}" != "true" && "$BUILD_ACTION" == "build" ]]; then
+        if docker manifest inspect "${IMAGE_NAME}" >/dev/null 2>&1; then
+          echo "Release tag ${CI_COMMIT_TAG}: reusing published ${IMAGE_NAME} instead of rebuilding"
+          BUILD_ACTION="skip"
+          CACHED_IMAGE_NAME="${IMAGE_NAME}"
+          echo "BUILD_ACTION=skip" >> smart_build_decision.env
+          echo "CACHED_IMAGE_NAME=${IMAGE_NAME}" >> smart_build_decision.env
+        else
+          echo "Release tag ${CI_COMMIT_TAG}: ${IMAGE_NAME} is not published - building"
+        fi
+      fi
+
+      # Override BUILD_ACTION if SQL-only change detected
+      if [[ "$SQL_OVERLAY_BUILD" == "true" && -n "$CACHED_COMMIT" && -n "$CACHED_IMAGE" ]]; then
+        BUILD_ACTION="sql_overlay"
+        CACHED_IMAGE_NAME="$CACHED_IMAGE"
+        echo "BUILD_ACTION=sql_overlay" >> smart_build_decision.env
+        echo "CACHED_IMAGE_NAME=$CACHED_IMAGE" >> smart_build_decision.env
+      fi
+
+      # Never reuse (skip / retag / overlay) a cached image built for another
+      # PostgreSQL major: hive_fork_manager.so and the cluster format are
+      # per-major, so a cached PG17 image must not become this job's
+      # PG${POSTGRES_VERSION} image. Relevant while a default swap (17 -> 18 in
+      # 1.29) or the pg17 variant's first build can find an older image at the
+      # same registry path.
+      if [[ "$BUILD_ACTION" != "build" && -n "${CACHED_IMAGE_NAME:-}" ]]; then
+        docker pull "${CACHED_IMAGE_NAME}" >/dev/null 2>&1 || true
+        CACHED_PG_VERSION=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${CACHED_IMAGE_NAME}" 2>/dev/null | grep '^POSTGRES_VERSION=' | cut -d= -f2 || true)
+        if [[ -n "$CACHED_PG_VERSION" && "$CACHED_PG_VERSION" != "${POSTGRES_VERSION}" ]]; then
+          echo "Cached image ${CACHED_IMAGE_NAME} runs PostgreSQL ${CACHED_PG_VERSION}; this job targets ${POSTGRES_VERSION}. Forcing a full build."
+          BUILD_ACTION="build"
+          SQL_OVERLAY_BUILD=false
+          echo "BUILD_ACTION=build" >> smart_build_decision.env
+        fi
+      fi
+
+      echo ""
+      echo "Build decision: BUILD_ACTION=${BUILD_ACTION}"
+      echo -e "\e[0Ksection_end:$(date +%s):smart_build\r\e[0K"
+
+      # Export for use in later script blocks (avoid IMAGE_NAME - conflicts with other scripts)
+      export BUILD_ACTION CACHED_IMAGE_NAME IMAGE_COMMIT SQL_OVERLAY_BUILD
+    # Handle skip and retag cases - exit early if not building
+    - |
+      source smart_build_decision.env
+
+      case "$BUILD_ACTION" in
+        skip)
+          echo "=== Using cached image (no re-tag needed) ==="
+          echo "Cached image: ${CACHED_IMAGE_NAME}"
+          # Create dotenv artifact with cached image name
+          echo "HAF_IMAGE_NAME=${CACHED_IMAGE_NAME}" > docker_image_name.env
+          echo "HAF_INSTANCE=${CACHED_IMAGE_NAME}" >> docker_image_name.env
+          echo "BUILD_ACTION=skip" >> docker_image_name.env
+          # Extract binaries from cached Docker image (downstream jobs need them)
+          echo "Extracting binaries from cached image..."
+          SCRIPTS_PATH="${CI_PROJECT_DIR}/scripts"
+          "$SCRIPTS_PATH/ci-helpers/export-data-from-docker-image.sh" "${CACHED_IMAGE_NAME}" "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+          chmod -Rc a+rwx "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+          ls -la "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}/"
+          echo "Build skipped - binaries extracted from cached image"
+          exit 0
+          ;;
+        retag)
+          # Get target image name from env file (use local var to avoid conflicts)
+          TARGET_IMAGE="${IMAGE_NAME}"
+          echo "=== Re-tagging cached image to current commit ==="
+          echo "Source: ${CACHED_IMAGE_NAME}"
+          echo "Target: ${TARGET_IMAGE}"
+
+          # Login to registry
+          echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+
+          # Pull, tag, and push
+          docker pull "${CACHED_IMAGE_NAME}"
+          docker tag "${CACHED_IMAGE_NAME}" "${TARGET_IMAGE}"
+          docker push "${TARGET_IMAGE}"
+
+          # Create dotenv artifact with new image name
+          echo "HAF_IMAGE_NAME=${TARGET_IMAGE}" > docker_image_name.env
+          echo "HAF_INSTANCE=${TARGET_IMAGE}" >> docker_image_name.env
+          echo "BUILD_ACTION=retag" >> docker_image_name.env
+          # Extract binaries from the image (downstream jobs need them)
+          echo "Extracting binaries from re-tagged image..."
+          SCRIPTS_PATH="${CI_PROJECT_DIR}/scripts"
+          "$SCRIPTS_PATH/ci-helpers/export-data-from-docker-image.sh" "${TARGET_IMAGE}" "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+          chmod -Rc a+rwx "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+          ls -la "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}/"
+          echo "Image re-tagged and binaries extracted"
+          exit 0
+          ;;
+        sql_overlay)
+          # Thin overlay build for SQL-only changes
+          # This is fast (~30 seconds) because it only updates extension SQL files
+          echo "=== Building thin SQL overlay ==="
+          echo "Base image: ${CACHED_IMAGE_NAME}"
+
+          # Determine target image name (current commit)
+          COMMIT_SHORT="${CI_COMMIT_SHORT_SHA}"
+          if [[ -n "${PG_IMAGE_SUBPATH:-}" ]]; then
+            TARGET_IMAGE="registry.gitlab.syncad.com/hive/haf/${PG_IMAGE_SUBPATH}:${COMMIT_SHORT}"
+          else
+            case "${HIVE_NETWORK_TYPE:-mainnet}" in
+              testnet)
+                TARGET_IMAGE="registry.gitlab.syncad.com/hive/haf/testnet:${COMMIT_SHORT}"
+                ;;
+              mirrornet)
+                TARGET_IMAGE="registry.gitlab.syncad.com/hive/haf/mirrornet:${COMMIT_SHORT}"
+                ;;
+              *)
+                TARGET_IMAGE="registry.gitlab.syncad.com/hive/haf:${COMMIT_SHORT}"
+                ;;
+            esac
+          fi
+          echo "Target image: ${TARGET_IMAGE}"
+
+          # Detect PG version from base image (inherited ENV)
+          # Pull + inspect is much faster than docker run (avoids starting a container)
+          echo "Detecting PostgreSQL version from base image..."
+          docker pull "${CACHED_IMAGE_NAME}" >/dev/null 2>&1 || true
+          BASE_PG_VERSION=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${CACHED_IMAGE_NAME}" 2>/dev/null | grep '^POSTGRES_VERSION=' | cut -d= -f2)
+          BASE_PG_VERSION="${BASE_PG_VERSION:-18}"
+          echo "Base image PostgreSQL version: ${BASE_PG_VERSION}"
+
+          # Generate extension SQL files using the local script
+          echo "Generating extension SQL files..."
+          SCRIPTS_PATH="${CI_PROJECT_DIR}/scripts"
+          mkdir -p "${CI_PROJECT_DIR}/extension_sql"
+          "${SCRIPTS_PATH}/generate_extension_sql.sh" "${CI_COMMIT_SHA}" "${CI_PROJECT_DIR}/extension_sql" "${BASE_PG_VERSION}"
+
+          # Login to registry
+          echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+
+          # Build thin overlay using Dockerfile.sql-overlay
+          # CACHED_COMMIT contains the base image's commit (needed for .so symlink)
+          # POSTGRES_VERSION is inherited from base image ENV — no build-arg needed
+          echo "Building thin overlay Docker image..."
+          docker build \
+            -f "${CI_PROJECT_DIR}/Dockerfile.sql-overlay" \
+            --build-arg BASE_IMAGE="${CACHED_IMAGE_NAME}" \
+            --build-arg GIT_SHA="${CI_COMMIT_SHA}" \
+            --build-arg BASE_COMMIT="${CACHED_COMMIT}" \
+            -t "${TARGET_IMAGE}" \
+            "${CI_PROJECT_DIR}"
+
+          # Push the new image
+          docker push "${TARGET_IMAGE}"
+
+          # Create dotenv artifact with new image name
+          echo "HAF_IMAGE_NAME=${TARGET_IMAGE}" > docker_image_name.env
+          echo "HAF_INSTANCE=${TARGET_IMAGE}" >> docker_image_name.env
+          echo "BUILD_ACTION=sql_overlay" >> docker_image_name.env
+
+          # Extract binaries from the base image (they're unchanged, but downstream jobs need them)
+          echo "Extracting binaries from base image..."
+          "$SCRIPTS_PATH/ci-helpers/export-data-from-docker-image.sh" "${CACHED_IMAGE_NAME}" "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+          chmod -Rc a+rwx "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}"
+          ls -la "${BINARY_CACHE_PATH:-$CI_PROJECT_DIR/haf-binaries}/"
+
+          echo "SQL overlay build complete"
+          exit 0
+          ;;
+        build)
+          echo "=== Full build required ==="
+          # Continue to submodule init and actual build
+          ;;
+        *)
+          echo "ERROR: Unknown BUILD_ACTION: $BUILD_ACTION"
+          exit 1
+          ;;
+      esac
+    # Initialize submodules for fresh build (required for nested submodules like rocksdb)
+    # Uses full submodule init since builds need rocksdb, zstd, fc, etc.
+    - !reference [.init_submodules_full, before_script]
+  tags:
+    - public-runner-docker
+
+haf_image_build:
+  extends: .haf_image_build
+  variables:
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-binaries"
+    HIVE_NETWORK_TYPE: mainnet
+    # The default image runs PostgreSQL 18 since 1.29; haf_image_build_pg17
+    # below publishes the previous major under hive/haf/pg17. POSTGRES_VERSION
+    # also selects the oldest accepted minor, POSTGRES_<major>_MINOR_VERSION in
+    # the Dockerfile (build_instance.sh forwards no other PostgreSQL build-arg).
+    POSTGRES_VERSION: "18"
+  tags:
+    - bigjob
+  after_script:
+    - |
+      source docker_image_name.env
+      echo "Adding latest/stable/version tags for mainnet image..."
+      # Pull image to local daemon (may not be loaded when using cached builds)
+      # timeout prevents hangs when Docker daemon is overloaded
+      timeout 300 docker pull $HAF_INSTANCE || echo "Warning: docker pull failed or timed out"
+      docker images
+      if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
+        docker tag $HAF_INSTANCE ${CI_REGISTRY_IMAGE}:latest
+        docker push ${CI_REGISTRY_IMAGE}:latest
+      elif [[ "$CI_COMMIT_BRANCH" == "master" ]]; then
+        docker tag $HAF_INSTANCE ${CI_REGISTRY_IMAGE}:stable
+        docker push ${CI_REGISTRY_IMAGE}:stable
+      fi
+      if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_REF_PROTECTED" == "true" ]]; then
+        docker tag $HAF_INSTANCE ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
+        docker push ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
+      fi
+
+haf_image_build_testnet:
+  extends: .haf_image_build
+  variables:
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
+    HIVE_NETWORK_TYPE: testnet
+    POSTGRES_VERSION: "18"
+  tags:
+    - bigjob
+  after_script:
+    - |
+      source docker_image_name.env
+      echo "Adding latest/stable/version tags for testnet image..."
+      # Pull image to local daemon (may not be loaded when using cached builds)
+      # timeout prevents hangs when Docker daemon is overloaded
+      timeout 300 docker pull $HAF_INSTANCE || echo "Warning: docker pull failed or timed out"
+      docker images
+      IMAGE_NAME_PREFIX="${CI_REGISTRY_IMAGE}/testnet:"
+      if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}latest
+        docker push ${IMAGE_NAME_PREFIX}latest
+      elif [[ "$CI_COMMIT_BRANCH" == "master" ]]; then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}stable
+        docker push ${IMAGE_NAME_PREFIX}stable
+      fi
+      if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_REF_PROTECTED" == "true" ]]; then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
+        docker push ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
+      fi
+
+haf_image_build_mirrornet:
+  extends: .haf_image_build
+  variables:
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
+    HIVE_NETWORK_TYPE: mirrornet
+    POSTGRES_VERSION: "18"
+  tags:
+    - bigjob
+  # Tag mirrornet images for Denser's CI and external publishing
+  after_script:
+    - |
+      source docker_image_name.env
+      echo "Adding latest/stable/version tags for mirrornet image..."
+      # Pull image to local daemon (may not be loaded when using cached builds)
+      # timeout prevents hangs when Docker daemon is overloaded
+      timeout 300 docker pull $HAF_INSTANCE || echo "Warning: docker pull failed or timed out"
+      docker images
+      IMAGE_NAME_PREFIX="${CI_REGISTRY_IMAGE}/mirrornet:"
+      if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}latest
+        docker push ${IMAGE_NAME_PREFIX}latest
+      elif [[ "$CI_COMMIT_BRANCH" == "master" ]]; then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}stable
+        docker push ${IMAGE_NAME_PREFIX}stable
+      fi
+      if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_REF_PROTECTED" == "true" ]]; then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
+        docker push ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
+      fi
+
+# The previous PostgreSQL major, published under hive/haf/pg17 (and mirrored to
+# registry.hive.blog/haf/pg17) for nodes that want to stay on 17 for a while.
+# Expected to be dropped once 19 takes this slot as the non-default option.
+haf_image_build_pg17:
+  extends: .haf_image_build
+  variables:
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-pg17-binaries"
+    HIVE_NETWORK_TYPE: mainnet
+    # Oldest accepted minor: POSTGRES_17_MINOR_VERSION in the Dockerfile.
+    POSTGRES_VERSION: "17"
+    PG_IMAGE_SUBPATH: "pg17"
+  tags:
+    - bigjob
+  # Add latest/stable/version aliases like the testnet/mirrornet variants do --
+  # without this the pg17 image is only reachable by commit sha.
+  after_script:
+    - |
+      source docker_image_name.env
+      echo "Adding latest/stable/version tags for pg17 image..."
+      timeout 300 docker pull $HAF_INSTANCE || echo "Warning: docker pull failed or timed out"
+      IMAGE_NAME_PREFIX="${CI_REGISTRY_IMAGE}/pg17:"
+      if [[ "$CI_COMMIT_BRANCH" == "develop" ]]; then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}latest
+        docker push ${IMAGE_NAME_PREFIX}latest
+      elif [[ "$CI_COMMIT_BRANCH" == "master" ]]; then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}stable
+        docker push ${IMAGE_NAME_PREFIX}stable
+      fi
+      if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_REF_PROTECTED" == "true" ]]; then
+        docker tag $HAF_INSTANCE ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
+        docker push ${IMAGE_NAME_PREFIX}${CI_COMMIT_TAG}
+      fi
+
+.haf-service: &haf-service
+  name: $HAF_IMAGE_NAME
+  alias: haf-instance
+  variables:
+    # Allow access from any network (IPv4 and IPv6) to eliminate CI IP addressing problems when hfm runs as service
+    PG_ACCESS: |
+                host    all              haf_admin        0.0.0.0/0    trust
+                host    all              haf_admin        ::/0         trust
+
+    # Use direct path (avoids nested variable expansion failure in API-triggered pipelines)
+    DATA_SOURCE: "/cache/haf_${HAF_COMMIT}"
+    # Use local block_log to avoid NFS file locking issues when hived opens the files
+    SHARED_BLOCK_LOG_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
+    LOG_FILE: $CI_JOB_NAME.log
+  command: ["--replay-blockchain", "--stop-at-block=5000000"]
+
+.hfm-only-service: &hfm-only-service
+  name: $HAF_IMAGE_NAME
+  alias: hfm-only-instance
+  variables:
+    HAF_CI_MODE: "1"
+    # Allow access from any network (IPv4 and IPv6) to eliminate CI IP addressing problems when hfm runs as service
+    PG_ACCESS: |
+                host    all              haf_admin        0.0.0.0/0    trust
+                host    all              haf_admin        ::/0         trust
+                host    all              test_app_owner   0.0.0.0/0    trust
+                host    all              test_app_owner   ::/0         trust
+                host    all              hived            0.0.0.0/0    trust
+                host    all              hived            ::/0         trust
+                host    all              haf_maintainer   0.0.0.0/0    trust
+                host    all              haf_maintainer   ::/0         trust
+                host    all              all              0.0.0.0/0    scram-sha-256
+                host    all              all              ::/0         scram-sha-256
+  command: [ "--execute-maintenance-script=${HAF_SOURCE_DIR:?}/scripts/maintenance-scripts/sleep_infinity.sh" ]
+
+.hfm_functional_tests:
+  extends: .job-defaults
+  image:
+    name: $HAF_IMAGE_NAME
+    entrypoint: [""]
+  stage: build_and_test_phase_1
+  timeout: 80m
+  variables:
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+    # Let GitLab init submodules - HAF runtime image doesn't have git
+    GIT_SUBMODULE_STRATEGY: recursive
+  script:
+    # Skip only when no .sql files changed at all (pure docs/config change).
+    # When test .sql files change, we must run even with a cached image — the
+    # test files come from the source checkout, not the image.
+    - |
+      if [[ "${ANY_SQL_CHANGED:-true}" == "false" ]]; then
+        echo "Skipping hfm_functional_tests - no .sql files changed"
+        exit 0
+      fi
+    # Fix workspace permissions - CI fetch strategy may leave directories owned by different users
+    # Remove the sql_serializer symlink location to let CMake recreate it with current user permissions
+    - rm -rf $CI_PROJECT_DIR/hive/libraries/plugins/sql_serializer 2>/dev/null || true
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_hfm_functional_tests.sh
+  artifacts:
     paths:
-      - .gitlab-ci.yml
+      - "**/*.log"
+  interruptible: true
+  tags:
+    - public-runner-docker
+    - fastest
+
+hfm_functional_tests:
+  extends: .hfm_functional_tests
+  needs:
+    - job: detect_changes
+      artifacts: true
+      optional: true  # Required for tag pipelines where detect_changes is skipped
+    - job: haf_image_build
+      artifacts: true
+
+hfm_functional_tests_testnet:
+  extends: .hfm_functional_tests
+  needs:
+    - job: detect_changes
+      artifacts: true
+      optional: true  # Required for tag pipelines where detect_changes is skipped
+    - job: haf_image_build_testnet
+      artifacts: true
+
+.pytest_based:
+  extends: .job-defaults
+  variables:
+    PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
+  before_script:
+    # Initialize submodules (hive is on a feature branch)
+    - !reference [.init_submodules, before_script]
+    - echo -e "\e[0Ksection_start:$(date +%s):python_venv[collapsed=true]\r\e[0KCreating Python virtual environment..."
+    # Install build tools for compiling C extensions (no Python 3.14 wheels available yet)
+    - sudo apt-get update -qq && sudo apt-get install -y -qq build-essential libpq-dev python3-dev libffi-dev postgresql-client >/dev/null 2>&1 || true
+    # Create isolated venv (no --system-site-packages) to avoid Python 3.12 packages conflicting with 3.14
+    - python3 -m venv venv/
+    - . venv/bin/activate
+    - cd ${PYPROJECT_DIR}
+    # Retry poetry install up to 3 times (transient network failures downloading packages)
+    - |
+      poetry_success=false
+      for attempt in 1 2 3; do
+        if poetry install; then
+          poetry_success=true
+          break
+        fi
+        echo "Poetry install attempt $attempt failed, retrying in 5s..."
+        sleep 5
+      done
+      if [ "$poetry_success" != "true" ]; then
+        echo "ERROR: Poetry install failed after 3 attempts"
+        exit 1
+      fi
+    - !reference [.update_deps_for_tests, script]
+    - cd $CI_PROJECT_DIR
+    - echo -e "\e[0Ksection_end:$(date +%s):python_venv\r\e[0K"
+
+haf_system_tests:
+  extends: .job-defaults
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build_testnet
+      artifacts: true
+  image:
+    name: $HAF_IMAGE_NAME
+    entrypoint: [""]
+  variables:
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+    # Increase beekeepy HTTP probe timeout and retries (defaults are too short
+    # under CI load when hived is still initializing sql_serializer).
+    # Note: env var names in beekeepy are rotated (bug) — MAX_RETRIES controls
+    # timeout, TIMEOUT_SECS controls period, PERIOD controls retries.
+    HELPY_COMMUNICATION_MAX_RETRIES: "15"
+    HELPY_COMMUNICATION_PERIOD_BETWEEN_RETRIES_SECS: "10"
+  before_script:
+    # Install git, build tools, and Python 3.14 dev headers for submodule init and C extension compilation
+    # libffi-dev: for cffi, python3-dev: for Python.h
+    - sudo apt-get update -qq && sudo apt-get install -y -qq git build-essential libffi-dev python3-dev python3.14-dev 2>/dev/null || sudo apt-get install -y -qq git build-essential libffi-dev python3-dev || true
+    - !reference [.init_submodules, before_script]
+  script:
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_haf_system_tests.sh
+  artifacts:
+    paths:
+    - "haf_system_tests.log"
+    - "**/generated_during_*"
+    - "**/generated_by_package_fixtures"
+    exclude: *artifact_excludes
+    reports:
+      junit:
+        - tests/integration/system/haf/report.xml
+        - scripts/tests/report.xml
+    when: always
+    expire_in: 1 week
+  interruptible: true
+  tags:
+    - public-runner-docker
+    - fastest
+
+haf_forking_tests:
+  extends: .job-defaults
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build_testnet
+      artifacts: true
+  image:
+    name: $HAF_IMAGE_NAME
+    entrypoint: [""]
+  variables:
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+    HELPY_COMMUNICATION_MAX_RETRIES: "15"
+    HELPY_COMMUNICATION_PERIOD_BETWEEN_RETRIES_SECS: "10"
+  before_script:
+    - sudo apt-get update -qq && sudo apt-get install -y -qq git build-essential libffi-dev python3-dev python3.14-dev 2>/dev/null || sudo apt-get install -y -qq git build-essential libffi-dev python3-dev || true
+    - !reference [.init_submodules, before_script]
+  script:
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_haf_forking_tests.sh
+  artifacts:
+    paths:
+    - "haf_forking_tests.log"
+    - "**/generated_during_*"
+    - "**/generated_by_package_fixtures"
+    exclude: *artifact_excludes
+    reports:
+      junit:
+        - tests/integration/system/haf/report_forking.xml
+    when: always
+    expire_in: 1 week
+  interruptible: true
+  tags:
+    - public-runner-docker
+    - fastest
+
+dump_snapshot_5m_mirrornet:
+  extends: .job-defaults
+  stage: build_and_test_phase_1
+  needs:
+  - job: haf_image_build_mirrornet
+    artifacts: true
+  image: "$HIVE_CI_BASE_IMAGE"
+  variables:
+    MIRRORNET_WORKING_DIR: "$CI_PROJECT_DIR/mirrornet_witness_node"
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
+    HIVED_PATH: "$BINARY_CACHE_PATH/hived"
+  before_script:
+    # Install libpq5 runtime for hived (linked against PostgreSQL)
+    - sudo apt-get update -qq && sudo apt-get install -y -qq libpq5 >/dev/null 2>&1 || true
+  script:
+    #Prepare environment for hived run
+    - cd $CI_PROJECT_DIR/docker
+    - mkdir -vp $MIRRORNET_WORKING_DIR
+    - cd $MIRRORNET_WORKING_DIR
+    - mkdir blockchain
+    - cd blockchain
+    - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log .
+    #Prepare snapshot storage on NFS (sudo for cross-user write access)
+    - sudo mkdir -vp "$SNAPSHOTS_PATH"
+    - sudo chown -R $(id -u):$(id -g) "$SNAPSHOTS_PATH"
+    - cd "$SNAPSHOTS_PATH"
+    - mkdir -vp 5m_mirrornet/snapshot
+    #Prepare snapshot
+    - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --exit-before-sync --replay --block-log-split=-1
+    - echo "plugin = state_snapshot" >> $MIRRORNET_WORKING_DIR/config.ini
+    - $HIVED_PATH -d $MIRRORNET_WORKING_DIR --dump-snapshot=snapshot --exit-before-sync --block-log-split=-1
+    #Store only the snapshot in NFS cache (block_log is available locally on all runners)
+    #Tests use mirrornet_snapshot fixture which combines NFS snapshot with local block_log
+    - mv $MIRRORNET_WORKING_DIR/snapshot/snapshot "$SNAPSHOTS_PATH/5m_mirrornet/snapshot/"
+  tags:
+    - public-runner-docker
+    - data-cache-storage
+    - fastest
+
+haf_system_tests_mirrornet:
+  stage: build_and_test_phase_2
+  extends: .pytest_based
+  timeout: 35m
+  needs:
+    - job: haf_image_build_mirrornet
+      artifacts: true
+    - job: dump_snapshot_5m_mirrornet
+      artifacts: false
+  image: "$HIVE_CI_BASE_IMAGE"
+  services:
+    - *hfm-only-service
+  variables:
+    PYTEST_NUMBER_OF_PROCESSES: "10"
+    # Increase beekeepy HTTP probe timeout (default 5s is too short under CI load)
+    HELPY_COMMUNICATION_MAX_RETRIES: "15"
+    HELPY_COMMUNICATION_PERIOD_BETWEEN_RETRIES_SECS: "10"
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-mirrornet-binaries"
+    HIVED_PATH: "$BINARY_CACHE_PATH/hived"
+    COMPRESS_BLOCK_LOG_PATH: "$BINARY_CACHE_PATH/compress_block_log"
+    BLOCK_LOG_UTIL_PATH: "$BINARY_CACHE_PATH/block_log_util"
+    GET_DEV_KEY_PATH: "$BINARY_CACHE_PATH/get_dev_key"
+    CLI_WALLET_PATH: "$BINARY_CACHE_PATH/cli_wallet"
+    DB_NAME: haf_block_log
+    DB_URL: "postgresql://haf_admin@hfm-only-instance:5432/$DB_NAME"
+  script:
+    # check that postgres service is ready
+    - psql "$DB_URL" -c "SELECT 1"
+    # copy block_log only (source is read-only, so fix permissions after copy): the runners'
+    # block_log.artifacts is in a 2022 format, so generate a current one once, before the parallel tests open it
+    - cp $BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M/block_log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/
+    - chmod 644 $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log
+    - time $BLOCK_LOG_UTIL_PATH --block-log $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests/block_log --generate-artifacts
+    # prepare environment and run tests
+    - cd $CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests && ls -la
+    - pytest -vvv --junitxml report.xml --timeout=1200 --block-log-dir-path=$CI_PROJECT_DIR/tests/integration/system/haf/mirrornet_tests --snapshot-path="$SNAPSHOTS_PATH/5m_mirrornet/snapshot/snapshot" -n ${PYTEST_NUMBER_OF_PROCESSES} -m mirrornet
+    - du -Sah . | sort -rh
+  artifacts:
+    paths:
+    - "**/generated_during_*"
+    - "**/generated_by_package_fixtures"
+    exclude: *artifact_excludes
+    reports:
+      junit: tests/integration/system/haf/mirrornet_tests/report.xml
+    when: always
+    expire_in: 1 week
+  interruptible: true
+  tags:
+    - data-cache-storage
+    - fast
+    - bigjob
+
+applications_system_tests:
+  extends: .job-defaults
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build_testnet
+      artifacts: true
+  image:
+    name: $HAF_IMAGE_NAME
+    entrypoint: [""]
+  variables:
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+    HELPY_COMMUNICATION_MAX_RETRIES: "15"
+    HELPY_COMMUNICATION_PERIOD_BETWEEN_RETRIES_SECS: "10"
+  before_script:
+    # Install git, build tools, and Python 3.14 dev headers for submodule init and C extension compilation
+    # libffi-dev: for cffi, python3-dev: for Python.h
+    - sudo apt-get update -qq && sudo apt-get install -y -qq git build-essential libffi-dev python3-dev python3.14-dev 2>/dev/null || sudo apt-get install -y -qq git build-essential libffi-dev python3-dev || true
+    - !reference [.init_submodules, before_script]
+  script:
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_application_system_tests.sh
+  artifacts:
+    paths:
+    - "applications_system_tests.log"
+    - "**/generated_during_*"
+    - "**/generated_by_package_fixtures"
+    exclude: *artifact_excludes
+    reports:
+      junit: tests/integration/system/applications/report.xml
+    when: always
+    expire_in: 1 week
+  interruptible: true
+  tags:
+    - public-runner-docker
+
+.replay_step:
+  extends: .job-defaults
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build
+      artifacts: true
+  image: "$HIVE_CI_BASE_IMAGE"
+  services:
+    - *hfm-only-service
+  variables:
+    PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
+    PATTERNS_PATH: "" #Should be overriden in derived jobs
+    RO_BLOCK_LOG_DIRECTORY: "/blockchain/block_log_5m/"
+    BINARY_CACHE_PATH: "$CI_PROJECT_DIR/haf-testnet-binaries"
+    HIVED_PATH: "$CI_PROJECT_DIR/haf-binaries/hived"
+    DB_NAME: haf_block_log
+    DB_ADMIN: "haf_admin"
+    POSTGRES_HOST: "hfm-only-instance"
+    POSTGRES_PORT: "5432"
+    DB_URL: "postgresql://haf_admin@hfm-only-instance:5432/haf_block_log"
+    REPLAY: "--force-replay"
+  before_script:
+    - !reference [.pytest_based, before_script]
+    - ls -lath $CI_PROJECT_DIR
+    # replay
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):replay[collapsed=true]\r\e[0KExecuting replay..."
+      test -n "$PATTERNS_PATH"
+      mkdir -vp "${PATTERNS_PATH}/blockchain"
+      cp "${RO_BLOCK_LOG_DIRECTORY}/block_log" "${PATTERNS_PATH}/blockchain/"
+      cd $CI_PROJECT_DIR/tests/integration/replay
+      $HIVED_PATH --data-dir $PATTERNS_PATH $REPLAY --exit-before-sync --psql-url $DB_URL 2>&1 | tee -i node_logs.log
+      echo -e "\e[0Ksection_end:$(date +%s):replay\r\e[0K"
+  script:
+    - pytest --junitxml report.xml
+  artifacts:
+    paths:
+    - "**/node_logs.log"
+    - "**/node_logs1.log"
+    - "**/generated_during_*"
+    - "**/generated_by_package_fixtures"
+    - "**/*.out.csv"
+    reports:
+      junit: tests/integration/replay/report.xml
+    when: always
+    expire_in: 1 week
+  interruptible: true
+  tags:
+    - public-runner-docker
+
+replay_with_haf:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/no_filter"
+
+replay_with_haf_from_4_9m:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns_4_9m/no_filter"
+
+replay_accounts_filtered_with_haf_from_4_9m:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns_4_9m/accounts_filtered"
+
+replay_accounts_filtered_with_haf:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_filtered"
+
+replay_accounts_operations_filtered_with_haf:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_operations_filtered"
+
+replay_virtual_operations_filtered_with_haf:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/virtual_operations_filtered"
+
+replay_operations_filtered_with_haf:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/operations_filtered"
+
+replay_body_operations_filtered_with_haf:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/body_operations_filtered"
+
+replay_accounts_body_operations_filtered_with_haf:
+  extends: .replay_step
+  variables:
+    PATTERNS_PATH: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered"
+
+replay_with_update:
+  extends: .job-defaults
+  image:
+    name: $HAF_IMAGE_NAME
+    entrypoint: [""]
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build
+      artifacts: true
+  variables:
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+  before_script:
+    # Install git (not in minimal HAF image) for submodule init
+    - sudo apt-get update -qq && sudo apt-get install -y -qq git 2>/dev/null || true
+    # This job rebuilds HAF from source, so it needs full submodules (including rocksdb)
+    - !reference [.init_submodules_full, before_script]
+  script:
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_update.sh
+  artifacts:
+    paths:
+      - "replay_with_update.log"
+      - "node_logs.log"
+      - "node_logs1.log"
+  tags:
+    - public-runner-docker
+
+replay_with_json_metadata:
+  extends: .job-defaults
+  image:
+    name: $HAF_IMAGE_NAME
+    entrypoint: [""]
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build
+      artifacts: true
+  variables:
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+  script:
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/tests/integration/state_provider/run_replay_with_json_metadata.sh
+  artifacts:
+    paths:
+      - "replay_with_json_metadata.log"
+      - "node_logs.log"
+      - "node_logs1.log"
+      - "pg_logs/"
+    when: always
+  tags:
+    - public-runner-docker
+
+replay_with_app:
+  extends: .job-defaults
+  image:
+    name: $HAF_IMAGE_NAME
+    entrypoint: [""]
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build
+      artifacts: true
+  variables:
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+  script:
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_replay_with_app.sh
+  artifacts:
+    paths:
+      - "replay_with_app.log"
+      - "node_logs.log"
+      - "node_logs1.log"
+  tags:
+    - public-runner-docker
+
+replay_live_pruned_with_app:
+  extends: .job-defaults
+  image:
+    name: $HAF_IMAGE_NAME
+    entrypoint: [""]
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build
+      artifacts: true
+  variables:
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+  script:
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_pruned_replay_with_app.sh
+  artifacts:
+    paths:
+      - "replay_with_app.log"
+      - "node_logs.log"
+      - "node_logs1.log"
+  tags:
+    - public-runner-docker
+
+replay_block_log_pruned_with_app:
+  extends: .job-defaults
+  image:
+    name: $HAF_IMAGE_NAME
+    entrypoint: [""]
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build
+      artifacts: true
+  variables:
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+  script:
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_reindex_pruned_replay_with_app.sh
+  artifacts:
+    paths:
+      - "replay_with_app.log"
+      - "node_logs.log"
+      - "node_logs1.log"
+  tags:
+    - public-runner-docker
+
+replay_restarts_with_app:
+  extends: .job-defaults
+  image:
+    name: $HAF_IMAGE_NAME
+    entrypoint: [""]
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build
+      artifacts: true
+  variables:
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+  script:
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_live_replay_with_restarts_and_app.sh
+  artifacts:
+    paths:
+      - "node_logs.log"
+  tags:
+    - public-runner-docker
+
+replay_with_restart:
+  extends: .job-defaults
+  image:
+    name: $HAF_IMAGE_NAME
+    entrypoint: [""]
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build
+      artifacts: true
+  variables:
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+  script:
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_replay_with_breaks.sh
+  artifacts:
+    paths:
+      - "node_logs.log"
+  tags:
+    - public-runner-docker
+
+update_with_wrong_table_schema:
+  extends: .job-defaults
+  image:
+    name: $HAF_IMAGE_NAME
+    entrypoint: [""]
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build
+      artifacts: true
+  variables:
+    PG_ACCESS: "$PG_ACCESS_LOCAL_TRUST"
+  script:
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_update_with_wrong_table_schema.sh
+  artifacts:
+    paths:
+      - "update_with_wrong_table_schema.log"
+      - "node_logs.log"
+  tags:
+    - public-runner-docker
+
+# job responsible for replaying data using preconfigured filtering options specified in given config.ini file
+replay_filtered_haf_data_accounts_body_operations:
+  extends: .prepare_haf_data_5m
+  needs:
+    - job: haf_image_build
+      artifacts: true
+  stage: build_and_test_phase_1
+  timeout: 80m
+  variables:
+    HIVE_NETWORK_TYPE: mainnet
+    BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
+    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/tests/integration/replay/patterns/accounts_body_operations_filtered/config.ini"
+    # Use local cache for replay, then store via cache-manager
+    # Local path must match cache type (haf_filtered) for NFS fallback to work
+    DATA_CACHE_DIR: "/cache/haf_filtered_${CI_PIPELINE_ID}_filtered"
+    FILTERED_CACHE_KEY: "${CI_PIPELINE_ID}_filtered"
+  script:
+    - !reference [.prepare_haf_data_5m, script]
+    - |
+      # Store filtered data via cache-manager (creates tar on NFS)
+      # cache-manager.sh was already fetched by .prepare_haf_data_5m script
+      CACHE_MANAGER="/tmp/cache-manager.sh"
+      echo "Storing filtered cache: type=haf_filtered key=${FILTERED_CACHE_KEY}"
+      "$CACHE_MANAGER" put "haf_filtered" "${FILTERED_CACHE_KEY}" "${DATA_CACHE_DIR}"
+      echo "Filtered cache stored successfully"
+  tags:
+    - public-runner-docker
+    - data-cache-storage
+    - fastest
+
+block_api_tests:
+  extends: .jmeter_benchmark_job
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build
+      artifacts: true
+    - job: replay_filtered_haf_data_accounts_body_operations
+      artifacts: true
+
+  variables:
+    BENCHMARK_DIR: "$CI_PROJECT_DIR/hive/tests/python/hive-local-tools/tests_api/benchmarks"
+    # Allow access from any network (IPv4 and IPv6) to eliminate CI IP addressing problems
+    HAF_DB_ACCESS: |
+      host    all              haf_admin        0.0.0.0/0    trust
+      host    all              haf_admin        ::/0         trust
+      host    all              hived            0.0.0.0/0    trust
+      host    all              hived            ::/0         trust
+      host    all              hafah_user       0.0.0.0/0    trust
+      host    all              hafah_user       ::/0         trust
+      host    all              all              0.0.0.0/0    scram-sha-256
+      host    all              all              ::/0         scram-sha-256
+
+    BENCHMARK_DB_URL: "postgresql://hived@haf-instance:5432/haf_block_log"
+    # Local path for filtered replay data (service's copy_datadir.sh handles NFS fallback)
+    # Must match DATA_CACHE_DIR in replay_filtered_haf_data_accounts_body_operations
+    FILTERED_DATA_LOCAL: "/cache/haf_filtered_${CI_PIPELINE_ID}_filtered"
+
+  services:
+    - name: ${HAF_IMAGE_NAME}
+      alias: haf-instance
+      variables:
+        PG_ACCESS: "${HAF_DB_ACCESS}"
+        # Use direct path (avoids nested variable expansion failure in API-triggered pipelines)
+        DATA_SOURCE: "/cache/haf_filtered_${CI_PIPELINE_ID}_filtered"
+        LOG_FILE: $CI_JOB_NAME.log
+      # Data is already replayed by replay_filtered_haf_data_accounts_body_operations
+      # Just keep PostgreSQL running for the tests - no need to start hived
+      command: ["--execute-maintenance-script=${HAF_SOURCE_DIR:?}/scripts/maintenance-scripts/sleep_infinity.sh"]
+  tags:
+    - public-runner-docker
+    - data-cache-storage
+    - fast
+
+  before_script:
+    # Install git (not in benchmark-test-runner image) for submodule init
+    # Try apt-get (Debian/Ubuntu) then apk (Alpine)
+    - (apt-get update -qq && apt-get install -y -qq git 2>/dev/null) || (apk add --no-cache git 2>/dev/null) || true
+    - !reference [.init_submodules, before_script]
+    # Wait for database to be ready (using Python since psql not available in this image)
+    # Note: The service container copies data from NFS internally via copy_datadir.sh
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):wait_db[collapsed=true]\r\e[0KWaiting for database..."
+      python3 -c "
+      import socket
+      import time
+      host = 'haf-instance'
+      port = 5432
+      for i in range(120):
+          try:
+              s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+              s.settimeout(2)
+              s.connect((host, port))
+              s.close()
+              print(f'Database is ready after {i+1} attempts')
+              exit(0)
+          except (socket.error, socket.timeout):
+              print(f'Waiting for database... attempt {i+1}/120')
+              time.sleep(5)
+      print('ERROR: Database not ready after 120 attempts')
+      exit(1)
+      "
+      echo -e "\e[0Ksection_end:$(date +%s):wait_db\r\e[0K"
+
+  script:
+    # run pattern tests
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):blocks_api_test[collapsed=true]\r\e[0KRunning blocks api tests..."
+      cd "$BENCHMARK_DIR"
+      python3 benchmark.py --loops 200 --threads 5 -n blocks_api -p 5432 -c perf_5M_light.csv --skip-version-check -d wdir --postgres $BENCHMARK_DB_URL --call-style postgres 2>&1 | tee -i $CI_PROJECT_DIR/python_benchmark.log
+      echo -e "\e[0Ksection_end:$(date +%s):blocks_api_test\r\e[0K"
+
+    # generate JUNIT report file
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):report[collapsed=true]\r\e[0KGenerating Junit report..."
+      m2u --input "$BENCHMARK_DIR/wdir/raw_jmeter_report.xml" --output $CI_PROJECT_DIR/report.junit
+      echo -e "\e[0Ksection_end:$(date +%s):report\r\e[0K"
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+    reports:
+      junit: $CI_PROJECT_DIR/report.junit
+    paths:
+      - $BENCHMARK_DIR/wdir
+      - $CI_PROJECT_DIR/python_benchmark.log
+    when: always
+    expire_in: 1 week
+
+prepare_haf_data:
+  extends: .prepare_haf_data_5m
+  needs:
+    - job: haf_image_build
+      artifacts: true
+      optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
+    - job: detect_changes
+      artifacts: true
+      optional: true  # Skipped for tagged builds
+  stage: build_and_test_phase_1
+  timeout: 80m
+  variables:
+    HIVE_NETWORK_TYPE: mainnet
+    BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
+    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
+    # build_data.sh from this ref records the job id in replay_running, and its
+    # cache-manager.sh creates the NFS cache dirs world-accessible; the ref must
+    # include ccc#69 (143e9b9c) and ccc#22 (89735d69)
+    COMMON_CI_REF: "e6a38e7270e6f667280ed27b71a292fc973230bf"
+  # Replaces the template's after_script, which would also delete the extracted
+  # DATA_CACHE_DIR before phase-2 consumers register. The lock release must stay
+  # first: build_data.sh leaves replay_running behind when the job fails, and later
+  # runs on this commit wait on it until it is an hour old. The release is
+  # owner-checked, so it needs a build_data.sh that writes CI_JOB_ID into the lock
+  # (COMMON_CI_REF above).
+  after_script:
+    - |
+      # Only the job whose id build_data.sh wrote into the lock releases it; a job that only waited leaves it
+      LOCK_FILE="${DATA_CACHE_DIR}/replay_running"
+      if [[ ! -f "$LOCK_FILE" ]]; then
+        echo "Lock file not present: $LOCK_FILE"
+      elif [[ -n "${CI_JOB_ID:-}" ]] && [[ "$(cat "$LOCK_FILE" 2>/dev/null)" == "${CI_JOB_ID}" ]]; then
+        rm -f "$LOCK_FILE" && echo "Lock file removed: $LOCK_FILE" || echo "Lock file removal failed: $LOCK_FILE"
+      else
+        echo "Lock file $LOCK_FILE belongs to another job ($(cat "$LOCK_FILE" 2>/dev/null || true)), not ${CI_JOB_ID:-}; leaving it"
+      fi
+    - |
+      rm -f "${DATA_CACHE_DIR}/consumers/${CI_JOB_ID}" 2>/dev/null || true
+    - echo "Cleanup complete"
+  tags:
+    - public-runner-docker
+    - data-cache-storage
+    - fastest
+
+prepare_haf_data_pg17:
+  extends: .prepare_haf_data_5m
+  needs:
+    - job: haf_image_build_pg17
+      artifacts: true
+  stage: build_and_test_phase_1
+  timeout: 80m
+  variables:
+    HIVE_NETWORK_TYPE: mainnet
+    BLOCK_LOG_SOURCE_DIR: "$BLOCK_LOG_SOURCE_DIR_5M"
+    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
+    # build_data.sh from this ref records the job id in replay_running, and its
+    # cache-manager.sh creates the NFS cache dirs world-accessible; the ref must
+    # include ccc#69 (143e9b9c) and ccc#22 (89735d69)
+    COMMON_CI_REF: "e6a38e7270e6f667280ed27b71a292fc973230bf"
+    HAF_CACHE_TYPE: "haf17"
+    DATA_CACHE_HAF_PREFIX: "/cache/haf17"
+    DATA_CACHE_DIR: "/cache/haf17_${HAF_COMMIT}"
+  # Replaces the template's after_script, which would also delete the extracted
+  # DATA_CACHE_DIR before phase-2 consumers register. The lock release must stay
+  # first: build_data.sh leaves replay_running behind when the job fails, and later
+  # runs on this commit wait on it until it is an hour old. The release is
+  # owner-checked, so it needs a build_data.sh that writes CI_JOB_ID into the lock
+  # (COMMON_CI_REF above).
+  after_script:
+    - |
+      # Only the job whose id build_data.sh wrote into the lock releases it; a job that only waited leaves it
+      LOCK_FILE="${DATA_CACHE_DIR}/replay_running"
+      if [[ ! -f "$LOCK_FILE" ]]; then
+        echo "Lock file not present: $LOCK_FILE"
+      elif [[ -n "${CI_JOB_ID:-}" ]] && [[ "$(cat "$LOCK_FILE" 2>/dev/null)" == "${CI_JOB_ID}" ]]; then
+        rm -f "$LOCK_FILE" && echo "Lock file removed: $LOCK_FILE" || echo "Lock file removal failed: $LOCK_FILE"
+      else
+        echo "Lock file $LOCK_FILE belongs to another job ($(cat "$LOCK_FILE" 2>/dev/null || true)), not ${CI_JOB_ID:-}; leaving it"
+      fi
+    - |
+      rm -f "${DATA_CACHE_DIR}/consumers/${CI_JOB_ID}" 2>/dev/null || true
+    - echo "Cleanup complete"
+  tags:
+    - public-runner-docker
+    - data-cache-storage
+    - fastest
+
+# Publishes the 5M replay cache of $HAF_COMMIT as hive/haf/fixture-5m:<commit>:
+# the HAF image with the replayed database in an image layer, serving it without
+# hived (see Dockerfile.fixture). Built once per commit; later pipelines for the
+# same commit only report the existing image.
+build_haf_fixture_image:
+  extends: .docker_image_builder_job
+  stage: build_and_test_phase_2
+  needs:
+    - job: prepare_haf_data
+      artifacts: true
+    - job: haf_image_build
+      artifacts: true
+      optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
+    - job: detect_changes
+      artifacts: true
+      optional: true  # Skipped for tagged builds
+  timeout: 2h
+  variables:
+    FIXTURE_REPOSITORY: "${CI_REGISTRY_IMAGE}/fixture-5m"
+  script:
+    # The fixture is FROM $HAF_IMAGE_NAME, so it must be the image that wrote the
+    # cache. A SQL-only overlay or a QUICK_TEST image runs over another commit's cache.
+    - |
+      if [[ "${SQL_ONLY_CHANGE:-false}" == "true" || "${QUICK_TEST}" == "true" ]]; then
+        echo "Skipping fixture build: $HAF_IMAGE_NAME did not produce the replay cache of $HAF_COMMIT"
+        exit 0
+      fi
+      export HAF_DATA_CACHE_LOCAL="/cache/haf_${HAF_COMMIT}"
+    - *fetch_haf_cache
+    - !reference [.script_registry_login_gitlab, script]
+    - |
+      "$CI_PROJECT_DIR/scripts/ci-helpers/build_haf_fixture_image.sh" \
+        --haf-image="$HAF_IMAGE_NAME" \
+        --data-cache="$HAF_DATA_CACHE_LOCAL" \
+        --fixture-repository="$FIXTURE_REPOSITORY" \
+        --haf-commit="$HAF_COMMIT"
+  tags:
+    - public-runner-docker
+    - data-cache-storage
+    - fast
+
+dead_app_auto_detach:
+  extends: .job-defaults
+  stage: build_and_test_phase_2
+  image: "$HIVE_CI_BASE_IMAGE"
+  needs:
+    - job: prepare_haf_data
+      artifacts: true
+    - job: haf_image_build
+      artifacts: true
+      optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
+    - job: detect_changes
+      artifacts: true
+      optional: true  # Skipped for tagged builds
+  services:
+    - name: $HAF_IMAGE_NAME
+      alias: haf-instance
+      variables:
+        # Allow access from any network (IPv4 and IPv6) to eliminate CI IP addressing problems when hfm runs as service
+        PG_ACCESS: |
+                    host    all              haf_admin        0.0.0.0/0    trust
+                    host    all              haf_admin        ::/0         trust
+                    host    all              hived            0.0.0.0/0    trust
+                    host    all              hived            ::/0         trust
+                    host    all              test_app_owner   0.0.0.0/0    trust
+                    host    all              test_app_owner   ::/0         trust
+
+        # Use direct path (avoids nested variable expansion failure in API-triggered pipelines)
+        DATA_SOURCE: "/cache/haf_${HAF_COMMIT}"
+        LOG_FILE: $CI_JOB_NAME.log
+      command: ["--execute-maintenance-script=${HAF_SOURCE_DIR:?}/scripts/maintenance-scripts/sleep_infinity.sh"]
+  variables:
+    HAF_COMMIT: $HAF_COMMIT
+  before_script:
+    # Install psql for database operations
+    - sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null 2>&1 || true
+    # Note: No fetch_haf_cache needed - service container already extracts to ${HAF_DATA_CACHE_LOCAL}
+  script:
+    - $CI_PROJECT_DIR/tests/integration/system/applications/auto_detaching/scenario1.sh "haf-instance"
+  artifacts:
+    paths:
+    - scenario*.log
+  tags:
+    - public-runner-docker
+    - data-cache-storage
+    - fast
+
+start_haf_as_service:
+  extends: .job-defaults
+  stage: build_and_test_phase_2
+  image: "$HIVE_CI_BASE_IMAGE"
+  needs:
+    - job: prepare_haf_data
+      artifacts: true
+    - job: haf_image_build
+      artifacts: true
+      optional: true  # Skipped in QUICK_TEST/AUTO_SKIP mode
+    - job: detect_changes
+      artifacts: true
+      optional: true  # Skipped for tagged builds
+  services:
+    - *haf-service
+  variables:
+    HAF_POSTGRES_URL: postgresql://haf_admin@haf-instance:5432/haf_block_log
+    HAF_COMMIT: $HAF_COMMIT
+  # Note: No before_script/fetch_haf_cache needed - service container already extracts to ${HAF_DATA_CACHE_LOCAL}
+  script:
+    # Wait for hived API to be ready (adapted from block_api_tests pattern)
+    - |
+      echo -e "\e[0Ksection_start:$(date +%s):wait_hived[collapsed=true]\r\e[0KWaiting for hived API..."
+      python3 -c "
+      import socket
+      import time
+      host = 'haf-instance'
+      port = 8091
+      for i in range(120):
+          try:
+              s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+              s.settimeout(2)
+              s.connect((host, port))
+              s.close()
+              print(f'hived API ready after {i+1} attempts')
+              exit(0)
+          except (socket.error, socket.timeout):
+              print(f'Waiting for hived API... attempt {i+1}/120')
+              time.sleep(5)
+      print('ERROR: hived API not ready after 120 attempts')
+      exit(1)
+      "
+      echo -e "\e[0Ksection_end:$(date +%s):wait_hived\r\e[0K"
+    - curl -I haf-instance:8091 || (echo "error connecting to service hived-instance" && false)
+    - |
+        curl -XPOST -d '{
+        "jsonrpc": "2.0",
+        "method": "database_api.get_dynamic_global_properties",
+        "params": {
+        },
+        "id": 2
+        }' haf-instance:8091
+  after_script:
+    - rm docker_entrypoint.log -f
+    - cp "${HAF_DATA_CACHE_LOCAL}/datadir/$CI_JOB_NAME.log" "$CI_PROJECT_DIR/docker_entrypoint.log"
+  artifacts:
+    paths:
+    - docker_entrypoint.log
+  tags:
+    - public-runner-docker
+    - data-cache-storage
+    - fast
+
+cleanup_haf_cache_manual:
+  extends: .cleanup_cache_manual_template
+  stage: cleanup
+  variables:
+    CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
+  tags:
+    - public-runner-docker
+    - data-cache-storage
+    - fast
+
+cleanup_haf_snapshot_from_cache:
+  extends: .cleanup_cache_manual_template
+  stage: cleanup
+  variables:
+    CLEANUP_PATH_PATTERN: "/cache/snapshots_pipeline_*"
+  tags:
+    - public-runner-docker
+    - data-cache-storage
+    - fast
+
+cleanup_old_haf_cache:
+  extends: .cleanup_old_cache_template
+  stage: cleanup
+  variables:
+    CLEANUP_PATH_PATTERN: "/cache/replay_data_haf_*"
+  tags:
+    - public-runner-docker
+    - data-cache-storage
+    - fast
+
+publish_images:
+  extends: .docker_publish_job_template
+  variables:
+    # Publish mainnet (root), mirrornet and the pg17 variant to registry.hive.blog
+    # (haf_api_node selects pg17 with HAF_IMAGE=.../haf/pg17).
+    # Note: testnet is not published externally (internal use only)
+    PUBLISH_IMAGES: "haf mirrornet pg17"
+
+double_haf_replay_tests:
+  extends: .docker_image_builder_job
+  stage: build_and_test_phase_2
+  variables:
+    CONFIG_INI_SOURCE: "$CI_PROJECT_DIR/docker/config_5M.ini"
+  needs:
+    - job: haf_image_build
+      artifacts: true
+  script:
+  - docker container ps -a
+  - docker images
+  - docker context ls
+  tags:
+    - public-runner-docker
+
+op_body_filter_tests:
+  extends: .job-defaults
+  stage: build_and_test_phase_2
+  needs:
+    - job: haf_image_build_testnet
+      artifacts: true
+  image:
+    name: $HAF_IMAGE_NAME
+    entrypoint: [""]
+  # No submodule initialization needed - this test only uses the op_body_filter binary
+  # and pytest with no external dependencies (test_tools dependency removed)
+  script:
+    - /home/hived/docker_entrypoint.sh --execute-maintenance-script=$CI_PROJECT_DIR/scripts/maintenance-scripts/run_op_body_filter_tests.sh
+  artifacts:
+    paths:
+    - "op_body_filter_tests.log"
+    - "**/generated_during_*"
+    - "**/generated_by_package_fixtures"
+    exclude: *artifact_excludes
+    reports:
+      junit: tests/integration/tools/op_body_filter/report.xml
+    when: always
+    expire_in: 1 week
+  interruptible: true
+  tags:
+    - public-runner-docker
+
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>| HAF LOCAL TOOLS WHEEL |>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+build_haf_local_tools_wheel:
+  stage: build_and_test_phase_1
+  extends: .build_wheel_template
+  variables:
+    PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
+  tags:
+    - public-runner-docker
+
+deploy_haf_local_tools_wheel:
+  stage: publish
+  extends: .deploy_wheel_to_gitlab_template
+  when: on_success
+  variables:
+    PYPROJECT_DIR: "$CI_PROJECT_DIR/tests/integration/haf-local-tools"
+  needs:
+    - job: build_haf_local_tools_wheel
+      artifacts: true
+  tags:
+    - public-runner-docker
+
+# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<| HAF LOCAL TOOLS WHEEL |<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
