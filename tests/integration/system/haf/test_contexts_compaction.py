@@ -15,6 +15,8 @@ THRESHOLD_PAGES = 64
 TIMEOUT_SECONDS = 120
 # blocks hived must keep producing while a compaction cannot get its lock
 BLOCKS_WHILE_SKIPPING = 3
+# blocks that wake the application from a wait begun before the older sessions closed, with a margin
+BLOCKS_TO_WAKE_APPLICATION = 2
 
 # An application in an eternal CALL main()-style loop: each iteration commits and, at the head,
 # waits for the next block.
@@ -39,6 +41,8 @@ def heap_pages(session: Session) -> int:
 
 # Sessions VACUUM FULL may keep the filler rows for: one with a transaction not newer than their DELETE in any
 # database (VACUUM FULL's own snapshot does not see past it), or one of the test database with an older snapshot.
+# It cannot see an application waiting in hive.wait_for_new_block: that clears the backend's xmin for the wait and
+# restores it on waking, so a wait that began under an older snapshot re-advertises it at the next block.
 OLDER_SNAPSHOTS = """
 SELECT pid, datname, backend_type, application_name, state, backend_xid::TEXT AS xid, backend_xmin::TEXT AS xmin,
        xact_start, wait_event_type, wait_event, left( query, 200 ) AS query
@@ -180,7 +184,13 @@ def test_contexts_compaction(
                 )
             older_snapshot.close()
             other_database.close()
-            # so the compaction that starts once the lock is gone can give the filler rows back
+            # so the compaction that starts once the lock is gone can give the filler rows back: blocks wake the
+            # application from any wait that began under the closed sessions, and its next iteration drops the
+            # snapshot it restored on waking
+            wait_for_no_older_snapshots(session, deleted_by)
+            node_under_test.wait_for_block_with_number(
+                node_under_test.get_last_block_number() + BLOCKS_TO_WAKE_APPLICATION
+            )
             wait_for_no_older_snapshots(session, deleted_by)
             holder.rollback()
 
