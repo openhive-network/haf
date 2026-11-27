@@ -119,7 +119,17 @@ BEGIN
     ASSERT hive.index_restore_helpers( 'hafd.account_operations', 16 ) = 1, 'Wrong helper count for 16 threads';
     ASSERT hive.index_restore_helpers( 'hafd.account_operations', 8 ) = 0, 'Wrong helper count for 8 threads';
     ASSERT hive.index_restore_helpers( 'hafd.account_operations', 128 ) = 3, 'Wrong helper count for 128 threads';
-    ASSERT hive.index_restore_helpers( 'hafd.operations', 32 ) = 0, 'hafd.operations has helpers by default';
+    PERFORM set_config( 'max_parallel_workers', '16', TRUE );
+    PERFORM set_config( 'max_parallel_maintenance_workers', '4', TRUE );
+    ASSERT hive.index_restore_helpers( 'hafd.operations', 32 ) = 2, 'Wrong helper count of hafd.operations for 32 threads';
+    ASSERT hive.index_restore_helpers( 'hafd.operations', 24 ) = 1, 'Wrong helper count of hafd.operations for 24 threads';
+    ASSERT hive.index_restore_helpers( 'hafd.operations', 16 ) = 0, 'Wrong helper count of hafd.operations for 16 threads';
+    ASSERT hive.index_restore_helpers( 'hafd.operations', 128 ) = 2, 'Wrong helper count of hafd.operations for 128 threads';
+    PERFORM set_config( 'max_parallel_maintenance_workers', '6', TRUE );
+    ASSERT hive.index_restore_helpers( 'hafd.operations', 32 ) = 0, 'The helpers of hafd.operations overrun max_parallel_workers';
+    PERFORM set_config( 'max_parallel_maintenance_workers', '0', TRUE );
+    ASSERT hive.index_restore_helpers( 'hafd.operations', 32 ) = 2, 'Wrong helper count of hafd.operations with no parallel workers';
+    ASSERT hive.index_restore_helpers( 'hafd.blocks', 32 ) = 0, 'hafd.blocks has helpers by default';
     PERFORM set_config( 'hive.index_restore_helpers', '2', TRUE );
     ASSERT hive.index_restore_helpers( 'hafd.operations', 8 ) = 2, 'hive.index_restore_helpers is not obeyed';
 END;

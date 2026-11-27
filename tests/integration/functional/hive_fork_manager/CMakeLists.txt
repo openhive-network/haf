@@ -144,6 +144,8 @@ ADD_TEST( NAME test_update_script
  ADD_SQL_FUNCTIONAL_TEST( hived_api/proc_reorder_account_operations_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/proc_help_restore_indexes_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/proc_restore_indexes_with_helper_test.sql )
+ADD_SQL_FUNCTIONAL_TEST( hived_api/proc_restore_indexes_concurrent_test.sql )
+ADD_SQL_FUNCTIONAL_TEST( hived_api/proc_restore_indexes_concurrent_interrupted_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/proc_restore_indexes_copyback_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/proc_restore_indexes_copyback_with_helper_test.sql )
  ADD_SQL_FUNCTIONAL_TEST( hived_api/proc_restore_indexes_copyback_interrupted_test.sql )

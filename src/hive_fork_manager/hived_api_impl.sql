@@ -1248,8 +1248,18 @@ LANGUAGE sql IMMUTABLE
 -- How many sessions hived runs hive.proc_help_restore_indexes in alongside its post-replay
 -- hive.proc_restore_indexes of the table, on a host with _cores hardware threads: the custom setting
 -- hive.index_restore_helpers, for every table, when it is set; otherwise, for hafd.account_operations,
--- whose reorder is the longest restore, one for every 8 threads beyond the first 8, at most 3, and
--- none for the other tables, whose index builds run alongside it.
+-- whose reorder is the longest restore, one for every 8 threads beyond the first 8, at most 3; for
+-- hafd.operations, whose index builds take as long as that reorder when run one after another, one for
+-- every 8 threads beyond the first 16, at most 2; and none for the other tables, whose few index builds
+-- run alongside those two.
+-- The budget the tables share while their restores run at once: every build takes up to
+-- maintenance_work_mem, split among its parallel workers, and asks for max_parallel_maintenance_workers
+-- of them out of max_parallel_workers (and max_worker_processes). On a 32-thread host with 4 workers per
+-- build out of 16 and 4 GB, hafd.operations builds 3 indexes at once (12 workers, 12 GB), and the other
+-- tables' builds, mostly while hafd.account_operations is still reordered by its sessions, take the rest.
+-- So hafd.operations leaves room for one more build's workers: it builds at most
+-- max_parallel_workers / max_parallel_maintenance_workers - 1 indexes at once. A build that gets fewer
+-- workers than it asks for runs on those it gets, or in its own session alone: oversubscribing slows it.
 CREATE OR REPLACE FUNCTION hive.index_restore_helpers( in _table_name TEXT, in _cores INTEGER )
 RETURNS INTEGER
 AS
@@ -1266,6 +1276,11 @@ BEGIN
 
   IF _table_name = 'hafd.account_operations' THEN
     RETURN LEAST( 3, GREATEST( 0, _cores / 8 - 1 ) );
+  END IF;
+  IF _table_name = 'hafd.operations' THEN
+    RETURN LEAST( 2, GREATEST( 0, _cores / 8 - 2 )
+                , GREATEST( 0, current_setting( 'max_parallel_workers' )::INTEGER
+                               / GREATEST( 1, current_setting( 'max_parallel_maintenance_workers' )::INTEGER ) - 2 ) );
   END IF;
   RETURN 0;
 END;
@@ -1322,10 +1337,29 @@ $function$
 LANGUAGE sql STABLE
 ;
 
+-- The order in which hive.restore_next_index claims a table's plain indexes, lowest first: an estimate of
+-- how long each takes to build, longest first, so that, with helpers, the longest build starts at once
+-- and the short ones fill in at the end. The build time is not known before the build, so: an index whose
+-- key or predicate reads the operation body, which each row has to be decoded for, first; then an index
+-- of every row of the table; then a partial index, which sorts only the rows its predicate selects;
+-- within each, a longer definition, i.e. a wider key or a more complex predicate, first.
+CREATE OR REPLACE FUNCTION hive.index_restore_order( in _command TEXT )
+RETURNS INTEGER
+AS
+$function$
+  SELECT CASE
+           WHEN _command ~* '\mbody_value\M' THEN 0
+           WHEN _command !~* '\sWHERE\s' THEN 1
+           ELSE 2
+         END * 1000000 - length( _command );
+$function$
+LANGUAGE sql IMMUTABLE
+;
+
 -- Claims a 'missing' index or PK/UNIQUE constraint of the table that no session is building and builds
 -- it with hive.restore_index, or the table's NOT NULL constraints with hive.restore_not_null_constraints,
--- in the caller's transaction, which commits next, if hive.is_index_restore_ready. Returns FALSE when
--- there is nothing to claim.
+-- in the caller's transaction, which commits next, if hive.is_index_restore_ready. Plain indexes are
+-- claimed in hive.index_restore_order. Returns FALSE when there is nothing to claim.
 -- Attaching a constraint's index needs an ACCESS EXCLUSIVE lock, which would wait, stalling the readers
 -- of the table queued behind it, for every index build of another session, or deadlock with another
 -- attach: so a table's PK/UNIQUE constraints are built one at a time, and its NOT NULL constraints and
@@ -1362,6 +1396,7 @@ BEGIN
                       WHERE table_name = _table_name AND is_foreign_key = FALSE AND status = 'missing' AND is_constraint
                         AND NOT ( table_name = 'hafd.account_operations' AND index_constraint_name = 'hive_account_operations_uq1'
                                   AND hive.is_account_operations_cluster_index_building() ) )
+    ORDER BY hive.index_restore_order( ic.command ), ic.index_constraint_name
     LIMIT 1
     FOR UPDATE OF ic SKIP LOCKED;
   END IF;
