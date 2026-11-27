@@ -589,7 +589,17 @@ BEGIN
         WHEN 'NEW_BLOCK' THEN
             ASSERT  _context_state.next_event_block_num > _context_state.current_block_num, 'We could not process block without consume event';
             IF _context_state.next_event_block_num > _block_limit THEN
-                -- a dependency has not committed this block yet: keep the event for later
+                -- a dependency has not committed this block yet: keep the event for later.
+                -- hive.find_next_event has already moved events_id onto it. Above the irreversible
+                -- block it searches only after events_id, so put the context back on the event it
+                -- was on (the one just before), or the next iteration skips this block and sees a
+                -- hole in the reversible range; at or below it, it searches from events_id itself
+                IF _context_state.current_block_num > _context_state.irreversible_block_num THEN
+                    UPDATE hafd.contexts
+                    SET events_id = ( SELECT MAX( heq.id ) FROM hafd.events_queue heq WHERE heq.id < _context_state.next_event_id )
+                    WHERE name = _context;
+                END IF;
+
                 __result.first_block = -1;
                 __result.last_block = -2;
                 RETURN __result;
