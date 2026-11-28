@@ -101,8 +101,8 @@ variables:
   SNAPSHOTS_PATH: /nfs/ci-cache/haf/snapshots_pipeline_${CI_PIPELINE_ID}
   BLOCK_LOG_SOURCE_DIR_MIRRORNET_5M: /blockchain/block_log_5m_mirrornet
 
-  # sccache distributed compiler cache (Redis backend on builder-10)
-  SCCACHE_REDIS: "redis://192.168.50.109:6379"
+  # sccache distributed compiler cache (Redis backend, addressed by DNS name in the runners' view)
+  SCCACHE_REDIS: "redis://sccache.syncad.com:6379"
   SCCACHE_CACHE_SIZE: "50G"
 
   # PostgreSQL access config for localhost-only jobs (IPv4 and IPv6)
