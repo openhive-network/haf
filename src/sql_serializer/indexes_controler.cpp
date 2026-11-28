@@ -13,10 +13,12 @@
 #include <fc/thread/thread.hpp>
 
 #include <algorithm>
+#include <atomic>
 #include <cerrno>
 #include <chrono>
 #include <cstring>
 #include <exception>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -202,11 +204,41 @@ int64_t stream_sorted_account_operations(PGconn* source, PGconn* target, const s
   return std::stoll(PQcmdTuples(written.get()));
 }
 
+bool is_account_operations_range_sorted(PGconn* source, const std::string& sorted_table)
+{
+  const char* const values[] = { sorted_table.c_str() };
+  const pg_result_ptr result(
+    PQexecParams(source, "SELECT hive.is_account_operations_range_sorted( $1 )", 1, nullptr, values, nullptr, nullptr, 0), &PQclear);
+  if (PQresultStatus(result.get()) != PGRES_TUPLES_OK)
+    throw std::runtime_error("Checking whether " + sorted_table + " is sorted for the copy-back of hafd.account_operations failed: " + PQerrorMessage(source));
+  return std::string_view(PQgetvalue(result.get(), 0, 0)) == "t";
+}
+
+const std::chrono::milliseconds COPYBACK_SORT_POLL_INTERVAL{ 250 };
+
+// Waits on the idle source connection until the sort has committed sorted_table. Fails once sort_ended is set
+// while the table is not sorted: the sort failed, as one that returns has sorted every range. Returns the time waited.
+fc::microseconds wait_until_account_operations_range_sorted(PGconn* source, const std::string& sorted_table, const std::atomic<bool>& sort_ended)
+{
+  const auto start_time = fc::time_point::now();
+  for (;;)
+  {
+    // read before the check, so that a sort that ended had committed each range the check can see
+    const bool ended = sort_ended.load();
+    if (is_account_operations_range_sorted(source, sorted_table))
+      return fc::time_point::now() - start_time;
+    if (ended)
+      throw std::runtime_error("The sort of hafd.account_operations ended before " + sorted_table + " was sorted");
+    std::this_thread::sleep_for(COPYBACK_SORT_POLL_INTERVAL);
+  }
+}
+
 // Copies the sorted hafd.account_operations back, which hive.proc_restore_indexes left to its caller, in one
 // transaction (hive.start_account_operations_copyback): COPY FREEZE needs to be a top-level statement in the
 // transaction that truncated the table, which a PL/pgSQL procedure cannot run. The rows are read on a second
-// connection. A failure rolls the copy-back back, leaving the table as it was before.
-void copy_back_account_operations(const std::string& db_url)
+// connection. It starts once the heap is staged and streams each range as soon as it is sorted, until
+// sort_ended, set once the sort returns or fails. A failure rolls the copy-back back, leaving the table as it was before.
+void copy_back_account_operations(const std::string& db_url, const std::atomic<bool>& sort_ended)
 {
   const auto start_time = fc::time_point::now();
   const pg_connection_ptr target = connect_for_copyback(db_url);
@@ -217,16 +249,74 @@ void copy_back_account_operations(const std::string& db_url)
   exec_for_copyback(target.get(), "BEGIN", PGRES_COMMAND_OK);
   const pg_result_ptr sorted_tables = exec_for_copyback(target.get(), "SELECT hive.start_account_operations_copyback()", PGRES_TUPLES_OK);
   int64_t copied = 0;
+  fc::microseconds waited_for_sort;
   for (int i = 0; i < PQntuples(sorted_tables.get()); ++i)
-    copied += stream_sorted_account_operations(source.get(), target.get(), PQgetvalue(sorted_tables.get(), i, 0));
+  {
+    const std::string sorted_table = PQgetvalue(sorted_tables.get(), i, 0);
+    waited_for_sort += wait_until_account_operations_range_sorted(source.get(), sorted_table, sort_ended);
+    copied += stream_sorted_account_operations(source.get(), target.get(), sorted_table);
+  }
   exec_for_copyback(target.get(), "SELECT hive.end_account_operations_copyback( " + std::to_string(copied) + " )", PGRES_TUPLES_OK);
   const pg_result_ptr commit = exec_for_copyback(target.get(), "COMMIT", PGRES_COMMAND_OK);
   if (std::string_view(PQcmdStatus(commit.get())) != "COMMIT")
     throw std::runtime_error("The copy-back of hafd.account_operations was rolled back: " + std::string(PQcmdStatus(commit.get())));
 
-  ilog("PROFILE: Copied ${rows} sorted rows of ${tables} tables back into hafd.account_operations by COPY FREEZE: ${t}s",
-    ("rows", copied)("tables", PQntuples(sorted_tables.get()))("t", (fc::time_point::now() - start_time).to_seconds()));
+  ilog("PROFILE: Copied ${rows} sorted rows of ${tables} tables back into hafd.account_operations by COPY FREEZE: ${t}s, ${w}s of them waiting for the sort",
+    ("rows", copied)("tables", PQntuples(sorted_tables.get()))("t", (fc::time_point::now() - start_time).to_seconds())("w", waited_for_sort.to_seconds()));
 }
+
+// Sorts the staged ranges of hafd.account_operations on the restore's connection, alongside its helpers, while
+// copy_back_account_operations streams the sorted ones back on connections of its own, so that the copy-back of
+// the first ranges overlaps the sort of the later ones. Throws the sort's error, else the copy-back's.
+void sort_and_copy_back_account_operations(pqxx::nontransaction& tx, const std::string& db_url)
+{
+  std::atomic<bool> sort_ended{ false };
+  auto copy_back = std::async(std::launch::async, [&db_url, &sort_ended]() { copy_back_account_operations(db_url, sort_ended); });
+  std::exception_ptr sort_error;
+  try
+  {
+    tx.exec("CALL hive.proc_do_account_operations_reorder_steps( 'sort' );");
+  }
+  catch (const std::exception&)
+  {
+    sort_error = std::current_exception();
+  }
+  sort_ended = true;
+
+  if (sort_error)
+  {
+    try
+    {
+      copy_back.get();
+    }
+    catch (const std::exception& e)
+    {
+      wlog("The copy-back of hafd.account_operations failed with its sort: ${e}", ("e", e.what()));
+    }
+    std::rethrow_exception(sort_error);
+  }
+  copy_back.get();
+}
+
+// Lets the waiter on the promise go on once set(), or once destroyed unset, e.g. by a failure before.
+class restore_lock_signal
+{
+public:
+  explicit restore_lock_signal(std::shared_ptr<std::promise<void>> promise) : _promise(std::move(promise)) {}
+  restore_lock_signal(const restore_lock_signal&) = delete;
+  restore_lock_signal& operator=(const restore_lock_signal&) = delete;
+  ~restore_lock_signal() { set(); }
+
+  void set()
+  {
+    const std::shared_ptr<std::promise<void>> promise = std::move(_promise);
+    if (promise)
+      promise->set_value();
+  }
+
+private:
+  std::shared_ptr<std::promise<void>> _promise;
+};
 
 // Runs hive.proc_help_restore_indexes on connections of its own and joins them when destroyed.
 // A helper that fails loses no work: the restore it helps does what the helper left uncommitted.
@@ -823,13 +913,19 @@ indexes_controler::enable_indexes() {
   ilog( "Restoring HAF indexes..." );
   fc::time_point restore_indexes_start_time = fc::time_point::now();
 
+  // The other tables' builds are capped beside the reorder of hafd.account_operations, the longest restore,
+  // once its restore holds its lock (hive.claim_index_build_slot): until then, they would not be.
+  auto account_operations_lock_taken = std::make_shared< std::promise< void > >();
+  std::future< void > account_operations_restore_started = account_operations_lock_taken->get_future();
+  auto restore_account_operations_idxs = start_restore_indexes( "hafd.account_operations", "account_operations indexes", account_operations_lock_taken );
+  account_operations_restore_started.wait();
+
   auto restore_blocks_idxs = start_restore_indexes( "hafd.blocks", "blocks indexes" );
   auto restore_irreversible_idxs = start_restore_indexes( "hafd.hive_state", "hive_state indexes" );
   auto restore_transactions_idxs = start_restore_indexes( "hafd.transactions", "transactions indexes" );
   auto restore_transactions_sigs_idxs = start_restore_indexes( "hafd.transactions_multisig", "transactions_multisig indexes" );
   auto restore_operations_idxs = start_restore_indexes( "hafd.operations", "operations indexes" );
   auto restore_accounts_idxs = start_restore_indexes( "hafd.accounts", "accounts indexes" );
-  auto restore_account_operations_idxs = start_restore_indexes( "hafd.account_operations", "account_operations indexes" );
   auto restore_applied_hardforks_idxs = start_restore_indexes( "hafd.applied_hardforks", "applied_hardforks indexes" );
 
   join_processors(
@@ -933,20 +1029,22 @@ indexes_controler::enable_constrains() {
 }
 
 // hive.proc_restore_indexes commits after each statement, so it is CALLed on an autocommit connection
-// instead of in the transaction of a queries_commit_data_processor.
+// instead of in the transaction of a queries_commit_data_processor. lock_taken, when given, is set once the
+// restore holds hive.index_restore_lock_key, or once it fails before.
 std::unique_ptr<data_processor>
-indexes_controler::start_restore_indexes( const std::string& table_name, std::string objects_name ) {
+indexes_controler::start_restore_indexes( const std::string& table_name, std::string objects_name, std::shared_ptr< std::promise< void > > lock_taken ) {
   ilog("Creating ${objects_name}...", ("objects_name", objects_name ) );
 
   const std::string query = "CALL hive.proc_restore_indexes( '" + table_name + "' );";
   std::string description = "Query processor: `" + query + "'";
   auto processor = std::make_unique< data_processor >( description, "index_ctrl",
                                                        [db_url=db_url_with_hived_app(_db_url), maintainer_db_url=db_url_with_hived_app_as_haf_maintainer(_db_url),
-                                                        is_account_operations=( table_name == "hafd.account_operations" ), table_name,
+                                                        is_account_operations=( table_name == "hafd.account_operations" ), table_name, lock_taken,
                                                         query, objects_name=std::move(objects_name), description](const data_processor::data_chunk_ptr&) -> data_processor::data_processing_status
   {
     ilog("Attempting to execute query: `${query}`...", ("query", query ) );
     const auto start_time = fc::time_point::now();
+    restore_lock_signal lock_signal( lock_taken );
     // declared before the connection, so that its close releases the lock that ends the helpers before they are joined
     index_restore_helpers helpers;
     pqxx::connection conn(db_url);
@@ -959,6 +1057,7 @@ indexes_controler::start_restore_indexes( const std::string& table_name, std::st
     }
     // taken before the helpers start: a helper returns when no session holds it
     tx.exec_params( "SELECT pg_advisory_lock( hive.index_restore_lock_key( $1 ) )", table_name );
+    lock_signal.set();
     const int helper_count = tx.exec_params( "SELECT hive.index_restore_helpers( $1, $2 ) AS helpers",
       table_name, static_cast<int>( std::thread::hardware_concurrency() ) )[0]["helpers"].as<int>();
     if ( helper_count > 0 )
@@ -966,10 +1065,10 @@ indexes_controler::start_restore_indexes( const std::string& table_name, std::st
     helpers.start( db_url, table_name, helper_count );
     tx.exec( query );
     if ( is_account_operations
-         && tx.exec( "SELECT hive.account_operations_copyback_state() IS NOT DISTINCT FROM 'pending' AS pending" )[0]["pending"].as<bool>() )
+         && tx.exec( "SELECT hive.account_operations_copyback_state() IN ( 'sorting', 'pending' ) AS staged" )[0]["staged"].as<bool>( false ) )
     {
-      // the helpers wait meanwhile: this session still holds the lock
-      copy_back_account_operations( db_url );
+      // the helpers sort alongside, then wait: this session still holds the lock
+      sort_and_copy_back_account_operations( tx, db_url );
       tx.exec( query );
     }
     ilog(
