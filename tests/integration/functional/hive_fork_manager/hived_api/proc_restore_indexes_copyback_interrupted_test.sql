@@ -42,7 +42,10 @@ DECLARE
 BEGIN
     PERFORM set_config( 'hive.account_operations_copyback', 'copy', FALSE );
     CALL hive.proc_restore_indexes( 'hafd.account_operations' );
-    ASSERT hive.account_operations_copyback_state() = 'pending', 'hive.proc_restore_indexes did not leave the copy-back to its caller';
+    ASSERT hive.account_operations_copyback_state() = 'sorting', 'hive.proc_restore_indexes did not leave the sort and the copy-back to its caller';
+    COMMIT;
+    CALL hive.proc_do_account_operations_reorder_steps( 'sort' );
+    ASSERT hive.account_operations_copyback_state() = 'pending', 'The sorted ranges do not await their copy-back';
     COMMIT;
 
     -- the copy-back that hived streams by COPY FREEZE, here by INSERT

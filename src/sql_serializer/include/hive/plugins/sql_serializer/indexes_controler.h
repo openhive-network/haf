@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <future>
 #include <memory>
 #include <string>
 #include <hive/plugins/sql_serializer/indexes_interruptor.h>
@@ -49,7 +50,7 @@ namespace hive::plugins::sql_serializer {
     std::unique_ptr<queries_commit_data_processor>
     start_commit_sql( bool mode, const std::string& sql_function_call, std::string objects_name );
     std::unique_ptr<data_processor>
-    start_restore_indexes( const std::string& table_name, std::string objects_name );
+    start_restore_indexes( const std::string& table_name, std::string objects_name, std::shared_ptr< std::promise< void > > lock_taken = nullptr );
 
     bool are_any_indexes_missing() const;
     void vacuum_account_operations();

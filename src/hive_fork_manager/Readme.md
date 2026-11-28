@@ -445,11 +445,15 @@ reorder needs free disk space of about twice the table's size.
 
 The setting `hive.account_operations_copyback` selects how that last copy writes the rows: `insert`
 (`INSERT ... SELECT`, the default when it is unset) or `copy`, which `hived` sets for its session unless it
-is set for the database or role. With `copy`, `hive.proc_restore_indexes` returns once the ranges are sorted,
-and `hived` copies them back itself, in one transaction: `hive.start_account_operations_copyback()` checks
-that the table has no index and truncates it, `hived` streams each sorted range from a second connection into
+is set for the database or role. With `copy`, `hive.proc_restore_indexes` returns once the heap is copied
+into the ranges, and `hived` sorts them (`hive.proc_do_account_operations_reorder_steps('sort')`, with the
+helpers) while it copies them back itself, in one transaction: `hive.start_account_operations_copyback()`
+checks that the table has no index and truncates it, `hived` streams each range, in account order, as soon
+as it is sorted (`hive.is_account_operations_range_sorted`), from a second connection into
 `COPY hafd.account_operations FROM STDIN (FORMAT binary, FREEZE)`, and
-`hive.end_account_operations_copyback(rows)` checks the row count and drops the ranges. `hived` then calls
+`hive.end_account_operations_copyback(rows)` checks the row count and drops the ranges. The copy-back of the
+first ranges so overlaps the sort of the later ones; its transaction, and its lock on the table, last from
+the end of the copying of the heap to the end of the copy-back. `hived` then calls
 `hive.proc_restore_indexes` again, which builds the indexes without reordering the table again. `COPY` inserts
 the rows in batches and writes them frozen, with the visibility map set, so the `VACUUM (FREEZE, ANALYZE)`
 that follows the restore skips them. `COPY ... FREEZE` has to be a statement of its own in the transaction that
@@ -475,6 +479,15 @@ on 8). The other tables get none, because their index builds already run alongsi
 sets the number for every table, and `'0'` turns helpers off. Each index build can also use PostgreSQL's
 parallel maintenance workers (`max_parallel_maintenance_workers`), set for the database or role in the
 same way.
+
+The reorder of `hafd.account_operations` and the build of `hive_account_operations_uq1` after it are the
+longest chain of the restore, and index builds of other tables beside it slow it down. While it runs
+(`hive.is_account_operations_reorder_running()`), each other table builds at most
+`hive.index_builds_beside_account_operations_reorder` indexes at once, 1 by default, across its restore and
+its helpers; `'0'` holds them back until `hive_account_operations_uq1` is built. The helpers read it too,
+so set it for the database or role, e.g.
+`ALTER DATABASE haf_block_log SET hive.index_builds_beside_account_operations_reorder = '2';`. `hived`
+starts the other tables' restores once the restore of `hafd.account_operations` has taken its lock.
 
 Before it starts, `hive.account_operations_reorder_space_suffices()` compares that need, twice
 `pg_relation_size('hafd.account_operations')` plus a margin, with the setting

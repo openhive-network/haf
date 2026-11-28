@@ -1,5 +1,6 @@
 -- hive.proc_restore_indexes of hafd.account_operations with hive.account_operations_copyback = 'copy', as hived
--- runs it: the procedure returns once the table is sorted, another session copies the sorted ranges back by
+-- runs it: the procedure returns once the table is staged, the ranges are sorted (as hived does on the
+-- procedure's connection, here before the copy-back), another session copies the sorted ranges back by
 -- COPY ... FREEZE in one transaction (hive.start/end_account_operations_copyback), as hived streams them,
 -- and the procedure, CALLed again, builds the indexes without reordering the table again.
 
@@ -24,7 +25,8 @@ BEGIN
     CREATE TABLE public.relation_before AS
     SELECT oid, reltype, relacl::text FROM pg_class WHERE oid = 'hafd.account_operations'::regclass;
     CREATE TABLE public.copyback(
-          state_after_sort TEXT
+          state_after_stage TEXT
+        , state_after_sort TEXT
         , rows_after_sort BIGINT
         , refused_with_index TEXT
         , state_with_index TEXT
@@ -52,8 +54,12 @@ DECLARE
 BEGIN
     PERFORM set_config( 'hive.account_operations_copyback', 'copy', FALSE );
     CALL hive.proc_restore_indexes( 'hafd.account_operations' );
-    INSERT INTO public.copyback( state_after_sort, rows_after_sort )
-    SELECT hive.account_operations_copyback_state(), count(*) FROM hafd.account_operations;
+    INSERT INTO public.copyback( state_after_stage ) VALUES ( hive.account_operations_copyback_state() );
+    COMMIT;
+    CALL hive.proc_do_account_operations_reorder_steps( 'sort' );
+    UPDATE public.copyback SET
+          state_after_sort = hive.account_operations_copyback_state()
+        , rows_after_sort = ( SELECT count(*) FROM hafd.account_operations );
     COMMIT;
 
     -- sorted again in many ranges, so that the copy-back runs a COPY FREEZE for each in its transaction
@@ -126,7 +132,8 @@ DECLARE
     __copyback RECORD;
 BEGIN
     SELECT * INTO __copyback FROM public.copyback;
-    ASSERT __copyback.state_after_sort = 'pending', 'hive.proc_restore_indexes did not leave the copy-back to its caller';
+    ASSERT __copyback.state_after_stage = 'sorting', 'hive.proc_restore_indexes did not leave the sort and the copy-back to its caller';
+    ASSERT __copyback.state_after_sort = 'pending', 'The sorted ranges do not await their copy-back';
     ASSERT __copyback.rows_after_sort = 30000, 'hafd.account_operations changed before its copy-back';
     ASSERT __copyback.state_with_index IS NULL, 'A copy-back is pending although hafd.account_operations has an index';
     ASSERT __copyback.refused_with_index LIKE '%has indexes%', 'The copy-back did not refuse to run with an index present';
